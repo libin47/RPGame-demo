@@ -66,6 +66,15 @@ function locationDescription(ctx: GameContext): string {
   return resolveSanText(loc.description, ctx.player.survival.san)
 }
 
+function updateNarrative(ctx: GameContext, resultLines: string[], tickTexts: string[]): void {
+  const lines: string[] = [...resultLines]
+  if (tickTexts.length > 0) {
+    lines.push(...tickTexts)
+  }
+  lines.push(locationDescription(ctx))
+  ctx.ui.narrativeLines = lines
+}
+
 export function executeAction(ctx: GameContext, action: GameAction): ActionResult {
   const events: NarrativeEvent[] = []
   const ectx = effectCtx(ctx)
@@ -150,7 +159,7 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
         return { ok: false, reason: '现在无法查看。', events }
       }
       if (target.onceFlag && ctx.flags.flags[target.onceFlag]) {
-        ctx.ui.narrativeLines.push('你已经仔细查看过了。')
+        updateNarrative(ctx, ['你已经仔细查看过了。'], [])
         return { ok: true, events }
       }
       const text = target.text
@@ -161,13 +170,14 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
               ctx.player.survival.san,
             )
           : '……'
-      ctx.ui.narrativeLines.push(text)
+      advanceMinutes(ctx.world, 5)
+      const tick = applySurvivalForMinutes(ctx.player, ctx.world, 5, ectx.warmthBonus)
+      updateNarrative(ctx, [text], tick.texts)
       const ev = applyEffects(target.effects, ectx)
       events.push(...ev)
       pushEvents(ctx.ui, ev)
       if (target.onceFlag) ctx.flags.flags[target.onceFlag] = true
-      advanceMinutes(ctx.world, 5)
-      applySurvivalForMinutes(ctx.player, ctx.world, 5, ectx.warmthBonus)
+      if (tick.dead) events.push({ kind: 'ending', endingId: 'death' })
       return { ok: true, events }
     }
 
@@ -308,7 +318,7 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
         lines.push('这一带暂时没有新发现。')
       }
 
-      ctx.ui.narrativeLines.push(...lines, ...tick.texts)
+      updateNarrative(ctx, lines, tick.texts)
       for (const t of tick.texts) events.push({ kind: 'text', text: t })
       if (tick.dead) events.push({ kind: 'ending', endingId: 'death' })
       return { ok: true, events }
@@ -460,7 +470,9 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
         buried: false,
       })
       advanceMinutes(ctx.world, 20)
-      ctx.ui.narrativeLines.push('你就地扎起了临时营地。数天后营地会消失。')
+      const tick = applySurvivalForMinutes(ctx.player, ctx.world, 20, ectx.warmthBonus)
+      updateNarrative(ctx, ['你就地扎起了临时营地。数天后营地会消失。'], tick.texts)
+      if (tick.dead) events.push({ kind: 'ending', endingId: 'death' })
       return { ok: true, events }
     }
 
@@ -470,9 +482,11 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
       )
       if (!camp) return { ok: false, reason: '此处没有可埋藏的临时营地。', events }
       advanceMinutes(ctx.world, 40)
+      const tick = applySurvivalForMinutes(ctx.player, ctx.world, 40, ectx.warmthBonus)
       camp.buried = true
       camp.daysLeft = (camp.daysLeft ?? 3) + 4
-      ctx.ui.narrativeLines.push('你花时间设置了埋藏点，营地更不容易被发现。')
+      updateNarrative(ctx, ['你花时间设置了埋藏点，营地更不容易被发现。'], tick.texts)
+      if (tick.dead) events.push({ kind: 'ending', endingId: 'death' })
       return { ok: true, events }
     }
 
@@ -487,15 +501,16 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
         // Allow rough sleep with heavy penalties
         const r = rest(ctx.player, ctx.world, 6, ectx.warmthBonus - 10)
         ctx.player.survival.san = Math.max(0, ctx.player.survival.san - 5)
-        ctx.ui.narrativeLines.push(...r.texts, '没有床铺，睡眠质量很差。')
+        updateNarrative(ctx, [...r.texts, '没有床铺，睡眠质量很差。'], [])
         tickCamps(ctx)
+        if (r.dead) events.push({ kind: 'ending', endingId: 'death' })
         return { ok: true, events }
       }
       if (ctx.world.inDungeon) {
         return { ok: false, reason: '地牢中不宜久眠。', events }
       }
       const r = rest(ctx.player, ctx.world, 8, ectx.warmthBonus)
-      ctx.ui.narrativeLines.push(...r.texts)
+      updateNarrative(ctx, r.texts, [])
       tickCamps(ctx)
       if (r.dead) events.push({ kind: 'ending', endingId: 'death' })
       return { ok: true, events }
@@ -511,7 +526,7 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
       const ev = applyEffects(def.useEffects, ectx)
       events.push(...ev)
       pushEvents(ctx.ui, ev)
-      ctx.ui.narrativeLines.push(`你使用了${def.name}。`)
+      updateNarrative(ctx, [`你使用了${def.name}。`], [])
       return { ok: true, events }
     }
 
@@ -529,7 +544,7 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
         removeItemSafe(ctx, action.itemId, 1)
         ctx.player.equipment[def.equipSlot] = action.itemId
       }
-      ctx.ui.narrativeLines.push(`装备了${def.name}。`)
+      updateNarrative(ctx, [`装备了${def.name}。`], [])
       return { ok: true, events }
     }
 
@@ -557,13 +572,14 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
       if (ctx.world.inDungeon) {
         return { ok: false, reason: '地牢中无法保存。', events }
       }
+      const serialize = <T>(obj: T): T => JSON.parse(JSON.stringify(obj))
       writeSave(action.slot, {
-        player: structuredClone(ctx.player),
-        world: structuredClone(ctx.world),
-        inventory: structuredClone(ctx.inventory),
-        base: structuredClone(ctx.base),
-        flags: structuredClone(ctx.flags),
-        combat: structuredClone({
+        player: serialize(ctx.player),
+        world: serialize(ctx.world),
+        inventory: serialize(ctx.inventory),
+        base: serialize(ctx.base),
+        flags: serialize(ctx.flags),
+        combat: serialize({
           ...ctx.combat,
           active: false,
           player: null,

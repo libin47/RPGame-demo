@@ -26,6 +26,13 @@ export const beach: LocationDef = {
   actions: [
     { id: 'explore', label: '探索', type: 'explore', timeCost: 30 },
     {
+      id: 'talk_castaway',
+      label: '与漂流者对话',
+      type: 'startDialogue',
+      dialogueId: 'castaway',
+      when: { flag: 'intro_done' },
+    },
+    {
       id: 'enter_cave',
       label: '进入洞窟',
       type: 'enterDungeon',

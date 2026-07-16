@@ -4,6 +4,7 @@ import { beach } from './locations/beach'
 import { wreck } from './locations/wreck'
 import { jungleEdge, signalRidge } from './locations/jungle'
 import { intro } from './dialogues/intro'
+import { castaway } from './dialogues/castaway'
 import { items } from './items'
 import { recipes } from './recipes'
 import { enemies } from './enemies'
@@ -18,7 +19,7 @@ function byId<T extends { id: Id }>(list: T[]): Record<Id, T> {
 export const content: ContentRegistry = {
   characters: byId(characters),
   locations: byId([beach, wreck, jungleEdge, signalRidge]),
-  dialogues: byId([intro]),
+  dialogues: byId([intro, castaway]),
   items: byId(items),
   recipes: byId(recipes),
   enemies: byId(enemies),

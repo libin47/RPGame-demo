@@ -6,7 +6,9 @@ import { useGameDispatch } from '@/composables/useGameDispatch'
 import CutsceneScreen from './CutsceneScreen.vue'
 import NormalScreen from './NormalScreen.vue'
 import CombatScreen from './CombatScreen.vue'
-import MenuOverlay from '@/components/menus/MenuOverlay.vue'
+import SystemMenuScreen from '@/components/menus/SystemMenuScreen.vue'
+import InventoryScreen from '@/components/menus/InventoryScreen.vue'
+import StatsScreen from '@/components/menus/StatsScreen.vue'
 
 const router = useRouter()
 const session = useSessionStore()
@@ -21,13 +23,18 @@ onMounted(() => {
 
 <template>
   <div class="shell" :style="{ filter: session.theme.filter }">
-    <CutsceneScreen v-if="session.ui.state.mode === 'cutscene'" />
+    <SystemMenuScreen v-if="session.ui.state.menu === 'system'" />
+    <InventoryScreen v-else-if="session.ui.state.menu === 'inventory'" />
+    <StatsScreen v-else-if="session.ui.state.menu === 'stats'" />
+    
+    <CutsceneScreen v-else-if="session.ui.state.mode === 'cutscene'" />
     <NormalScreen v-else-if="session.ui.state.mode === 'normal' || session.ui.state.mode === 'dialogue' || session.ui.state.mode === 'map' || session.ui.state.mode === 'craft' || session.ui.state.mode === 'dungeon'" />
     <CombatScreen v-else-if="session.ui.state.mode === 'combat' || session.ui.state.mode === 'combat_result'" />
+    
     <div v-else class="placeholder">
       <p>Loading...</p>
     </div>
-    <MenuOverlay v-if="session.ui.state.menu" />
+    
     <div v-if="session.ui.state.toasts.length" class="toasts">
       <div v-for="(t, i) in session.ui.state.toasts" :key="i" class="toast" @click="dispatch({ type: 'dismissToast' })">
         {{ t }}
@@ -80,11 +87,12 @@ onMounted(() => {
   border: 1px solid var(--ei-border);
   padding: 0.45rem 0.9rem;
   font-size: 0.82rem;
-  border-radius: 2px;
+  border-radius: var(--ei-radius-md);
   pointer-events: auto;
   cursor: pointer;
   text-align: center;
   white-space: nowrap;
+  box-shadow: var(--ei-shadow-md);
 }
 
 .unlock-notice {
@@ -94,32 +102,36 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.7);
 }
 
 .unlock-notice .card {
-  background: var(--ei-panel);
+  background: var(--ei-gradient-panel);
   border: 1px solid var(--ei-accent);
   padding: 1.5rem 2rem;
   text-align: center;
-  border-radius: 2px;
+  border-radius: var(--ei-radius-lg);
+  box-shadow: var(--ei-shadow-lg), var(--ei-shadow-glow-accent);
+  max-width: 80%;
 }
 
 .unlock-notice .label {
   font-size: 0.8rem;
-  color: var(--ei-muted);
+  color: var(--ei-text-muted);
   margin-bottom: 0.3rem;
 }
 
 .unlock-notice .name {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
+  font-weight: 600;
   color: var(--ei-accent);
   margin-bottom: 0.8rem;
+  text-shadow: 0 0 10px rgba(90, 154, 106, 0.3);
 }
 
 .unlock-notice .tap {
   font-size: 0.75rem;
-  color: var(--ei-muted);
+  color: var(--ei-text-muted);
   opacity: 0.7;
 }
 </style>

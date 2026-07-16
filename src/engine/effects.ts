@@ -101,6 +101,10 @@ export function applyEffects(effects: Effect[] | undefined, ctx: EffectContext):
         ctx.ui.dialogueNodeId = effect.nodeId ?? dialogue.start
         ctx.ui.previousMode = ctx.ui.mode
         ctx.ui.mode = dialogue.cutscene ? 'cutscene' : 'dialogue'
+        const startNode = dialogue.nodes.find((n) => n.id === ctx.ui.dialogueNodeId)
+        if (startNode) {
+          ctx.ui.narrativeLines = [startNode.text]
+        }
         events.push({ kind: 'mode', mode: ctx.ui.mode })
         break
       }

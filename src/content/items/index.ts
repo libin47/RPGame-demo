@@ -4,6 +4,7 @@ export const items: ItemDef[] = [
   {
     id: 'ration',
     name: '压缩饼干',
+    emoji: '🥫',
     description: '味道像纸板，但能填肚子。',
     weight: 0.3,
     stackable: true,
@@ -17,6 +18,7 @@ export const items: ItemDef[] = [
   {
     id: 'water_bottle',
     name: '饮用水',
+    emoji: '💧',
     description: '半瓶温热的水。',
     weight: 0.5,
     stackable: true,
@@ -27,6 +29,7 @@ export const items: ItemDef[] = [
   {
     id: 'knife',
     name: '求生刀',
+    emoji: '🔪',
     description: '刃口有缺口，仍能劈砍。',
     weight: 0.6,
     equipSlot: 'hands',
@@ -36,6 +39,7 @@ export const items: ItemDef[] = [
   {
     id: 'rope',
     name: '绳索',
+    emoji: '🪢',
     description: '结实的尼龙绳。',
     weight: 0.8,
     stackable: true,
@@ -43,6 +47,7 @@ export const items: ItemDef[] = [
   {
     id: 'wood',
     name: '木材',
+    emoji: '🪵',
     description: '潮湿但还能用的木料。',
     weight: 1.2,
     stackable: true,
@@ -51,6 +56,7 @@ export const items: ItemDef[] = [
   {
     id: 'scrap_metal',
     name: '金属碎片',
+    emoji: '🔩',
     description: '飞机残骸上敲下来的。',
     weight: 1,
     stackable: true,
@@ -58,6 +64,7 @@ export const items: ItemDef[] = [
   {
     id: 'spear',
     name: '简易长矛',
+    emoji: '🗡️',
     description: '削尖的木杆绑着金属尖。',
     weight: 1.5,
     equipSlot: 'hands',
@@ -67,6 +74,7 @@ export const items: ItemDef[] = [
   {
     id: 'camp_kit',
     name: '露营工具',
+    emoji: '⛺',
     description: '可以就地扎营。',
     weight: 2,
     stackable: true,
@@ -74,6 +82,7 @@ export const items: ItemDef[] = [
   {
     id: 'bandage',
     name: '绷带',
+    emoji: '🩹',
     description: '止血包扎。',
     weight: 0.2,
     stackable: true,
@@ -83,6 +92,7 @@ export const items: ItemDef[] = [
   {
     id: 'mutant_hide',
     name: '变异兽皮',
+    emoji: '🦴',
     description: '摸上去温热，仿佛还活着。',
     weight: 1.5,
     stackable: true,
@@ -90,12 +100,14 @@ export const items: ItemDef[] = [
   {
     id: 'charges',
     name: '实验性炸药',
+    emoji: '💣',
     description: '研究基地留下的不稳定装置。',
     weight: 3,
   },
   {
     id: 'cloth',
     name: '破布',
+    emoji: '🧵',
     description: '可以做成绷带或衣物衬里。',
     weight: 0.2,
     stackable: true,
@@ -103,6 +115,7 @@ export const items: ItemDef[] = [
   {
     id: 'warm_cloak',
     name: '兽皮披风',
+    emoji: '🧥',
     description: '提供保暖。',
     weight: 2,
     equipSlot: 'body',
@@ -112,6 +125,7 @@ export const items: ItemDef[] = [
   {
     id: 'watch',
     name: '机械手表',
+    emoji: '⌚',
     description: '还在走的旧手表。能让你知道准确时间。',
     weight: 0.1,
     equipSlot: 'accessory',

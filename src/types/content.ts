@@ -142,6 +142,7 @@ export interface DialogueDef {
 export interface ItemDef {
   id: Id
   name: string
+  emoji?: string
   description: string
   weight: number
   stackable?: boolean

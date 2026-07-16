@@ -13,7 +13,7 @@ export function writeSave(slot: number, snapshot: SaveSnapshot): SaveFile {
     version: SAVE_VERSION,
     savedAt: new Date().toISOString(),
     slot,
-    snapshot: structuredClone(snapshot),
+    snapshot: JSON.parse(JSON.stringify(snapshot)),
   }
   localStorage.setItem(saveKey(slot), JSON.stringify(file))
   return file
