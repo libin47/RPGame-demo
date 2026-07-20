@@ -10,10 +10,11 @@ import type { DockButton } from '@/components/ActionDock.vue'
 const session = useSessionStore()
 const { dispatch } = useGameDispatch()
 
-const interactionMode = computed(() =>
-  session.ui.state.mode === 'dialogue' ||
-  session.ui.state.mode === 'map' ||
-  session.ui.state.mode === 'craft',
+const interactionMode = computed(
+  () =>
+    session.ui.state.mode === 'dialogue' ||
+    session.ui.state.mode === 'map' ||
+    session.ui.state.mode === 'craft',
 )
 
 function systemButtons(): DockButton[] {
@@ -54,6 +55,7 @@ function sceneButtons(): DockButton[] {
 
   if (session.ui.state.mode === 'dungeon') {
     return [
+      { id: 'dungeonExplore', label: '探索洞穴' },
       { id: 'dungeon_n', label: '北' },
       { id: 'dungeon_s', label: '南' },
       { id: 'dungeon_e', label: '东' },
@@ -109,9 +111,11 @@ function sceneButtons(): DockButton[] {
           else if (id === 'closeCraft') dispatch({ type: 'closeCraft' })
           else if (id.startsWith('travel:')) dispatch({ type: 'travel', locationId: id.slice(7) })
           else if (id.startsWith('craft:')) dispatch({ type: 'craft', recipeId: id.slice(6) })
-          else if (id.startsWith('act:')) dispatch({ type: 'locationAction', actionId: id.slice(4) })
+          else if (id.startsWith('act:'))
+            dispatch({ type: 'locationAction', actionId: id.slice(4) })
           else if (id.startsWith('dialogue:'))
             dispatch({ type: 'chooseDialogue', choiceIndex: Number(id.slice(9)) })
+          else if (id === 'dungeonExplore') dispatch({ type: 'dungeonExplore' })
           else if (id === 'dungeon_n') dispatch({ type: 'dungeonMove', dir: 'n' })
           else if (id === 'dungeon_s') dispatch({ type: 'dungeonMove', dir: 's' })
           else if (id === 'dungeon_e') dispatch({ type: 'dungeonMove', dir: 'e' })

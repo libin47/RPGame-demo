@@ -223,6 +223,81 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
       if (act.type === 'sleep') {
         return executeAction(ctx, { type: 'sleep' })
       }
+      if (act.type === 'custom') {
+        if (act.customType === 'search_food') {
+          ctx.flags.flags['food_searched'] = true
+          ctx.player.survival.stamina = Math.max(0, ctx.player.survival.stamina - 10)
+          const rand = Math.random()
+          if (rand < 0.5) {
+            addItem(ctx.inventory, 'latiao', 1, ctx.content)
+            ctx.ui.narrativeLines.push('你找到了一包辣条！')
+          } else if (rand < 0.7) {
+            addItem(ctx.inventory, 'instant_noodles', 1, ctx.content)
+            ctx.ui.narrativeLines.push('你找到了一包方便面！')
+          } else {
+            ctx.ui.narrativeLines.push('你什么都没找到。')
+          }
+          return { ok: true, events }
+        }
+        if (act.customType === 'search_weapon') {
+          ctx.flags.flags['weapon_searched'] = true
+          const rand = Math.random()
+          if (rand < 0.5) {
+            addItem(ctx.inventory, 'spear', 1, ctx.content)
+            ctx.ui.narrativeLines.push('你找到了一根长矛！')
+          } else {
+            addItem(ctx.inventory, 'baseball_bat', 1, ctx.content)
+            ctx.ui.narrativeLines.push('你找到了一根棒球棒！')
+          }
+          return { ok: true, events }
+        }
+        if (act.customType === 'search_survivor') {
+          ctx.flags.flags['survivor_searched'] = true
+          const rand = Math.random()
+          if (rand < 0.5) {
+            ctx.player.survival.san -= 1
+            ctx.ui.narrativeLines.push('你被一颗人头吓了一跳，SAN-1。')
+          } else {
+            ctx.player.survival.hp = Math.max(1, ctx.player.survival.hp - 1)
+            ctx.ui.narrativeLines.push('你摔了个跟头，HP-1。')
+          }
+          return { ok: true, events }
+        }
+        if (act.customType === 'search_watch') {
+          ctx.flags.flags['watch_found'] = true
+          addItem(ctx.inventory, 'watch', 1, ctx.content)
+          ctx.ui.narrativeLines.push('你找到了一块手表！')
+          return { ok: true, events }
+        }
+        if (act.customType === 'search_san_monitor') {
+          ctx.flags.flags['san_monitor_found'] = true
+          addItem(ctx.inventory, 'san_monitor', 1, ctx.content)
+          ctx.ui.narrativeLines.push('你找到了一台SAN显示仪！')
+          return { ok: true, events }
+        }
+        if (act.customType === 'search_clothes') {
+          ctx.flags.flags['clothes_found'] = true
+          addItem(ctx.inventory, 'protective_suit', 1, ctx.content)
+          ctx.ui.narrativeLines.push('你找到了一套防护服！')
+          return { ok: true, events }
+        }
+        if (act.customType === 'search_backpack') {
+          ctx.flags.flags['backpack_found'] = true
+          addItem(ctx.inventory, 'backpack', 1, ctx.content)
+          ctx.ui.narrativeLines.push('你找到了一个背包！')
+          return { ok: true, events }
+        }
+        if (act.customType === 'search_map') {
+          ctx.flags.flags['map_found'] = true
+          addItem(ctx.inventory, 'tattered_map', 1, ctx.content)
+          ctx.ui.narrativeLines.push('你找到了一张残破地图！')
+          ctx.flags.flags['jungle_unlocked'] = true
+          unlockLocation(ctx.world, 'jungle_edge')
+          events.push({ kind: 'unlock', locationId: 'jungle_edge', name: '丛林边缘' })
+          ctx.ui.unlockNotices.push('丛林边缘')
+          return { ok: true, events }
+        }
+      }
       const ev = applyEffects(builtEffects, ectx)
       events.push(...ev)
       pushEvents(ctx.ui, ev)
@@ -273,49 +348,54 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
       advanceMinutes(ctx.world, minutes)
       const tick = applySurvivalForMinutes(ctx.player, ctx.world, minutes, ectx.warmthBonus)
       grantSkillXp(ctx.player, 'scout', 1)
-      const lines = ['你在附近仔细探索……']
+      const lines = []
       const loc = ctx.content.locations[ctx.world.locationId]
 
-      // Content-driven explore via location actions with type explore results in effects;
-      // also chance-based discoveries from interactables not yet found
-      if (ctx.world.locationId === 'beach' && !ctx.flags.flags['cave_found']) {
-        if (Math.random() < 0.55 || (ctx.player.skills.scout ?? 0) >= 2) {
-          ctx.flags.flags['cave_found'] = true
-          lines.push('你在礁石后发现了一个阴暗的洞窟入口。')
-          events.push({ kind: 'toast', text: '发现：海滩洞窟' })
-        }
-      }
-      if (ctx.world.locationId === 'beach' && !ctx.flags.flags['know_wreck']) {
-        ctx.flags.flags['know_wreck'] = true
-        const newly = unlockLocation(ctx.world, 'wreck')
-        lines.push('潮水退去，你看清了更远处的飞机残骸轮廓。')
-        if (newly) {
+      if (ctx.world.locationId === 'beach') {
+        const rand = Math.random()
+        if (!ctx.flags.flags['wreck_found'] && rand < 0.2) {
+          ctx.flags.flags['wreck_found'] = true
+          unlockLocation(ctx.world, 'wreck')
+          lines.push('你发现了飞机残骸，点击进入查看。')
           events.push({ kind: 'unlock', locationId: 'wreck', name: '飞机残骸' })
           ctx.ui.unlockNotices.push('飞机残骸')
+        } else if (!ctx.flags.flags['crab_found'] && rand < 0.4) {
+          ctx.flags.flags['crab_found'] = true
+          lines.push('散步时，你发现了一只螃蟹。')
+        } else if (!ctx.flags.flags['sea_folk_found'] && rand < 0.55) {
+          ctx.flags.flags['sea_folk_found'] = true
+          ctx.player.survival.san -= 3
+          lines.push('散步时，你发现了一个海民。')
+        } else if (!ctx.flags.flags['cave_found'] && rand < 0.7) {
+          ctx.flags.flags['cave_found'] = true
+          lines.push('散步时，你发现了一个洞穴入口。')
+        } else if (rand < 0.85) {
+          lines.push('你在沙滩上散步，没有发现什么特别的东西。')
+        } else {
+          ctx.player.survival.hp = Math.max(1, ctx.player.survival.hp - 1)
+          lines.push('你摔了个跟头，HP-1。')
         }
-      }
-      if (ctx.world.locationId === 'wreck' && !ctx.flags.flags['found_scrap']) {
-        ctx.flags.flags['found_scrap'] = true
-        addItem(ctx.inventory, 'scrap_metal', 2, ctx.content)
-        lines.push('你在座椅下翻出了一些金属碎片。')
-      }
-      if (ctx.world.locationId === 'jungle_edge' && !ctx.flags.flags['met_mutant']) {
-        lines.push('灌木丛后有什么东西在动……')
-        const ev = applyEffects([{ type: 'startCombat', enemyId: 'mutant_dog' }], ectx)
-        events.push(...ev)
-        pushEvents(ctx.ui, ev)
-        ctx.flags.flags['met_mutant'] = true
-        return { ok: true, events }
-      }
-
-      // Generic: reveal first hidden interactable
-      const hidden = loc?.interactables?.find(
-        (i) => i.onceFlag && !ctx.flags.flags[i.onceFlag] && evalWhen(i.when, condCtx(ctx)),
-      )
-      if (hidden && lines.length === 1) {
-        lines.push(`你注意到了${hidden.label}。`)
-      } else if (lines.length === 1) {
-        lines.push('这一带暂时没有新发现。')
+      } else if (ctx.world.locationId === 'wreck') {
+        if (!ctx.flags.flags['found_scrap']) {
+          ctx.flags.flags['found_scrap'] = true
+          addItem(ctx.inventory, 'scrap_metal', 2, ctx.content)
+          lines.push('你在座椅下翻出了一些金属碎片。')
+        } else {
+          lines.push('你在飞机残骸周围探索了一番，没有新发现。')
+        }
+      } else if (ctx.world.locationId === 'jungle_edge') {
+        if (!ctx.flags.flags['met_mutant']) {
+          lines.push('灌木丛后有什么东西在动……')
+          const ev = applyEffects([{ type: 'startCombat', enemyId: 'mutant_dog' }], ectx)
+          events.push(...ev)
+          pushEvents(ctx.ui, ev)
+          ctx.flags.flags['met_mutant'] = true
+          return { ok: true, events }
+        } else {
+          lines.push('你在丛林边缘探索了一番，没有新发现。')
+        }
+      } else {
+        lines.push('你在附近探索了一番，没有新发现。')
       }
 
       updateNarrative(ctx, lines, tick.texts)
@@ -439,6 +519,47 @@ export function executeAction(ctx: GameContext, action: GameAction): ActionResul
           pushEvents(ctx.ui, ev)
         }
       }
+      return { ok: true, events }
+    }
+
+    case 'dungeonExplore': {
+      advanceMinutes(ctx.world, 10)
+      const tick = applySurvivalForMinutes(ctx.player, ctx.world, 10, ectx.warmthBonus)
+      const cell = ctx.world.dungeonId
+        ? getCell(ctx.content, ctx.world.dungeonId, ctx.world.dungeonX, ctx.world.dungeonY)
+        : undefined
+
+      const exploreLines: string[] = []
+
+      if (ctx.world.dungeonId === 'beach_cave') {
+        if (ctx.world.dungeonY === 0) {
+          const rand = Math.random()
+          if (rand < 0.5) {
+            addItem(ctx.inventory, 'ration', 1, ctx.content)
+            exploreLines.push('你在洞穴中发现了一些食物！')
+          } else {
+            exploreLines.push('你在洞穴中发现了一个变异生物！')
+            const ev = applyEffects([{ type: 'startCombat', enemyId: 'mutant_crab' }], ectx)
+            events.push(...ev)
+            pushEvents(ctx.ui, ev)
+          }
+        } else if (ctx.world.dungeonY === -1) {
+          addItem(ctx.inventory, 'ration', 1, ctx.content)
+          exploreLines.push('你在洞穴中发现了一些食物！')
+        } else if (ctx.world.dungeonY === -2) {
+          exploreLines.push('一群变异猴子向你袭来！')
+          const ev = applyEffects([{ type: 'startCombat', enemyId: 'monkey' }], ectx)
+          events.push(...ev)
+          pushEvents(ctx.ui, ev)
+        }
+      } else {
+        exploreLines.push('你在洞穴中探索了一番，没有新发现。')
+      }
+
+      ctx.ui.narrativeLines = [...exploreLines]
+      updateNarrative(ctx, ctx.ui.narrativeLines, tick.texts)
+      for (const t of tick.texts) events.push({ kind: 'text', text: t })
+      if (tick.dead) events.push({ kind: 'ending', endingId: 'death' })
       return { ok: true, events }
     }
 

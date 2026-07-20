@@ -16,6 +16,7 @@ export type GameAction =
   | { type: 'combatFlee' }
   | { type: 'confirmCombatResult' }
   | { type: 'dungeonMove'; dir: 'n' | 's' | 'e' | 'w' }
+  | { type: 'dungeonExplore' }
   | { type: 'exitDungeon' }
   | { type: 'camp' }
   | { type: 'sleep' }

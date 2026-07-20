@@ -79,19 +79,44 @@ export function playerAttack(
     return { texts: [`${skill.name} 冷却中（${cd}）。`], finished: false }
   }
 
+  if (skill.staminaCost && player.survival.stamina < skill.staminaCost) {
+    return { texts: ['体力不足。'], finished: false }
+  }
+
   const level = player.skills[skill.skill] ?? 1
-  const dmg = evalDamageFormula(skill.damageFormula, {
+  let dmg = evalDamageFormula(skill.damageFormula, {
     STR: player.attrs.strength,
     AGI: player.attrs.agility,
     LEVEL: level,
     BASE: baseWeaponDamage,
   })
+
+  const critChance = skill.critChance
+    ? evalDamageFormula(skill.critChance, {
+        STR: player.attrs.strength,
+        AGI: player.attrs.agility,
+        LEVEL: level,
+        BASE: baseWeaponDamage,
+      }) / 100
+    : 0
+  const isCrit = Math.random() < critChance
+  if (isCrit) {
+    dmg = Math.round(dmg * (skill.critMultiplier ?? 1.5))
+  }
+
   const mitigated = Math.max(1, dmg - target.armor)
   target.hp -= mitigated
   combat.player.cooldowns[skill.id] = skill.cooldown
   tickCooldowns(combat.player)
+  if (skill.staminaCost) {
+    player.survival.stamina = Math.max(0, player.survival.stamina - skill.staminaCost)
+  }
 
-  const texts = [`你使用【${skill.name}】攻击 ${target.name}，造成 ${mitigated} 点伤害。`]
+  const texts = [
+    isCrit
+      ? `你使用【${skill.name}】暴击 ${target.name}，造成 ${mitigated} 点伤害！`
+      : `你使用【${skill.name}】攻击 ${target.name}，造成 ${mitigated} 点伤害。`,
+  ]
 
   if (target.hp <= 0) {
     texts.push(`${target.name} 倒下了。`)
@@ -187,6 +212,67 @@ export function defaultPlayerSkills(): CombatSkillDef[] {
       cooldown: 2,
       damageFormula: 'STR * 1.2 + 8 + LEVEL',
       description: '高伤害，冷却 2 回合',
+    },
+    {
+      id: 'spear_thrust',
+      name: '刺击',
+      skill: 'melee',
+      cooldown: 0,
+      damageFormula: 'STR * BASE * 0.5',
+      description: '用矛类武器进行精准刺击',
+      weaponType: 'spear',
+      critChance: 'AGI / 100',
+      critMultiplier: 1.5,
+      staminaCost: 1,
+    },
+    {
+      id: 'spear_sweep',
+      name: '扫击',
+      skill: 'melee',
+      cooldown: 2,
+      damageFormula: 'STR * BASE * 0.8',
+      description: '用矛类武器进行范围横扫',
+      weaponType: 'spear',
+      unlockLevel: 10,
+      critChance: 'AGI / 100',
+      critMultiplier: 1.5,
+      staminaCost: 10,
+    },
+    {
+      id: 'bat_strike',
+      name: '击打',
+      skill: 'melee',
+      cooldown: 0,
+      damageFormula: 'STR * BASE * 0.5',
+      description: '用棒类武器进行击打',
+      weaponType: 'bat',
+      critChance: 'AGI / 100',
+      critMultiplier: 1.5,
+      staminaCost: 1,
+    },
+    {
+      id: 'bat_smash',
+      name: '当头一棒',
+      skill: 'melee',
+      cooldown: 2,
+      damageFormula: 'STR * BASE * 5',
+      description: '用棒类武器进行强力重击',
+      weaponType: 'bat',
+      unlockLevel: 20,
+      critChance: 'AGI / 100',
+      critMultiplier: 1.5,
+      staminaCost: 50,
+    },
+    {
+      id: 'sea_shout',
+      name: '海民大喝',
+      skill: 'brawl',
+      cooldown: 2,
+      damageFormula: 'STR * BASE * 0.5 * LEVEL',
+      description: '模仿海民的震慑大喝',
+      critChance: 'AGI / 100',
+      critMultiplier: 1.5,
+      staminaCost: 1,
     },
   ]
 }

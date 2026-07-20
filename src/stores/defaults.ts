@@ -28,6 +28,7 @@ export function createPlayer(character: CharacterDef, playerName?: string): Play
       thirst: 70,
       san: 80 + (character.weaknesses?.san ?? 0),
       warmth: 55,
+      stamina: 100,
     },
     survivalMax: {
       hp: 100,
@@ -35,6 +36,7 @@ export function createPlayer(character: CharacterDef, playerName?: string): Play
       thirst: 100,
       san: 100,
       warmth: 100,
+      stamina: 100,
     },
     attrs,
     skills: {

@@ -5,7 +5,7 @@ export type Season = 'spring' | 'summer' | 'autumn' | 'winter'
 export type Weather = 'clear' | 'rain' | 'storm' | 'fog'
 
 export type BaseAttr = 'strength' | 'agility' | 'constitution' | 'intelligence'
-export type SurvivalAttr = 'hp' | 'hunger' | 'thirst' | 'san' | 'warmth'
+export type SurvivalAttr = 'hp' | 'hunger' | 'thirst' | 'san' | 'warmth' | 'stamina'
 export type SkillId =
   | 'scout'
   | 'chop'
@@ -89,6 +89,7 @@ export interface LocationAction {
   enemyId?: string
   dialogueId?: string
   recipeId?: string
+  customType?: string
 }
 
 export interface InteractableDef {
@@ -180,6 +181,11 @@ export interface CombatSkillDef {
   damageFormula: string
   hitBonus?: number
   description?: string
+  weaponType?: string
+  unlockLevel?: number
+  critChance?: string
+  critMultiplier?: number
+  staminaCost?: number
 }
 
 export interface EnemyDef {
