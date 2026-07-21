@@ -1,8 +1,12 @@
 // effect.ts - 效果数据结构
 
-/**
- * 效果类型枚举
- */
+import type { RecipeType } from './recipe'
+import type { FlagOperation } from './flag'
+
+// ============================================================
+// 效果类型枚举
+// ============================================================
+
 export enum EffectType {
   /** 属性变动 */
   ATTRIBUTE = 'attribute',
@@ -20,15 +24,22 @@ export enum EffectType {
   CG = 'cg',
   /** 事件触发 */
   EVENT = 'event',
+  /** 解锁配方 */
+  UNLOCK_RECIPE = 'unlockRecipe',
+  /** 解锁技能 */
+  UNLOCK_SKILL = 'unlockSkill',
+  /** 获得经验 */
+  GAIN_EXP = 'gainExp',
   /** 条件判断 */
   CONDITION = 'condition',
   /** 复合效果（多个效果组合） */
   COMPOSITE = 'composite',
 }
 
-/**
- * 属性类型
- */
+// ============================================================
+// 属性类型
+// ============================================================
+
 export enum AttributeType {
   // 生存属性
   HP = 'hp',
@@ -65,89 +76,78 @@ export enum AttributeType {
   SKILL_LEVEL = 'skillLevel',
   SKILL_EXP = 'skillExp',
 
-  // 其他属性
-  RECOVERY_RATE_COEFFICIENT = 'recoveryRateCoefficient', // 恢复速率系数
-  SATIETY_UPPER_LIMIT_COEFFICIENT = 'satietyUpperLimitCoefficient', // 饱食度上限系数
-  SATIETY_LOSS_COEFFICIENT = 'satietyLossCoefficient', // 饱食度损失系数
-  STAMINA_CONSUMPTION_COEFFICIENT = 'staminaConsumptionCoefficient', // 体力消耗系数
-  STAMINA_RECOVERY_COEFFICIENT = 'staminaRecoveryCoefficient', // 体力恢复系数
-  STAMINA_RECOVERY_FIX = 'staminaRecoveryFix', // 体力恢复修正
-  SAN_MODIFIER = 'sanModifier', // SAN修正指数
-  TEMPERATURE_LOW = 'temperatureLow', // 适宜温度低值
-  TEMPERATURE_HIGH = 'temperatureHigh', // 适宜温度高值
-  CARRY_WEIGHT_MODIFIER = 'carryWeightModifier', // 负重修正
+  // 系数属性
+  RECOVERY_RATE_COEFFICIENT = 'recoveryRateCoefficient',
+  SATIETY_UPPER_LIMIT_COEFFICIENT = 'satietyUpperLimitCoefficient',
+  SATIETY_LOSS_COEFFICIENT = 'satietyLossCoefficient',
+  STAMINA_CONSUMPTION_COEFFICIENT = 'staminaConsumptionCoefficient',
+  STAMINA_RECOVERY_COEFFICIENT = 'staminaRecoveryCoefficient',
+  STAMINA_RECOVERY_FIX = 'staminaRecoveryFix',
+  SAN_MODIFIER = 'sanModifier',
+  TEMPERATURE_LOW = 'temperatureLow',
+  TEMPERATURE_HIGH = 'temperatureHigh',
+  CARRY_WEIGHT_MODIFIER = 'carryWeightModifier',
 }
 
-/**
- * 属性操作类型
- */
+// ============================================================
+// 属性操作
+// ============================================================
+
 export enum AttributeOperation {
-  /** 设置（覆盖） */
   SET = 'set',
-  /** 增加 */
   ADD = 'add',
-  /** 减少 */
   SUBTRACT = 'subtract',
-  /** 乘以 */
   MULTIPLY = 'multiply',
-  /** 除以 */
   DIVIDE = 'divide',
 }
 
-/**
- * 属性效果
- */
+// ============================================================
+// 效果接口
+// ============================================================
+
+/** 属性效果 */
 export interface AttributeEffect {
   type: EffectType.ATTRIBUTE
-  /** 目标属性 */
   attribute: AttributeType
-  /** 操作类型 */
   operation: AttributeOperation
-  /** 变动值 */
   value: number
-  /** 如果是武器熟练度/技能等，指定具体类型 */
+  /** 子类型（武器熟练度/技能等需要指定具体类型时使用） */
   subType?: string
 }
 
-/**
- * 状态类型
- */
-export enum StatusType {
-  /** 属性变动引发的常驻状态 */
-  HUNGER = 'hunger',
-  COLD = 'cold',
-  HOT = 'hot',
-  FREEZING = 'freezing',
-  SCORCHING = 'scorching',
-  LIGHT_LOAD = 'lightLoad',
-  HEAVY_LOAD = 'heavyLoad',
-  OVERLOAD = 'overload',
-
-  /** 临时状态（由具体配置定义） */
-  TEMPORARY = 'temporary',
-
-  /** 常驻状态（由具体配置定义） */
-  PERMANENT = 'permanent',
-}
-
-/**
- * 状态效果
- */
+/** 状态效果（施加或移除异常状态） */
 export interface StatusEffect {
   type: EffectType.STATUS
-  /** 状态ID */
+  /** 状态模板ID（对应 status.ts 中的 StatusConfig.id） */
   statusId: string
   /** 是施加(true)还是移除(false) */
   apply: boolean
-  /** 持续时间（回合数/分钟数，-1表示常驻） */
+  /** 持续时间值（-1=使用状态模板默认值） */
   duration?: number
-  /** 状态的具体效果参数 */
+  /** 持续时间单位（不填则使用状态模板默认单位） */
+  durationUnit?: 'turn' | 'minute' | 'hour' | 'permanent'
+  /** 施加层数（apply=true时生效，受状态模板叠加规则约束） */
+  stackCount?: number
+  /** 来源描述（用于战斗日志等，如"来自毒蛇之咬"） */
+  sourceId?: string
+  /** 覆盖状态模板的参数 */
   params?: Record<string, number>
 }
 
-/**
- * 物品变动类型
- */
+/** 物品效果 */
+export interface ItemEffect {
+  type: EffectType.ITEM
+  itemId: string
+  changeType: ItemChangeType
+  quantity?: number
+  randomQuantity?: {
+    min: number
+    max: number
+  }
+  probability?: number
+  condition?: Condition
+}
+
 export enum ItemChangeType {
   ADD = 'add',
   REMOVE = 'remove',
@@ -155,107 +155,123 @@ export enum ItemChangeType {
   UNEQUIP = 'unequip',
 }
 
-/**
- * 物品效果
- */
-export interface ItemEffect {
-  type: EffectType.ITEM
-  /** 物品ID */
-  itemId: string
-  /** 变动类型 */
-  changeType: ItemChangeType
-  /** 数量 */
-  quantity?: number
-  /** 是否随机数量 */
-  randomQuantity?: {
-    min: number
-    max: number
-  }
-  /** 获得概率 (0-1) */
-  probability?: number
-  /** 条件（满足条件才生效） */
-  condition?: Condition
-}
-
-/**
- * 场景效果
- */
+/** 场景切换效果 */
 export interface SceneEffect {
   type: EffectType.SCENE
-  /** 目标场景ID */
   sceneId: string
-  /** 子场景ID（可选） */
   subSceneId?: string
-  /** 是否立即切换 */
   immediate?: boolean
 }
 
-/**
- * 标志位操作
- */
-export enum FlagOperation {
-  SET = 'set',
-  UNSET = 'unset',
-  TOGGLE = 'toggle',
-  INCREMENT = 'increment',
-  DECREMENT = 'decrement',
-}
-
-/**
- * 标志位效果
- */
+/** 标志位效果 */
 export interface FlagEffect {
   type: EffectType.FLAG
-  /** 标志位ID */
   flagId: string
-  /** 操作类型 */
   operation: FlagOperation
-  /** 值（SET/INCREMENT/DECREMENT时使用） */
   value?: number | string | boolean
 }
 
-/**
- * 战斗效果
- */
+
+/** 战斗效果 */
 export interface BattleEffect {
   type: EffectType.BATTLE
-  /** 敌人配置ID */
   enemyId: string
-  /** 胜利后的效果 */
   victoryEffects?: Effect[]
-  /** 失败后的效果 */
   defeatEffects?: Effect[]
-  /** 是否可逃跑 */
   canEscape?: boolean
-  /** 是否有初见加成 */
   firstEncounterBonus?: boolean
 }
 
-/**
- * CG效果
- */
+/** CG效果 */
 export interface CGEffect {
   type: EffectType.CG
-  /** CG配置ID */
   cgId: string
 }
 
-/**
- * 事件触发效果
- */
+/** 事件触发效果 */
 export interface EventTriggerEffect {
   type: EffectType.EVENT
-  /** 事件ID */
   eventId: string
-  /** 触发时机（立即触发/下次进入场景触发/特定条件触发） */
   triggerTiming: 'immediate' | 'onSceneEnter' | 'onConditionMet'
-  /** 触发条件 */
   condition?: Condition
 }
 
-/**
- * 条件比较运算符
- */
+/** 解锁配方效果 */
+export interface UnlockRecipeEffect {
+  type: EffectType.UNLOCK_RECIPE
+  recipeId: string
+  recipeType: RecipeType
+}
+
+/** 解锁技能效果 */
+export interface UnlockSkillEffect {
+  type: EffectType.UNLOCK_SKILL
+  skillId: string
+}
+
+/** 获得经验效果 */
+export interface GainExpEffect {
+  type: EffectType.GAIN_EXP
+  /** 经验目标类型 */
+  target: GainExpTarget
+  /** 目标ID（技能ID/武器类型ID/属性类型） */
+  targetId: string
+  /** 经验值 */
+  amount: number
+}
+
+export enum GainExpTarget {
+  /** 生存技能 */
+  SURVIVAL_SKILL = 'survivalSkill',
+  /** 武器熟练度 */
+  WEAPON_PROFICIENCY = 'weaponProficiency',
+  /** 战斗技能 */
+  BATTLE_SKILL = 'battleSkill',
+  /** 基础属性（力量/敏捷/智力/体质） */
+  ATTRIBUTE = 'attribute',
+}
+
+/** 复合效果 */
+export interface CompositeEffect {
+  type: EffectType.COMPOSITE
+  effects: Effect[]
+  executionMode: 'sequential' | 'random' | 'weighted_random'
+  weights?: number[]
+}
+
+// ============================================================
+// 效果联合类型
+// ============================================================
+
+export type Effect =
+  | AttributeEffect
+  | StatusEffect
+  | ItemEffect
+  | SceneEffect
+  | FlagEffect
+  | BattleEffect
+  | CGEffect
+  | EventTriggerEffect
+  | UnlockRecipeEffect
+  | UnlockSkillEffect
+  | GainExpEffect
+  | CompositeEffect
+
+// ============================================================
+// 效果结果
+// ============================================================
+
+export interface EffectResult {
+  effect: Effect
+  probability?: number
+  condition?: Condition
+  description?: string
+}
+
+// ============================================================
+// 条件系统
+// ============================================================
+
 export enum ComparisonOperator {
   EQUAL = 'equal',
   NOT_EQUAL = 'notEqual',
@@ -270,36 +286,21 @@ export enum ComparisonOperator {
   NOT_EXISTS = 'notExists',
 }
 
-/**
- * 条件逻辑运算符（用于复合条件）
- */
 export enum LogicOperator {
   AND = 'and',
   OR = 'or',
   NOT = 'not',
 }
 
-/**
- * 条件定义
- */
 export interface Condition {
-  /** 逻辑运算符（如果是复合条件） */
   logic?: LogicOperator
-  /** 子条件列表（用于复合条件） */
   subConditions?: Condition[]
-  /** 条件检查的目标 */
   target?: ConditionTarget
-  /** 比较运算符 */
   operator?: ComparisonOperator
-  /** 比较值 */
   value?: number | string | boolean | number[]
-  /** 取值范围的第二个值（BETWEEN时使用） */
   value2?: number
 }
 
-/**
- * 条件检查目标类型
- */
 export enum ConditionTargetType {
   ATTRIBUTE = 'attribute',
   FLAG = 'flag',
@@ -313,88 +314,17 @@ export enum ConditionTargetType {
   CORRUPTION = 'corruption',
   SKILL = 'skill',
   WEAPON_PROFICIENCY = 'weaponProficiency',
+  /** 配方是否已解锁 */
+  RECIPE_UNLOCKED = 'recipeUnlocked',
+  /** 玩家金币数量 */
+  PLAYER_GOLD = 'playerGold',
+  /** 负重率 */
+  CARRY_WEIGHT_RATE = 'carryWeightRate',
 }
 
-/**
- * 条件目标
- */
 export interface ConditionTarget {
   type: ConditionTargetType
-  /** 具体目标ID */
   id?: string
-  /** 属性子类型（如果type是attribute） */
   attributeType?: AttributeType
-  /** 子类型（武器类型、技能类型等） */
   subType?: string
-}
-
-/**
- * 复合效果（包含多个子效果）
- */
-export interface CompositeEffect {
-  type: EffectType.COMPOSITE
-  /** 子效果列表 */
-  effects: Effect[]
-  /** 执行方式 */
-  executionMode: 'sequential' | 'random' | 'weighted_random'
-  /** 权重（weighted_random时使用） */
-  weights?: number[]
-}
-
-/**
- * 效果联合类型
- */
-export type Effect =
-  | AttributeEffect
-  | StatusEffect
-  | ItemEffect
-  | SceneEffect
-  | FlagEffect
-  | BattleEffect
-  | CGEffect
-  | EventTriggerEffect
-  | CompositeEffect
-
-/**
- * 效果结果（包含概率和条件）
- */
-export interface EffectResult {
-  /** 效果 */
-  effect: Effect
-  /** 触发概率 (0-1, 1为必定触发) */
-  probability?: number
-  /** 触发条件 */
-  condition?: Condition
-  /** 效果描述（用于显示） */
-  description?: string
-}
-
-/**
- * 选项结果配置
- */
-export interface OptionResult {
-  /** 结果类型 */
-  type: 'end' | 'battle' | 'trade' | 'cg' | 'nextEvent' | 'composite'
-  /** 子事件ID（nextEvent时使用） */
-  nextEventId?: string
-  /** 参数（战斗敌人ID、CG ID等） */
-  params?: Record<string, unknown>
-  /** 效果列表 */
-  effects?: EffectResult[]
-  /** 战斗胜利后的子事件 */
-  victoryEventId?: string
-  /** 战斗失败后的子事件 */
-  defeatEventId?: string
-}
-
-/**
- * 事件效果批处理配置
- */
-export interface EventEffectConfig {
-  /** 事件开始时触发的效果 */
-  onEventStart?: EffectResult[]
-  /** 事件结束时触发的效果 */
-  onEventEnd?: EffectResult[]
-  /** 事件内选项对应的效果 */
-  optionEffects?: Record<string, OptionResult>
 }

@@ -3,7 +3,11 @@
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
 import type { ItemId } from './item' // 假设 item.ts 中导出了 ItemId 类型
-
+import type {
+  TimeOfDay,
+  WeatherType,
+  SeasonPhase,
+} from './seasonWeather'
 // ============================================================
 // 基础场景类型（Scene 和 SubScene 的公共字段）
 // ============================================================
@@ -459,146 +463,6 @@ export enum InteractionCostType {
   ITEM = 'item',
 }
 
-// ============================================================
-// 时间、天气、季节
-// ============================================================
-
-/**
- * 时间段枚举
- */
-export enum TimeOfDay {
-  // 深夜 23:00-01:00
-  LATE_NIGHT = 'lateNight',
-  // 凌晨 02:00-04:00
-  EARLY_MORNING = 'earlyMorning',
-  // 清晨 05:00-07:00
-  DAWN = 'dawn',
-  // 上午 08:00-12:00
-  MORNING = 'morning',
-  // 下午 13:00-17:00
-  AFTERNOON = 'afternoon',
-  // 傍晚 18:00-20:00
-  DUSK = 'dusk',
-  // 夜晚 21:00-22:00（注意：23点起为深夜 LATE_NIGHT）
-  NIGHT = 'night',
-}
-
-/**
- * 天气类型枚举
- */
-export enum WeatherType {
-  SUNNY = 'sunny',
-  CLOUDY = 'cloudy',
-  OVERCAST = 'overcast',
-  RAIN = 'rain',
-  SNOW = 'snow',
-  STORM = 'storm',
-  BLIZZARD = 'blizzard',
-  DUST = 'dust',
-  FOG = 'fog',
-  THUNDERSTORM = 'thunderstorm',
-  ACID_RAIN = 'acidRain',
-  BLOOD_RAIN = 'bloodRain',
-}
-
-/**
- * 季节阶段枚举
- */
-export enum SeasonPhase {
-  EARLY_SPRING = 'earlySpring',
-  MID_SPRING = 'midSpring',
-  LATE_SPRING = 'lateSpring',
-  EARLY_SUMMER = 'earlySummer',
-  MID_SUMMER = 'midSummer',
-  LATE_SUMMER = 'lateSummer',
-  EARLY_AUTUMN = 'earlyAutumn',
-  MID_AUTUMN = 'midAutumn',
-  LATE_AUTUMN = 'lateAutumn',
-  EARLY_WINTER = 'earlyWinter',
-  MID_WINTER = 'midWinter',
-  LATE_WINTER = 'lateWinter',
-}
-
-// ============================================================
-// 地图与移动
-// ============================================================
-
-/**
- * 场景地图配置
- * 用于大地图移动画面，定义场景在地图上的位置和移动路径
- */
-export interface SceneMapConfig {
-  // 场景ID（关联Scene.id）
-  sceneId: string
-  // 场景在地图上的坐标
-  coordinates: {
-    x: number
-    y: number
-  }
-  // 场景地图图标资源ID
-  mapIconId?: string
-  // 是否已探索（未探索时在地图上显示为"???"或迷雾）
-  isExplored: boolean
-  // 首次探索触发的效果（如获得经验、解锁新场景等）
-  onFirstExploreEffects?: EffectResult[]
-  // 探索条件（不满足时无法前往）
-  exploreCondition?: Condition
-  // 探索条件不满足时的提示文本
-  exploreConditionHint?: string
-
-  // 从此场景到其他场景的移动路径列表
-  // 注意：路径是单向的，若需双向移动，两个场景的 SceneMapConfig 中需各自配置
-  travelPaths: TravelPath[]
-}
-
-/**
- * 移动路径
- * 定义从当前场景到目标场景的移动信息
- * 注意：此路径是单向的。如需从A到B再从B返回A，
- * 需在A和B的 SceneMapConfig.travelPaths 中分别配置。
- */
-export interface TravelPath {
-  // 目标场景ID
-  targetSceneId: string
-  // 目标子场景ID（可选，若填则直接进入子场景）
-  targetSubSceneId?: string
-  // 移动所需时间（游戏内分钟数）
-  travelTimeMinutes: number
-  // 移动基础消耗体力
-  staminaCost: number
-  // 路径是否可用（受条件限制）
-  isAvailable: boolean
-  // 路径可用条件
-  availableCondition?: Condition
-  // 路径描述（如"沿着海岸线步行"、"穿过茂密的丛林"）
-  pathDescription: string
-  // 移动途中是否可能触发遭遇
-  canEncounter: boolean
-  // 遭遇事件ID（canEncounter为true时，移动途中可能触发此事件）
-  encounterEventId?: string
-  // 遭遇触发概率（0-1）
-  encounterProbability?: number
-  // 移动所需条件（如需要特定物品、技能等级等）
-  requirements?: TravelRequirement[]
-  // 移动途中的天气影响系数（影响实际移动时间）
-  weatherImpactCoefficient?: number
-}
-
-/**
- * 移动条件需求
- */
-export interface TravelRequirement {
-  // 需求类型
-  type: 'item' | 'skill' | 'flag' | 'attribute'
-  // 需求具体ID（物品ID/技能ID/标志位ID/属性类型）
-  id: string
-  // 需求值（如技能等级>=3、属性>=10等）
-  value?: number
-  // 比较运算符
-  operator?: 'equal' | 'greaterEqual' | 'greater' | 'lessEqual' | 'less'
-  // 需求不满足时的提示文本
-  hint: string
-}
 
 // ============================================================
 // 场景注册表
@@ -612,8 +476,6 @@ export interface SceneRegistry {
   scenes: Record<string, Scene>
   // 所有子场景
   subScenes: Record<string, SubScene>
-  // 场景地图配置
-  sceneMaps: Record<string, SceneMapConfig>
   // 玩家初始场景ID（游戏开始时所在场景）
   initialSceneId: string
   // 玩家初始子场景ID（可选，如游戏开始在沙滩上的飞机残骸旁）

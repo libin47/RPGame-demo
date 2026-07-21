@@ -206,15 +206,15 @@ export interface CGOption {
 
 // CG选项结果（联合类型版本）
 export type CGOptionResult =
-  | NextFrameResult
-  | NextCGResult
-  | EnterSceneResult
-  | TriggerEventResult
-  | TriggerBattleResult
-  | EndingResult
+  | CGNextFrameResult
+  | CGNextCGResult
+  | CGEnterSceneResult
+  | CGTriggerEventResult
+  | CGTriggerBattleResult
+  | CGEndingResult
 
 // 跳转到下一帧
-export interface NextFrameResult {
+export interface CGNextFrameResult {
   type: 'nextFrame'
   // 目标帧ID（必填）
   nextFrameId: string
@@ -225,7 +225,7 @@ export interface NextFrameResult {
 }
 
 // 跳转到另一个CG
-export interface NextCGResult {
+export interface CGNextCGResult {
   type: 'nextCG'
   // 目标CG的ID（必填）
   nextCGId: string
@@ -236,7 +236,7 @@ export interface NextCGResult {
 }
 
 // 结束CG，进入游戏场景
-export interface EnterSceneResult {
+export interface CGEnterSceneResult {
   type: 'enterScene'
   // 场景信息（必填）
   sceneInfo: {
@@ -250,7 +250,7 @@ export interface EnterSceneResult {
 }
 
 // 触发事件
-export interface TriggerEventResult {
+export interface CGTriggerEventResult {
   type: 'triggerEvent'
   // 事件ID（必填）
   eventId: string
@@ -261,7 +261,7 @@ export interface TriggerEventResult {
 }
 
 // 触发战斗
-export interface TriggerBattleResult {
+export interface CGTriggerBattleResult {
   type: 'triggerBattle'
   // 敌人ID（必填）
   enemyId: string
@@ -276,7 +276,7 @@ export interface TriggerBattleResult {
 }
 
 // 进入结局
-export interface EndingResult {
+export interface CGEndingResult {
   type: 'ending'
   // 结局ID
   endingId: string
@@ -284,4 +284,7 @@ export interface EndingResult {
   effects?: EffectResult[]
   // 设置标志位
   setFlags?: Record<string, number | string | boolean>
+}
+export interface CGRegistry {
+  cgs: Record<string, CGScene>
 }

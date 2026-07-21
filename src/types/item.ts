@@ -3,13 +3,10 @@
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
 import type { AttributeType } from './effect'
-
+import type { RecipeType } from './recipe'
 // ============================================================
 // 基础标识类型
 // ============================================================
-
-/** 物品唯一ID（branded type，编译后为 string） */
-export type ItemId = string & { readonly __brand: 'ItemId' }
 
 /** 物品类别 */
 export enum ItemCategory {
@@ -60,7 +57,7 @@ export enum ItemRarity {
  */
 export interface BaseItem {
   /** 物品唯一ID */
-  id: ItemId
+  id: string
   /** 物品名称（显示用） */
   name: string
   /** 物品备注（开发者可见） */
@@ -132,12 +129,10 @@ export interface DurabilityConfig {
   repairMaterials?: RepairMaterial[]
   /** 修理所需工作台等级（0表示徒手可修） */
   repairWorkbenchLevel?: number
-  /** 每次修理恢复的耐久度（固定值或百分比，百分比为0-1） */
-  repairAmount: number | { type: 'percentage'; value: number }
   /** 耐久度归零后物品是否销毁（false则变为"损坏的XXX"状态，不可用但可修理） */
   destroyOnBreak: boolean
   /** 损坏后的替代物品ID（destroyOnBreak为false时生效） */
-  brokenItemId?: ItemId
+  brokenItemId?: string
   /** 耐久度影响效果系数（低耐久度是否影响性能） */
   performanceDegradation?: DurabilityPerformanceDegradation
 }
@@ -159,7 +154,7 @@ export interface DurabilityPerformanceDegradation {
  */
 export interface RepairMaterial {
   /** 材料物品ID */
-  itemId: ItemId
+  itemId: string
   /** 所需数量 */
   quantity: number
 }
@@ -319,7 +314,7 @@ export interface ToolItem extends BaseItem {
   durability?: DurabilityConfig
 
   /** 装备槽位（工具通常手持，部分可放在工具腰带） */
-  equipmentSlot: EquipmentSlot.TOOL
+  equipmentSlot: EquipmentSlot.TOOL | EquipmentSlot.WEAPON | EquipmentSlot.LIGHT
 
   /** 工具类型ID（如'axe'、'pickaxe'、'torch'、'fishingRod'等） */
   toolTypeId: string
@@ -362,7 +357,7 @@ export interface ConsumableItem extends BaseItem {
   /** 是否可以多次使用（如某种药膏可以用3次） */
   usesRemaining?: number
   /** 使用完毕后是否留下容器（如喝完水留下空瓶） */
-  remainingItemId?: ItemId
+  remainingItemId?: string
 
   /** 使用时的文本描述（覆盖默认的"使用了XXX"） */
   useText?: string
@@ -530,19 +525,6 @@ export interface RecipeItem extends BaseItem {
   learnTimeMinutes: number
 }
 
-/**
- * 配方类型
- */
-export enum RecipeType {
-  /** 制作配方 */
-  CRAFT = 'craft',
-  /** 建造配方 */
-  BUILD = 'build',
-  /** 烹饪配方 */
-  COOK = 'cook',
-  /** 修理配方（解锁高级修理能力） */
-  REPAIR = 'repair',
-}
 
 // ============================================================
 // 任务物品
@@ -575,7 +557,7 @@ export interface MiscItem extends BaseItem {
   /** 是否可以与其他物品组合 */
   isCombinable: boolean
   /** 组合配方（组合目标物品ID -> 产物物品ID） */
-  combineRecipes?: Record<string, ItemId>
+  combineRecipes?: Record<string, string>
   /** 使用效果（如果可"使用"的话） */
   useEffects?: EffectResult[]
 }
@@ -684,7 +666,7 @@ export interface ItemRegistry {
   /** 所有物品配置，按ID索引 */
   items: Record<string, Item>
   /** 按类别分组的物品ID列表（便于快速查找） */
-  itemsByCategory: Record<ItemCategory, ItemId[]>
+  itemsByCategory: Record<ItemCategory, string[]>
   /** 按标签分组的物品ID列表 */
-  itemsByTag: Record<string, ItemId[]>
+  itemsByTag: Record<string, string[]>
 }

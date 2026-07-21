@@ -1,79 +1,299 @@
-import type { BaseAttributes, Skill, InventoryItem, PassiveSkill } from './player'
+// character.ts - 玩家职业/角色配置
 
-export type CharacterClass = 'survivor' | 'soldier' | 'scientist' | 'medic' | 'engineer' | 'hunter' | 'chef'
+import type { EffectResult } from './effect'
+import type { AttributeType } from './effect'
+import type { ItemId } from './item'
+import type { FlagValue } from './flag'
+import type { PassiveSkillId } from './skill'
 
-export interface Character {
+// ============================================================
+// 职业定义
+// ============================================================
+
+/**
+ * 职业配置
+ * 定义玩家可选的初始职业，决定开局属性、物品、技能和独特能力。
+ */
+export interface CharacterClass {
+  /** 职业唯一ID */
   id: string
+  /** 职业名称（显示用） */
   name: string
-  class: CharacterClass
+  /** 职业备注（开发者可见） */
+  notes?: string
+
+  /** 职业描述（选择界面展示） */
   description: string
-  avatar: string
-  startingAttributes: Partial<BaseAttributes>
-  startingSkills: Skill[]
-  startingItems: InventoryItem[]
-  uniqueAbility: UniqueAbility
-  attributeBonuses: CharacterAttributeBonus
-  skillBonuses: CharacterSkillBonus
-  backgroundStory: string
+  /** 职业详细说明（展示在确认界面） */
+  detailedDescription?: string
+
+  /** 职业图标资源ID */
+  iconId: string
+  /** 职业立绘/插画资源ID（选择界面展示） */
+  portraitImageId?: string
+
+  /** 职业标签（用于筛选和事件判定，如"医疗"、"战斗"、"技术"） */
+  tags: string[]
+
+  /** 职业难度（1-5，在选择界面显示） */
+  difficulty: number
+  /** 职业难度描述（如"适合新手"、"挑战性极高"） */
+  difficultyDescription?: string
+
+  // ============================================================
+  // 初始属性
+  // ============================================================
+
+  /** 初始基础属性 */
+  initialAttributes: CharacterAttributes
+
+  /** 初始生存属性（覆盖默认值） */
+  initialSurvivalAttributes?: CharacterSurvivalAttributes
+
+  // ============================================================
+  // 初始物品
+  // ============================================================
+
+  /** 初始装备（直接装备在身上） */
+  initialEquipment: CharacterInitialEquipment[]
+
+  /** 初始背包物品 */
+  initialInventory: CharacterInitialItem[]
+
+  // ============================================================
+  // 初始技能
+  // ============================================================
+
+  /** 初始已解锁的被动技能ID列表 */
+  initialPassiveSkillIds: PassiveSkillId[]
+
+  /** 初始生存技能等级 */
+  initialSurvivalSkillLevels: CharacterInitialSkillLevel[]
+
+  /** 初始武器熟练度 */
+  initialWeaponProficiency: CharacterInitialWeaponProficiency[]
+
+  /** 初始已解锁的战斗技能ID列表 */
+  initialBattleSkillIds?: string[]
+
+  // ============================================================
+  // 初始配方
+  // ============================================================
+
+  /** 初始已解锁的制作配方ID列表 */
+  initialCraftRecipeIds: string[]
+  /** 初始已解锁的烹饪配方ID列表 */
+  initialCookRecipeIds: string[]
+  /** 初始已解锁的建造配方ID列表 */
+  initialBuildRecipeIds: string[]
+
+  // ============================================================
+  // 职业专属能力
+  // ============================================================
+
+  /** 职业专属被动加成（非技能，与职业绑定的特殊效果） */
+  classBonuses: ClassBonus[]
+
+  /** 职业专属配方（仅此职业可解锁的配方ID列表） */
+  exclusiveRecipeIds?: string[]
+  /** 职业专属技能（仅此职业可解锁的技能ID列表） */
+  exclusiveSkillIds?: string[]
+
+  // ============================================================
+  // 初始剧情
+  // ============================================================
+
+  /** 初始标志位（开局时设置的标志位，用于引导不同职业的初始剧情） */
+  initialFlags: Record<string, FlagValue>
+
+  /** 初始触发的事件ID（可选，职业专属开场事件，如医生可能先发现医疗包） */
+  initialEventId?: string
+
+  // ============================================================
+  // 初始场景
+  // ============================================================
+
+  /** 职业专属初始场景ID（覆写全局初始场景，为空则使用全局默认） */
+  initialSceneId?: string
+  /** 职业专属初始子场景ID */
+  initialSubSceneId?: string
 }
 
-export interface UniqueAbility {
-  id: string
-  name: string
-  description: string
-  effect: AbilityEffect
-  isPassive: boolean
-  cooldown?: number
+// ============================================================
+// 初始属性
+// ============================================================
+
+/**
+ * 初始基础属性
+ */
+export interface CharacterAttributes {
+  /** 力量（默认10，取值范围0-100） */
+  strength: number
+  /** 敏捷（默认10） */
+  agility: number
+  /** 智力（默认10） */
+  intelligence: number
+  /** 体质（默认10） */
+  constitution: number
 }
 
-export interface AbilityEffect {
-  type: 'attribute' | 'skill' | 'crafting' | 'combat' | 'survival' | 'healing'
-  target?: string
-  modifier?: number
-  description?: string
-  unlockCondition?: AbilityUnlockCondition
+/**
+ * 初始生存属性（仅需覆写的字段）
+ */
+export interface CharacterSurvivalAttributes {
+  /** 生命值（默认由体质计算） */
+  hp?: number
+  /** 饱食度（默认100） */
+  satiety?: number
+  /** 体力值（默认100） */
+  stamina?: number
+  /** SAN值（默认100） */
+  san?: number
 }
 
-export interface AbilityUnlockCondition {
-  skillLevel?: { skillId: string; level: number }
-  attributeLevel?: { attribute: string; level: number }
-  eventId?: string
+// ============================================================
+// 初始物品
+// ============================================================
+
+/**
+ * 初始装备
+ */
+export interface CharacterInitialEquipment {
+  /** 物品ID */
+  itemId: ItemId
+  /** 装备槽位 */
+  slot: string
+  /** 初始耐久度（为空则使用物品默认耐久） */
+  initialDurability?: number
 }
 
-export interface CharacterAttributeBonus {
-  strength?: number
-  agility?: number
-  intelligence?: number
-  constitution?: number
-  maxHp?: number
-  maxSatiety?: number
-  maxStamina?: number
-  maxSan?: number
-  maxCarryWeight?: number
+/**
+ * 初始背包物品
+ */
+export interface CharacterInitialItem {
+  /** 物品ID */
+  itemId: ItemId
+  /** 数量 */
+  quantity: number
+  /** 物品耐久度（如有耐久度系统，为空则使用默认值） */
+  durability?: number
 }
 
-export interface CharacterSkillBonus {
-  survivalSkills?: Record<string, number>
-  combatSkills?: Record<string, number>
-  weaponProficiencies?: Record<string, number>
-}
+// ============================================================
+// 初始技能
+// ============================================================
 
-export interface CharacterClassConfig {
-  class: CharacterClass
-  name: string
-  description: string
-  attributeBonuses: CharacterAttributeBonus
-  skillBonuses: CharacterSkillBonus
-  uniqueAbility: UniqueAbility
-  startingEquipment?: string[]
-  flavorText: string
-}
-
-export interface CharacterState {
-  characterId: string
-  class: CharacterClass
+/**
+ * 初始生存技能等级
+ */
+export interface CharacterInitialSkillLevel {
+  /** 技能ID */
+  skillId: string
+  /** 初始等级 */
   level: number
-  experience: number
-  passiveSkills: PassiveSkill[]
-  learnedAbilities: string[]
+  /** 初始经验值（0为从该等级0经验开始） */
+  exp?: number
+}
+
+/**
+ * 初始武器熟练度
+ */
+export interface CharacterInitialWeaponProficiency {
+  /** 武器类型ID */
+  weaponTypeId: string
+  /** 初始熟练度等级 */
+  level: number
+  /** 初始经验值 */
+  exp?: number
+}
+
+// ============================================================
+// 职业专属加成
+// ============================================================
+
+/**
+ * 职业专属加成
+ * 与职业绑定的永久被动效果，非技能系统管理，无法通过其他方式获得或移除。
+ */
+export interface ClassBonus {
+  /** 加成ID */
+  id: string
+  /** 加成名称 */
+  name: string
+  /** 加成描述 */
+  description: string
+
+  /** 加成效果列表 */
+  effects: EffectResult[]
+
+  /** 直接属性修正（显示在属性面板） */
+  attributeModifiers?: ClassAttributeModifier[]
+
+  /** 触发条件（部分加成有条件触发，如"烹饪时有30%概率产出双倍"） */
+  triggerCondition?: string
+}
+
+/**
+ * 职业属性修正
+ */
+export interface ClassAttributeModifier {
+  /** 属性类型 */
+  attribute: AttributeType
+  /** 修正值 */
+  value: number
+  /** 修正类型 */
+  modifierType: 'add' | 'multiply'
+  /** 子类型 */
+  subType?: string
+}
+
+// ============================================================
+// 背景故事（可选扩展）
+// ============================================================
+
+/**
+ * 角色背景故事
+ * 可选配置，为职业提供更深层的角色扮演元素。
+ * 背景故事影响：初始对话文本、特定NPC反应、专属事件选项。
+ */
+export interface CharacterBackground {
+  /** 背景ID */
+  id: string
+  /** 背景名称 */
+  name: string
+  /** 背景描述（选择界面展示） */
+  description: string
+
+  /** 所属职业ID（每个职业可有多个背景可选，为空则所有职业通用） */
+  classId?: string
+
+  /** 额外初始标志位 */
+  additionalFlags: Record<string, FlagValue>
+  /** 额外初始物品 */
+  additionalItems?: CharacterInitialItem[]
+  /** 额外属性修正 */
+  additionalAttributeModifiers?: ClassAttributeModifier[]
+
+  /** 背景专属事件ID列表（仅此背景可触发的事件） */
+  exclusiveEventIds?: string[]
+  /** 背景专属对话文本变体（事件中通过标志位判断） */
+  dialogueTags?: string[]
+}
+
+// ============================================================
+// 职业注册表
+// ============================================================
+
+/**
+ * 职业注册表
+ */
+export interface CharacterRegistry {
+  /** 所有职业 */
+  classes: Record<string, CharacterClass>
+  /** 职业选择界面排序（职业ID列表，按此顺序展示） */
+  selectionOrder: string[]
+  /** 默认职业ID（快速开始时使用） */
+  defaultClassId: string
+  /** 可选背景故事 */
+  backgrounds?: Record<string, CharacterBackground>
 }
