@@ -17,6 +17,7 @@ import type { FlagRegistry } from './flag'
 import type { SeasonWeatherRegistry } from './seasonWeather'
 import type { MapRegistry } from './map'
 import type { CharacterRegistry } from './character'
+import type { BuildRegistry } from './building'
 
 /**
  * 游戏全局配置注册表
@@ -81,6 +82,9 @@ export interface GameRegistry {
 
   /** 大地图注册表 */
   maps: MapRegistry
+
+  /** 建筑注册表 */
+  buildings: BuildRegistry
 
   /** 职业注册表 */
   characters: CharacterRegistry

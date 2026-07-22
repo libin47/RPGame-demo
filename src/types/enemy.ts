@@ -390,8 +390,4 @@ export interface EnemyLoot {
 export interface EnemyRegistry {
   /** 所有敌人配置，按ID索引 */
   enemies: Record<string, Enemy>
-  /** 按类型分组的敌人ID列表 */
-  enemiesByType: Record<EnemyType, string[]>
-  /** 按出现场景分组的敌人ID列表 */
-  enemiesByScene?: Record<string, string[]>
 }

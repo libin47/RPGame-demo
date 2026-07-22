@@ -166,12 +166,4 @@ export interface BaseRecipe {
 
 export interface RecipeRegistry {
   recipes: Record<string, BaseRecipe>
-  recipesByType: Record<RecipeType, string[]>
-
-  /**
-   * 技能等级 → 配方ID列表 的反向索引
-   * 用于技能升级时自动解锁对应配方
-   * 例：{ "cooking": { 3: ["recipe_stew", "recipe_bread"], 5: ["recipe_feast"] } }
-   */
-  skillLevelUnlocks?: Record<string, Record<number, string[]>>
 }

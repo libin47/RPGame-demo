@@ -376,6 +376,5 @@ export interface TriggerEventResult {
 export interface EventRegistry {
   /** 所有事件配置，按ID索引 */
   events: Record<string, GameEvent>
-  /** 按类型分组的事件ID列表 */
-  eventsByType: Record<EventType, string[]>
+
 }

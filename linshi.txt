@@ -1,0 +1,5993 @@
+// README.md 游戏策划书
+
+# 综述
+
+游戏名称：蚀岛。
+玩法人数：单人、文字。
+游戏类型：文字冒险、生存、克苏鲁。
+游戏方式：H5页面。
+游戏框架：ts+vue3。
+主要面向手机用户。
+
+# 游戏机制
+
+## 核心机制
+
+玩家通过阅读文字，了解游戏的背景、环境、人物、任务等，通过点击可交互按钮以做出操作。
+
+## 玩家状态
+
+玩家的属性分为生存属性、基础属性、技能。
+生存属性是指与玩家生存直接相关的属性，包括生命值、饱食度、 体力值、SAN、温暖度、负重。  
+基础属性是指玩家的基本属性，例如力量、敏捷、智力、体质。  
+武器熟练度是指玩家使用武器的熟练程度，例如使用剑、使用弓箭等。
+技能属性是指玩家的各种技能等级，包括生存技能、战斗技能。
+
+### 生存属性
+
+生存属性与生存息息相关。
+其中生命值、饱食度、体力值、SAN均存储为整数。
+若某次交互变动值小于1，则不更新该值，而是将此次交互变动值累计到下次变动直到大于1时再更新。例如第二次交互累计值为2.3，则更新2，累计值置为0.3。
+生存属性当前值的变动，均含以下方式：
+
+- 事件
+- 食物
+- 道具
+
+#### 生命值
+
+1、作用
+
+- 生命值是指玩家当前的健康状态，生命值为0时，玩家死亡，进入结局判定。
+- 额外情况：满足特定条件时，触发事件，事件判定优先于结局判定。参见[事件](#事件)。
+
+2、上限
+
+- 生命值上限与体质正相关。计算方式为：生命值 = 体质 \* 10，随体质变动而变动。无例外情况。
+- 生命上限变动时，当前生命值按照比例变动。当前生命值不会超过上限，且不小于0。
+
+3、损失
+
+- 战斗中受到敌人攻击，损失生命值，具体公式参见[战斗机制](#战斗机制)。
+- 饱食度、口渴度为0、温暖度不在适宜范围内时，玩家会随时间损失生命值，以分钟为单位计算。不同的相互叠加。
+  - 饥饿状态，生命值每小时损失量 = 5% \* 最大生命值。
+  - 温暖度不在适宜范围内时：
+    - 处于寒冷、炎热环境，生命值每小时损失量 = 5% \* 最大生命值。
+    - 处于极寒、酷热环境，生命值每小时损失量 = 15% \* 最大生命值。
+- 受异常状态影响，玩家会随时间损失生命值，具体公式参见[异常状态](#异常状态)。
+- 受事件影响，参见[事件](#事件)。
+
+4、恢复
+
+- 随时间生命值会自然恢复，参见5、自然恢复。
+- 通过休息/睡觉恢复生命值，具体公式参见[休息](#休息)。
+
+5、自然恢复
+
+- 生命值会随时间自然恢复，恢复速率与体质与buff相关。
+- 自然恢复每小时计算，向上取整。
+- 基础恢复速率为：生命值每小时恢复量 = 体质 \* 0.1， 随体质变动而变动。
+- 实际恢复速率 = 基础恢复速率 \* 恢复速率系数。恢复速率系数为1时，基础恢复速率为实际恢复速率。恢复速率系数为0时，实际恢复速率为0。
+- 恢复速率系数，事件、异常状态、人数技能等会改变恢复速率系数。具体参见对应机制。
+
+#### 饱食度
+
+1、作用
+
+- 饱食度是指玩家当前的饱食度状态，饱食度为0时，玩家会随时间损失生命值。
+
+2、上限
+
+- 饱食度上限=100\*饱食度上限系数，上限系数受事件、异常状态、人数技能影响。
+- 当前饱食度不大于饱食度上限，不小于0。
+
+3、变动
+
+- 饱食度随时间自然损失。
+
+4、自然损失
+
+- 饱食度自然损失每小时损失量 = 5 \* 饱食度损失系数，以分钟为单位计算。
+- 事件、异常状态、人数技能等会改变损失系数。具体参见对应机制。
+
+5、归零
+
+- 饱食度归零后，玩家进入饥饿状态。
+
+#### 体力值
+
+- 体力值是指玩家当前的体力状态，体力值小于交互所需消耗量时，无法进行此交互。
+- 体力值取值范围为0-100。
+
+1、上限
+
+- 体力值上限=100+体力修正值，体力修正值受装备、道具、状态、事件等影响。
+- 当前体力值不大于体力值上限，不小于0。
+
+2、变动
+
+- 体力值随时间自然恢复。
+- 体力值随交互消耗。
+
+3、自然恢复
+
+- 体力值自然恢复每小时/回合恢复量 = 10 \* 体力恢复系数+体力恢复修正，以分钟为单位计算。
+- 事件、异常状态、人数技能等会改变恢复系数。具体参见对应机制。
+- 体力恢复系数默认=1，体力恢复修正默认=0
+
+4、消耗
+
+- 体力值消耗量 = 交互所需消耗量 \* 体力消耗系数，体力消耗系数受装备、道具、状态、事件等影响。
+- 事件、异常状态、人数技能等会改变消耗系数。具体参见对应机制。
+- 体力消耗系数默认=1
+
+#### SAN
+
+1、作用
+
+- SAN值即玩家理智值，与游戏的核心机制相关。
+- SAN值的变动会导致UI不同、同样场景同样物品同样操作的描述不同。
+
+2、设定
+SAN值即为主角理智程度，在窥探到宇宙不可名状之真相、不能理解之物、大脑无法承受之事时，会损失理智值。而舒适的环境、温暖的食物、回忆中的美好事件等，会恢复理智值。
+
+SAN值越高，主角眼中的世界就越真实（越接近正常人类的世界），越SAN值越低，主角眼中的世界就越危险混乱，充满不可预测无法名状之物。
+
+游戏中大量的文本、选项、对话、事件等，都以玩家的SAN值为条件进行判断。SAN值管理将是游戏的核心机制。
+
+在本作世界观观中，亦可作为模因污染程度。
+
+2、上限
+
+- SAN上限=100+修正指数，修正指数受事件、异常状态、人数技能影响。
+- 当前理智值不大于理智值上限，不小于0。
+
+3、变动
+
+- 部分场景中，理智值随时间变化。具体损失值参见场景。
+- 与部分敌人战斗，理智值随回合损失。具体损失值参见敌人。
+- 异常状态影响。
+- 温暖度、饱食度影响。
+  - 温暖度不在适宜范围内时，玩家会随时间损失SAN，每小时损失量=1，按小时计。
+  - 饱食度为0时，玩家会随时间损失SAN，每小时损失量=1，按小时计。
+
+4、设定
+按照SAN值的高低，分为5个档位，具体影响按具体机制中描述进行。
+
+- 理性：>81
+  - 玩家处于理智状态，不会遇到任何梦境怪物，文字描述正常，UI效果正常。
+- 不安：61-80
+  - 玩家处于不安状态，极低概率遭遇梦境怪物，文字描述基本正常，出现极少量异常（涂黑、错位、混乱），UI效果轻微变形。
+- 动摇：41-60
+  - 玩家处于动摇状态，概率遭遇梦境怪物，文字描述少量出现异常，UI效果明显变形。
+- 崩溃：21-40
+  - 玩家处于崩溃状态，大概率遭遇梦境怪物，文字描述出现中等幅度异常，UI效果混乱。
+- 疯狂：1-20
+  - 玩家处于疯狂状态，敌人全部替换为梦境怪物，文字描述出现大量异常，替换为疯狂UI，无法正常对话。
+
+5、归零
+
+-玩家理智值归零后，游戏结束，进行结局判定。
+
+#### 温暖度
+
+1、作用
+温暖度是指玩家当前的温暖度状态，受天气、季节、装备、道具、环境影响。
+不在适宜范围内，将持续扣除HP、SAN。
+温暖度分为适宜、寒冷、炎热、严寒、酷热。
+
+2、计算
+温暖度由环境温度、温度抗性计算得到。计算过程不显示，玩家只能看到温暖度。
+
+- 其中环境温度由天气、季节确定，=季节基准温度+天气影响值+场景影响值，取值为摄氏度。
+- 其中适宜温度由装备、道具、环境影响，是一个范围，无装备、道具、环境影响时，适宜温度为10-25摄氏度，低温适宜值为10，高温适宜值为25.
+- 环境温度大于等于低温适宜值时，小于等于高温适宜值，温暖度为适宜。
+- 环境温度小于低温适宜值时，且差值不大于10，温暖度为寒冷。
+- 环境温度大于高温适宜值时，且差值不大于10，温暖度为炎热。
+- 环境温度小于低温适宜值时，且差值大于10，温暖度为严寒。
+- 环境温度大于高温适宜值时，且差值大于10，温暖度为酷热。
+
+#### 负重
+
+1、作用
+玩家的负重是指玩家当前携带的物品重量，可以超过最大负重，但是超过最大负重后，玩家无法进行移动交互。
+负重以千克为单位，以浮点数表示。且保留一位小数。
+负重率是指玩家当前负重与最大负重的比例，负重的各种影响以负重率计算。
+
+2、最大负重
+最大负重是指玩家可以携带并移动的最大物品重量，受力量值影响。
+计算公式为：最大负重=力量\*5+负重修正。
+负重修正默认为0，可由装备、道具、状态、事件等影响。
+
+3、负重率
+负重率 = 当前负重/最大负重
+不同的负重率会导致不同的影响，具体影响按具体机制中描述进行。
+
+### 基础属性
+
+基础属性、及经验（如果有的话）的变动，除特别说明外，均含以下方式：
+
+- 事件
+- 食物
+- 道具
+
+#### 力量
+
+力量描述为玩家的力量大小，影响玩家的负重能力、攻击伤害，以及某些交互需要力量判定。
+
+1、取值
+力量取值为整数，取值范围为0-100。
+力量初始值为10，实际力量=力量+力量修正值，可由装备、道具、状态、事件等影响获得临时力量修正，修正后的值可以超出取值范围。
+力量可以成长。
+
+2、成长
+力量的成长或者变动有以下方式：
+
+- 以近战方式攻击敌人
+- 在50%负重以上状态进行活动
+
+力量通过累计力量经验值的方式进行成长，升级所需经验=当前力量等级\*100。力量100后，不再成长，且不再获得力量经验。
+各方式获得的经验值在对应条目中描述。
+
+#### 敏捷
+
+敏捷是指玩家的反应能力，例如移动速度、闪避概率等，以及某些交互需要敏捷判定。
+
+1、作用
+敏捷取值为整数，取值范围为0-100。
+初始值为10，实际敏捷=敏捷+敏捷修正值。修正后的值可以超出取值范围。
+敏捷可以成长。
+
+2、成长
+敏捷的成长或者变动有以下方式：
+
+- 闪避攻击
+- 在50%负重以下状态进行活动
+
+敏捷通过累计敏捷经验值的方式进行成长，升级所需经验=当前敏捷等级\*100。敏捷100后，不再成长，且不再获得敏捷经验。
+各方式获得的经验值在对应条目中描述。
+
+#### 智力
+
+智力是指玩家的智力大小，影响玩家的学习能力、制作能力、SAN值变动，以及某些交互需要智力判定。
+
+1、作用
+智力取值为整数，取值范围为0-100。
+初始值为10，实际智力=智力+智力修正值。修正后的值可以超出取值范围。
+智力可以成长。
+
+2、成长
+智力的成长或者变动有以下方式：
+
+- 特定交互
+
+智力通过累计智力经验值的方式进行成长，升级所需经验=当前智力等级\*100。智力100后，不再成长，且不再获得智力经验。
+各方式获得的经验值在对应条目中描述。
+
+#### 体质
+
+体质是指玩家的体质大小，影响玩家的HP上限，以及某些交互需要体质判定。
+
+1、作用
+体质取值为整数，取值范围为0-100。
+初始值为10，实际体质=体质+体质修正值。修正后的值可以超出取值范围。
+体质可以成长。
+
+2、成长
+体质的成长或者变动有以下方式：
+
+- 特定交互
+- 规律作息，规律饮食，体质将逐渐提升
+
+体质通过累计体质经验值的方式进行成长，升级所需经验=当前体质等级\*100。体质100后，不再成长，且不再获得体质经验。
+各方式获得的经验值在对应条目中描述。
+
+### 武器熟练度
+
+武器熟练度指玩家使用武器的熟练程度，武器熟练度按照武器类别，例如木剑、铜剑都属于剑。
+取值为0-10，无任何修正。
+取值为整数，初始值为0。
+
+1、作用
+武器熟练度影响玩家使用对应武器技能的伤害及命中、暴击、暴击倍率。
+随着武器熟练度提升而解锁新的武器技能。
+武器技能及解锁武器技能的等级见战斗机制。
+
+2、成长
+武器熟练度的成长：
+
+- 特定事件
+- 特定食物
+- 特定交互
+- 使用该类别武器技能
+
+升级所需经验值 = 当前武器熟练度等级\*100，武器熟练度100后，不再成长，且不再获得武器熟练度经验。
+各方式获得的经验值在对应条目中描述。
+
+### 防御属性
+
+防御属性指玩家防御敌人的能力，是0-100之间的整数。
+按照类型分为：
+
+- 刺砍防御
+- 钝击防御
+- 远程防御
+- 毒素防御
+- 火焰防御
+
+按照百分比降低收到的伤害。
+
+#### 物理防御
+
+物理防御是指玩家防御物理攻击的能力，例如刀剑、钝器等。
+取值为0-10，无任何修正。
+取值为整数，初始值为0。
+
+1、作用
+物理防御影响玩家受到物理攻击的伤害，具体公式见战斗机制。
+
+2、成长
+物理防御的成长：
+
+- 特定事件
+- 特定食物
+- 特定交互
+- 使用该类别武器技能
+
+### 技能属性
+
+技能是指玩家的技艺，分为战斗技能和生存技能。
+
+#### 生存技能
+
+生存技能是指玩家在非战斗状态下进行的技能，生命技能影响对应的交互效率、结果、及作为是否可以交互的判定条件。
+生存技能取值为0-10，实际生成技能=生存技能+生存技能修正值。修正后的值可以超出取值范围。
+生存技能取值为整数。
+生存技能可以成长，成长方式与基础属性相同。
+生存技能获得经验值的方式主要包括：
+
+- 特定事件
+- 特定食物
+- 与该生存技能相关的交互
+
+升级所需经验值 = 当前生存技能等级\*100，生存技能满级后，不再成长，且不再获得生存技能经验。
+
+生存技能清单：
+
+- 探索
+- 砍伐
+- 挖掘
+- 采集
+- 制作
+- 种植
+- 烹饪
+
+#### 战斗技能
+
+战斗技能是指玩家战斗中可以使用的技能，详见战斗机制。
+战斗技能取值为0-10，无任何修正。
+战斗技能取值为整数。
+战斗技能可以成长，通过累计经验值获得成长。
+战斗技能获得经验值的方式主要包括：
+
+- 特定事件
+- 特定食物
+- 在战斗中使用该战斗技能
+
+战斗技能的级别，影响该技能的伤害、命中、暴击、暴击倍率等。
+
+战斗技能的解锁来自于：
+
+- 武器熟练度提升
+- 特殊事件
+- 装备着特定武器
+
+普攻也视为战斗技能，在武器熟练度0时即解锁（即默认解锁）。
+
+#### 被动技能
+
+通过事件、道具习得被动技能。
+被动技能在习得时生效，且一直生效，不会随着时间流逝而消失。
+被动技能影响的范围与【#### 其他临时状态】相同，数值和效果在习得时确定。
+但不显示在状态栏，而是被动技能中。
+
+### (异常)状态
+
+状态指玩家当前处于的额外状态，状态可以由事件、食物、道具、交互及属性的变化获得，持续时间在获得状态时确定，由属性变化获得的状态，在属性恢复后自动取消。（即每次交互、回合刷新一次）
+
+#### 属性变动引发的常驻状态
+
+1、饥饿
+饱食度归零时，玩家处于饥饿状态。
+
+- 生命值每小时损失量 = 5% \* 最大生命值，按分钟计。
+- SAN值每小时损失量 = 1，按分钟计。
+- 体力恢复系数 - 0.5
+
+2、寒冷、炎热、严寒、酷热
+玩家当前温暖度处于寒冷、炎热、严寒、酷热时，玩家处于对应状态。
+其中寒冷、炎热：
+
+- 生命值每小时损失量 = 5% \* 最大生命值，按分钟计。
+- SAN值每小时损失量 = 1，按分钟计。
+- 体力恢复系数 - 0.2
+
+其中严寒、酷热：
+
+- 生命值每小时损失量 = 10% \* 最大生命值，按分钟计。
+- SAN值每小时损失量 = 1，按分钟计。
+- 体力恢复系数 - 0.5
+
+3、负重
+根据玩家负重率获得不同状态：
+轻盈（<20%）:
+
+- 体力恢复系数 + 0.3
+  超重（>80%）:
+- 体力恢复系数 - 0.1
+  超载（>10%）:
+- 体力恢复系数 - 0.3
+- 体力消耗系数 + 0.5
+
+#### 其他临时状态
+
+临时状态在施加给角色时确定持续时间/回合，在持续时间/回合结束后自动消失。
+使用特定道具、食物可消除对应的临时状态，数值和效果在施加时确定。
+临时状态所可能影响的属性包括：
+
+- 生命值恢复速率系数
+- 生命值每小时损失/恢复（按分钟计算）
+- 生命值每回合损失/恢复
+- 饱食度上限系数
+- 饱食度自然损失系数
+- 体力消耗系数
+- 体力恢复系数
+- 体力恢复修正
+- SAN修正指数
+- SAN每小时变动
+- SAN每回合变动
+- 适宜温度（低温适宜、高温适宜分别）修正值
+- 负重修正
+- 力量修正
+- 敏捷修正
+- 智力修正
+
+#### 其他常驻状态
+
+常驻状态没有持续时间，只要条件满足就一直生效。
+所能影响的属性与临时状态相同，数值和效果在施加时确认。
+
+## 世界机制
+
+世界随时间而逐渐变化，天气随机变动，昼夜循环，季节更迭。
+
+世界会因玩家的操作和状态而发生改变。
+
+### 环境状态
+
+世界或者环境主要由以下状态值来衡量：
+天气、能见度、温度、昼夜、季节、腐化度。
+
+### 天气
+
+天气包括，晴天、多云、阴天、雨天/雪天、暴雨/暴雪、雾/沙尘、雷暴、酸雨。
+天气在每日晚上0点变动，持续到次日0点。
+
+- 晴天：温度+5，能见度10。
+- 多云：温度+3，能见度9。
+- 阴天：温度0，能见度8。
+- 雨天/雪天/酸雨：温度-2，能见度6。环境温度大于0时为雨天，否则为雪天。腐化度%的概率将为酸雨。
+- 暴雨/暴雪/血雨：温度-5，能见度4。 环境温度大于0时为暴雨，否则为暴雪。腐化度%的概率将为血雨。
+- 沙尘/雾：温度0，能见度0。季节为夏、秋季时为雾，否则为沙尘。
+- 雷暴：温度-5，能见度4。
+
+天气之间的转换按照以下概率进行
+|当前天气|晴天|多云|阴天|雨天/雪天|暴雨/暴雪|沙/雾|雷暴|
+|:--|:--|:--|:--|:--|:--|:--|:--|
+|晴天|0.5|0.3|0.15|0.03|0.01|0.01|0|
+|多云|0.3|0.3|0.3|0.05|0.04|0.01|0|
+|阴天|0.2|0.3|0.2|0.2|0.05|0.05|0|
+|雨天/雪天|0.4|0.2|0.1|0.1|0.1|0|0.1|
+|暴雨/暴雪|0.2|0.2|0.1|0.2|0.1|0|0.2|
+|沙/雾|0.25|0.2|0.1|0.1|0.05|0.3|0|
+|雷暴|0.4|0.1|0.1|0.1|0.1|0|0.2|
+
+### 能见度
+
+暂时还没想好怎么用。
+
+### 温度
+
+指环境温度，计算方法：
+环境温度 = 季节基准温度 + 天气修正 + 地点修正 + 其他修正
+
+### 季节
+
+玩家可见的季节分为春夏秋冬。
+每个季节30天。其中前10天为初，中间10天为盛，后10天为末。
+季节基准温度：
+
+- 初春：5
+- 春季：15
+- 春末：20
+- 夏初：20
+- 夏季：30
+- 夏末：35
+- 秋初：25
+- 秋季：15
+- 秋末：5
+- 冬初：-5
+- 冬季：-20
+- 冬末：0
+
+### 昼夜
+
+24小时一个循环。
+其中23-1为深夜，2-4为凌晨，5-7为清晨，8-12为上午，13-17为下午，18-20为傍晚，20-22为夜晚。
+深夜、凌晨：
+
+- 睡眠可获得2倍效果恢复加成
+- 体力消耗系数 + 0.5
+
+### 腐化度
+
+腐化度是环境腐化程度，玩家只能通过特定事件来变动腐化度。
+腐化度取值为0-100，初始值为40。
+腐化度影响大概包括：
+
+- 敌人的出现状态和频次
+- 探索出现对应事件的概率
+- 种植、钓鱼等交互的结果
+
+具体在对应事件和事项中标注。
+
+## 战斗机制
+
+适用于任何战斗。
+由玩家和敌人的敏捷值决定每回合的出手顺序，玩家每行动一次为一回合。
+
+### 玩家回合
+
+玩家每回合可以进行的操作包括：
+
+- 战斗技能
+- 防守
+- 使用物品
+- 观察/分析
+- 逃跑
+
+其中，战斗技能的单独配置，需包括：
+
+- 技能名称
+- 技能id
+- 武器类型（对于不限制武器的技能则为空）
+- 解锁条件（解锁等级、特定武器装备时、事件）
+- 技能等级
+- 伤害类型
+- 伤害（可与力量、武器熟练度、技能等级、武器属性进行计算）
+- 命中（可与敏捷、武器熟练度、技能等级、武器属性进行计算）
+- 暴击（可与敏捷、武器熟练度、技能等级、武器属性进行计算）
+- 暴击倍率（可与敏捷、武器熟练度、技能等级、武器属性进行计算）
+- 消耗体力（可与武器熟练度、技能等级、武器属性进行计算）
+- 对象
+- CD（回合数）
+- 施加效果
+- 持续时间
+
+其中，防守指进行防守准备，提升下一次敌人行动时降低受到的伤害。
+
+- 消耗体力30，提升下一次敌人行动时降低受到的伤害50%。
+
+其中使用物品：
+
+- 消耗体力0，根据物品类型和物品等级进行效果计算。
+
+其中观察/分析：
+
+- 消耗体力固定10，根据玩家智力属性，概率获得敌人信息。
+
+其中逃跑：
+
+- 消耗体力固定20，逃跑概率=玩家敏捷/（玩家敏捷+敌人敏捷），初见敌人时，获得两倍逃跑概率。特殊战斗禁止逃跑。
+
+### 敌人回合
+
+敌人按照条件和概率行动。
+在敌人配置中，应该包括以下内容：
+
+- 敌人名称
+- 敌人id
+- 敌人类型
+- 敌人描述
+- 敌人生命值
+- 敌人力量
+- 敌人敏捷
+- 敌人技能清单
+- 敌人防御
+- 战利品清单及对应概率
+
+其中敌人技能以配置逻辑为主：
+
+- 技能名称
+- 技能id
+- 使用优先级（优先使用高优先级，优先级相同时按照概率）
+- 使用概率
+- 使用条件（只有满足条件才会使用）
+- 使用次数（一场战斗使用上限）
+
+敌人技能配置：
+
+- 技能名称
+- 技能id
+- 伤害类型
+- 伤害（可与敌人攻击力、技能等级、敌人属性进行计算）
+- 命中（可与敌人敏捷、技能等级、敌人属性进行计算）
+- 施加效果
+- 持续时间
+- 对象
+- 发动时间（例如蓄力攻击，第三回合生效，0即当场生效）
+- CD
+
+### 战斗结束
+
+以某方生命值归零作为战斗结束条件。
+1、我方胜利
+获得敌方战利品。
+
+2、敌人胜利
+游戏结束。进行结算界面。
+如果触发战斗的事件中，有配置战败的子事件，则优先触发对应事件。
+
+## 场景与事件
+
+玩家总是身处某个场景之中，例如森林、草地、沙漠、城市、废弃工厂等。
+
+### 场景
+
+场景包括以下配置：
+
+- 场景名称
+- 场景id
+- 场景描述/事件入口
+- 场景图片
+- 场景温度影响（-50-50）
+- 场景特有的交互内容（探索、人物、游泳、建造营地/进入营地等）
+
+关于场景描述/事件入口的说明
+
+- 场景描述/事件入口：这是显示在场景中主要的文字描述，如果是事件入口则显示为蓝色下划线，玩家点击后进入对应事件。
+- 场景描述应该有多种，有优先级，有显示条件（包括但不限于玩家是否第一次造访、玩家的状态、世界腐化度、某些事件是否触发）
+- 场景描述/事件入口，可以设置成被动触发，即满足条件且概率抽中此条时，直接进入事件而不显示文字描述。
+
+### 子场景
+
+子场景是场景的子集，例如森林中的小溪、草地上的小屋、沙漠中的洞穴等。
+子场景的配置与场景类似，但子场景没有温度影响，且子场景的交互内容一般与场景不同。
+子场景包括以下配置：
+
+- 场景名称
+- 场景id
+- 场景描述/事件入口
+- 场景图片
+- 场景温度影响（-50-50）（与母场景叠加）
+- 是否地牢场景
+- 子场景特有的交互内容
+- 地牢场景特有内容：
+  - 相邻子场景（只有地牢子场景生效）
+  - 方位移动交互（根据相邻子场景，显示东西南北直接移动子场景）
+
+子场景中不会触发母场景的事件、不显示母场景的交互，但是温度影响相互叠加。
+子场景图片、描述等为空时显示母场景的。
+
+### 交互内容
+
+交互内容的配置：
+
+- 交互名称
+- 交互id
+- 交互类型（探索、事件、功能、进入子场景）
+- 交互条件（显示此交互的条件，例如沙滩场景，只有触发过“发现海怪”事件后，才会显示“海怪”选项，例如只有晚上1点才有海民选项。）
+- 交互描述（显示在交互按钮上）
+- 消耗的资源（体力、时间等）
+
+关于交互类型的说明：
+
+- 探索：探索场景，刷新场景描述/事件入口
+- 事件：直接触发事件，不刷新场景描述/事件入口
+- 功能：直接进入功能界面，例如建造、种植、制作等
+- 进入/切换子场景：直接进入子场景，不刷新当前场景描述/事件入口
+
+### 事件
+
+事件根据玩家交互、或被动触发。
+事件配置包括以下内容：
+
+- 事件名称
+- 事件备注（不会显示给玩家）
+- 事件描述（显示在上面的文字）
+- 事件图片
+
+- 进入子事件
+- 子事件配置
+  - 子事件名称
+  - 文本描述（可根据条件显示不同的描述）
+  - 图片描述（如果有的话，覆盖事件图片）
+  - 选项列表
+    - 选项
+    - 选项描述
+    - 选项可用条件
+    - 选项结果
+      - 选项类型（结束、战斗、交易、进入CG或其他可能的，留空则无额外操作进入下一个子事件）
+      - 参数（战斗的敌人、胜利的子事件、战败的子事件、CG的id等）
+      - 下一个子事件
+      - 属性值、物品、技能等及其他标志位变动（概率、条件分别）
+
+举例：
+渔民事件：
+描述渔民正在钓鱼，选项【搭话】【攻击】
+【搭话】询问海怪事件，渔民告诉你海怪只在晚上1点出现，赠与你力量药水【感谢离开】结束事件。
+【攻击】进入战斗，战斗胜利获得金币、鱼、海怪蛋等，进入【击杀】子事件，【拾取物品】获得服装，结束事件。
+
+
+## 基地
+
+玩家可以在有限的地点（离谱海滩等平坦地点）建立基地。基地是玩家活动的大本营，在基地可以储存物品、睡觉、制作、建造等。
+敌人可能会定期袭击玩家基地。（触发事件）
+建造可以建造防御建筑、生产建筑（田地、集雨器）、储存建筑、生活建筑（例如床屋子火堆等）、制作建筑（工作台、铁砧等）等。
+主基地只能有一个。在其他地点勘探完毕后，玩家可以选择迁移基地。
+迁移基地需要大量时间和材料，并触发事件。
+
+### 临时基地
+
+玩家可以消耗某些资源就地扎营，不限制地点，除了地牢。临时营地也可以睡觉、或使用火堆烹饪。
+
+# 角色、剧情与任务
+
+主角随着飞机事故，在荒岛的沙滩上醒来，不远处就是飞机的残骸。故事由此开始。
+玩家有多个角色可选，不同角色有不同的加成或弱点。
+例如：医生：​ 能制作抗生素，工程师：​ 能制作更高级的净水器、修复发电机，猎人：追踪能力更强，剥皮狩猎能力更强，厨师：​ 烹饪的食物更好等。
+
+# 背景
+
+背景基于克苏鲁+SCP的世界观。
+
+在太平洋的中间，有一座无名的岛屿。这座岛本身是正常的热带岛屿，但在五年前，一场海底地震震裂了海沟里的古老沉积层，释放出一种“远古孢子”（The Spores）。孢子并非来自于地球本身，而是早在地球生命诞生之前就降临在地球上的宇宙造物。
+
+孢子核心会无意识地在一定范围内散发能量场，导致生物发生变异。变异后的生物体内会产生新的污染源，即便能量场不存在，接触污染源也会让生物继续变异。
+
+SCP基金会介入后，对孢子本身进行收容，但物质场无法收容。在一段时间的研究后，随着工作人员的陆续变异，最终SCP基金会决定将整个岛一起收容。整个岛屿处于所有物质只进不出的状态。主角因此来到这里。
+
+因此岛上的生物因此变得极具攻击性且外形扭曲，但它们依然是物理存在，可以被长矛刺穿，被子弹打死。
+
+变异的影响分为身体与大脑。身体的变异包括但不限于形态的变化，额外的肢体、超越正常人类的能力。
+大脑的变化主要分三种，一种是宗教般的信仰狂热，一种是彻底的疯狂只保留进食冲动，一种是冷漠拒绝理解。
+
+通关结局：
+1、修复之前研究基地遗留的岛屿中心最高处的信号塔以呼叫救援。
+2、造一个好大船只离开。
+保护特定NPC以解锁浪漫结局。
+在感染状态离开，解锁0号病人结局。
+发现真相，解锁真相结局。
+3、低SAN值下，打倒变异人首领，解锁融入结局。
+4、发现真相，并通过引爆彻底解决孢子，解锁寂静归零结局。
+5、4在自身不死亡条件下，解锁真结局，英雄。
+
+# 开发
+
+核心目标是游戏功能框架与配置分离，以便于后期扩展维护。
+配置使用ts文件亦可。
+
+## 配置
+
+以下内容需在配置中而非逻辑代码中定义，对于每个内容，如果可能内容较多，应该支持多个ts文件。
+1、场景 √
+2、事件 √
+3、标志位 √
+4、物品 √
+5、合成表制作 √
+5、修理 √
+6、建筑表（建造） √
+7、烹饪表（烹饪） √
+8、技能 √
+9、武器类型  √
+10、伤害/防御类型  √
+12、敌人 √
+13、季节、天气、时间 √
+15、地图及距离
+16、CG √
+17、角色（玩家可选角色职业） √
+// DEMO.md 游戏机制规划
+
+# 游戏核心机制
+
+## 场景、事件、交互
+场景、事件、交互是游戏的核心。
+
+玩家总是在场景中，场景包括固定的交互和事件入口。
+
+通过交互和事件入口，玩家进入事件中。
+
+通过触发事件，以及在事件中的交互，进入战斗、建造、CG等界面、改变玩家的状态、物品、属性等。
+
+## 事件触发与时间
+对于buff、日期变化等时间判定，以动作完成后时间进行判定。
+例如有一个每分钟扣10血的buff，玩家选择探索（耗时3小时）。
+无需计算中间时间，在3小时结束后，统一处理所有与时间相关的事件。（扣除血量）
+天气、季节、日期等时间变化，也会在动作完成后时间进行判定。
+
+
+
+## 界面与UI
+
+界面与UI是游戏的基础，玩家通过界面与UI进行交互，了解游戏状态，进行游戏操作。
+
+### 启动界面
+
+游戏启动后的主菜单界面，包括以下内容：
+
+- 游戏名称
+- 开始新游戏
+- 继续游戏
+- 设置
+- 退出游戏
+
+### CG界面
+
+CG界面是游戏中的过场动画，开局、结局及重要场景应使用CG界面。
+
+CG界面不显示血条等其他UI，仅显示文字描述和图片。
+
+和玩家的选项。
+
+根据玩家的选项，选择进入下一个CG界面或进入其他界面。
+
+### 常态界面
+
+游戏的常态界面，显示以下内容：
+
+- 最上：第几日、季节、天气、时间（仅拥有手表或其他时间道具后）以及时间段的icon
+- 次上：生命值、饱食度、体力、SAN（仅有特定道具时显示数值进度条，否则不显示SAN：\*\*，而是显示文本，例如理智、混乱）
+- 次次上：左侧设置、背包、属性操作按钮，右侧当前场景名称（沙滩、沙滩-小屋、沙滩-洞穴-洞穴2）
+- 中间：当前场景描述、可交互内容以蓝色下划线显示，点击后进入对应事件或交互，特别内容可以以不同颜色大小字体显示
+- 下方：玩家主交互区域
+  - 当前场景特有的交互按钮，例如探索、劈柴、建造等
+
+其中中间主要描述、下方交互按钮的数据主要来自于scene。
+交互按钮会转向事件。
+交易界面同样在事件总点击交互再进入，不直接从场景进入。
+在基地中，特有的已完成建筑交互按钮，转向特有的建筑界面。（数据来自于build）在建筑界面中的交互按钮，再转向对应的界面，例如烹饪、制作等。
+基地中特有的建造按钮，直接转向建造页面。
+
+### 事件界面
+
+进入事件后的显示内容：
+
+- 最上：第几日、季节、天气、时间（仅拥有手表或其他时间道具后）以及时间段的icon
+- 次上：生命值、饱食度、体力、SAN（仅有特定道具时显示数值进度条，否则不显示SAN：\*\*，而是显示文本，例如理智、混乱）、其他（例如超重时显示超重icon，寒冷时显示寒冷icon）
+- 次次上：左侧设置、背包、属性操作按钮均隐藏，右侧当前场景名称（沙滩、沙滩-小屋、沙滩-洞穴-洞穴2）
+- 中间：当前事件描述，特别内容可以以不同颜色大小字体显示
+- 下方：当前事件特有的交互选项
+
+其中中间主要描述、下方交互按钮的数据主要来自于event。
+
+### 建筑页面
+
+建筑页面显示玩家当前选择的建筑。
+
+- 最上：第几日、季节、天气、时间（仅拥有手表或其他时间道具后）以及时间段的icon
+- 次上：生命值、饱食度、体力、SAN（仅有特定道具时显示数值进度条，否则不显示SAN：\*\*，而是显示文本，例如理智、混乱）、其他（例如超重时显示超重icon，寒冷时显示寒冷icon）
+- 次次上：左侧设置、背包、属性操作，右侧当前场景名称（沙滩、沙滩-小屋、沙滩-洞穴-洞穴2）
+- 中间：建筑描述。
+- 下方：交互按钮，包括对应的功能、拆除、升级等。其中功能按钮转向对应的界面。
+
+
+### 战斗界面
+
+进入战斗后的显示内容：
+
+- 最上：第几日、季节、天气、时间（仅拥有手表或其他时间道具后）以及时间段的icon
+- 次上：玩家生命值、体力、SAN
+- 次次上：敌人生命值（敌人可能有多个）
+- 中间：战斗描述，特别内容可以以不同颜色大小字体显示
+- 下方：玩家战斗战斗交互选项
+
+### 移动画面
+
+在常态界面点击移动按钮后，显示移动画面：
+
+- 次上：生命值、饱食度、体力、SAN（仅有特定道具时显示数值进度条，否则不显示SAN：\*\*，而是显示文本，例如理智、混乱）、其他（例如超重时显示超重icon，寒冷时显示寒冷icon）
+- 次次上：当前场景名称（沙滩、沙滩-小屋、沙滩-洞穴-洞穴2）
+- 中间：地图显示，其上可以去的地方已标记，并显示预计时间。点击对应地点，前往该场景。
+- 下方：退出按钮
+
+### 特殊界面
+
+#### 背包
+
+背包界面显示玩家当前背包中的物品，包括装备、道具、食物、材料、贵重物品、文档等。
+背包界面包括以下内容：
+
+- 最上：第几日、季节、天气、时间（仅拥有手表或其他时间道具后）以及时间段的icon
+- 次上：玩家生命值、饱食度、体力、SAN
+- 次次上：力量、敏捷、体质、智力、温暖度
+- 中间：背包列表，按照材料、食物、道具、装备、贵重物品分栏切换显示，每行显示5个道具
+  - 可用道具显示对应的吃、使用、装备按钮
+  - 点击图标或名称弹窗显示物品介绍
+- 下方：显示角色当前装备，各类防御值、攻击力
+- 最下：关闭按钮
+
+#### 建造
+
+在基地时可以打开建造选项。
+
+- 最上：第几日、季节、天气、时间（仅拥有手表或其他时间道具后）以及时间段的icon
+- 次上：玩家生命值、饱食度、体力、SAN
+- 中间：建造清单，每一行一条，描述、所需材料和条件、所需事件。上方按照类别筛选。
+  - 材料和条件满足时建造选项可用
+  - 仅持有对应蓝图或解锁建造后，才有这一条，不然没有这一条
+- 最下：关闭按钮
+
+#### 制作
+
+在对应工作台打开制作面板：
+
+- 最上：第几日、季节、天气、时间（仅拥有手表或其他时间道具后）以及时间段的icon
+- 次上：玩家生命值、饱食度、体力、SAN
+- 中间：建造清单，每一行一条，描述、所需材料和条件、所需事件。上方按照类别筛选。
+  - 材料和条件满足时建造选项可用
+  - 仅持有对应蓝图或解锁后，才有这一条，不然没有这一条
+- 最下：关闭按钮
+
+#### 烹饪
+
+基本同制作。
+
+#### 修理
+
+- 最上：第几日、季节、天气、时间（仅拥有手表或其他时间道具后）以及时间段的icon
+- 次上：玩家生命值、饱食度、体力、SAN
+- 中间：背包中可修理物品清单，每行一条，显示所需材料和时间。
+  - 材料和条件满足时建造选项可用
+  - 仅持有对应蓝图或解锁后，才有这一条，不然没有这一条
+- 最下：关闭按钮
+
+#### 交易
+
+- 最上：第几日、季节、天气、时间（仅拥有手表或其他时间道具后）以及时间段的icon
+- 次上：玩家生命值、饱食度、体力、SAN
+- 中间：分购买和售卖。自己背包分类显示，对方背包不分类。点击物品，弹窗显示物品描述、调整数量、显示价格或售出价格，确认后交易。
+- 最下：关闭按钮
+// build.ts - 建造配方数据结构
+
+import type {
+  BaseRecipe,
+  RequiredMaterial,
+  RecipeRequirements,
+  RecipeCost,
+  RecipeProduct,
+} from './recipe'
+import type { RecipeType } from './recipe'
+import type { EffectResult } from './effect'
+import type { Condition } from './effect'
+import type { RepairMaterial } from './item'
+
+// ============================================================
+// 建造配方
+// ============================================================
+
+/**
+ * 建造配方配置
+ * 在基地或临时营地中建造的建筑/设施。
+ * 例如：建造木墙、建造工作台、建造田地、建造床铺等。
+ */
+export interface BuildRecipe extends BaseRecipe {
+  recipeType: RecipeType.BUILD
+
+  /** 建造类型细分 */
+  buildCategory: BuildCategory
+
+  /** 建造产物为建筑实体（建筑在场景中以交互对象形式存在，而非背包物品） */
+  buildResult: BuildResult
+
+  /** 建造前置条件（必须先建造某些建筑才能建造此建筑） */
+  prerequisiteBuildings?: string[]
+}
+
+/**
+ * 建造类型
+ */
+export enum BuildCategory {
+  /** 防御建筑（墙壁、栅栏、陷阱） */
+  DEFENSE = 'defense',
+  /** 生产建筑（田地、集雨器、养殖场） */
+  PRODUCTION = 'production',
+  /** 储存建筑（箱子、仓库、冰箱） */
+  STORAGE = 'storage',
+  /** 生活建筑（床、椅子、桌子） */
+  LIVING = 'living',
+  /** 制作建筑（工作台、铁砧、厨房） */
+  CRAFTING_STATION = 'craftingStation',
+  /** 照明建筑（火把、路灯、篝火） */
+  LIGHTING = 'lighting',
+  /** 装饰建筑 */
+  DECORATION = 'decoration',
+  /** 基础设施（地板、屋顶、道路） */
+  INFRASTRUCTURE = 'infrastructure',
+  /** 祭坛/仪式建筑 */
+  RITUAL = 'ritual',
+}
+
+/**
+ * 建造产物
+ */
+export interface BuildResult {
+  /** 建筑实体ID（用于场景中标识此建筑） */
+  buildingId: string
+  /** 建筑名称（显示用） */
+  buildingName: string
+  /** 建筑描述 */
+  descriptionConfig: BuildingDescriptionConfig
+  // 是否纯装饰建筑
+  isDecorativeOnly: boolean
+  /** 建筑类型 */
+  buildingType: BuildCategory
+  /** 建筑是否可升级 */
+  isUpgradable: boolean
+  /** 升级目标配方ID列表 */
+  upgradeRecipeIds?: string[]
+  /** 同一类型的建筑是否只能建一个 */
+  isUnique: boolean
+  /** 是否可以拆除 */
+  isDeconstructable: boolean
+  /** 拆除返还材料比例（0-1） */
+  deconstructionReturnRatio: number
+  /** 建筑是否可以被敌人攻击/摧毁 */
+  isDestructible: boolean
+  /** 建筑耐久度（被摧毁前可承受的攻击次数或伤害值） */
+  durability?: number
+  /** 修复所需材料及数量 */
+  repairMaterials?: RepairMaterial[]
+  /** 建造完成后产生的持续效果（如床铺提供休息加成） */
+  passiveEffects?: EffectResult[]
+  /** 建筑提供的交互功能（建好后场景中出现的新交互） */
+  providedInteractions?: BuildProvidedInteraction[]
+  /** 建筑外观（在地图/场景中显示的图标） */
+  visualConfig?: BuildVisualConfig
+}
+
+/**
+ * 建筑提供的交互
+ */
+export interface BuildProvidedInteraction {
+  /** 交互ID（对应场景交互ID或新生成的交互） */
+  interactionId: string
+  /** 交互名称（按钮显示文本） */
+  interactionName: string
+  /** 交互类型 */
+  interactionType: 'craft' | 'cook' | 'rest' | 'store' | 'collect' | 'repair' | 'special' | 'event'
+  /** 交互参数 */
+  params?: Record<string, unknown>
+  /** 交互显示条件 */
+  displayCondition?: Condition
+}
+
+// 建筑描述配置
+export interface BuildingDescriptionConfig {
+  /** 建筑描述 */
+  description: string
+  /** 建筑描述（长） */
+  longDescription?: string
+  /** 建筑损坏描述 */
+  damageDescription?: string
+  /** 建筑损坏描述（长） */
+  damageLongDescription?: string
+  /** 建筑被摧毁描述 */
+  destroyedDescription?: string
+  /** 建筑被摧毁描述（长） */
+  destroyedLongDescription?: string
+}
+
+/**
+ * 建筑外观配置
+ */
+export interface BuildVisualConfig {
+  /** 建筑完整状态图标资源ID */
+  intactImageId: string
+  /** 建筑损坏状态图标资源ID */
+  damagedImageId?: string
+  /** 建筑被摧毁状态图标资源ID */
+  destroyedImageId?: string
+}
+
+// ============================================================
+// 建造配方注册表
+// ============================================================
+
+/**
+ * 建造配方注册表
+ */
+export interface BuildRecipeRegistry {
+  /** 所有建造配方 */
+  recipes: Record<string, BuildRecipe>
+  /** 按建造类型分组 */
+  recipesByCategory: Record<BuildCategory, string[]>
+  /** 建筑前置依赖映射（建筑ID -> 依赖它的建筑配方ID列表） */
+  buildingDependencyMap: Record<string, string[]>
+  /** 技能等级解锁映射 */
+  skillLevelUnlocks: Record<string, Record<number, string[]>>
+}
+// cg.ts - CG场景数据结构
+import type { EffectResult } from './effect'
+import type { Condition } from './effect'
+
+// CG场景配置
+export interface CGScene {
+  // CG唯一ID
+  id: string
+  // CG名称
+  name: string
+  // CG备注（开发者可见）
+  notes?: string
+
+  // CG帧序列
+  frames: CGFrame[]
+
+  // CG触发条件，事件触发时，依此条件判断是否触发CG
+  triggerCondition?: Condition
+
+  // CG类型
+  cgType: CGType
+}
+
+// CG类型
+export enum CGType {
+  // 开场CG
+  OPENING = 'opening',
+  // 结局CG
+  ENDING = 'ending',
+  // 重要场景CG
+  IMPORTANT_SCENE = 'important_scene',
+  // 角色CG
+  CHARACTER = 'character',
+  // 战斗CG
+  BATTLE = 'battle',
+  // 梦境CG
+  DREAM = 'dream',
+  // 回忆CG
+  MEMORY = 'memory',
+}
+
+// CG帧
+export interface CGFrame {
+  // 帧ID
+  id: string
+  // 帧序号（用于排序）
+  order: number
+
+  // 文本内容
+  texts: CGText[]
+
+  // 背景图片
+  backgroundImage?: CGSprite
+
+  // 前景图片/角色立绘
+  foregroundSprites?: CGSprite[]
+
+  // 屏幕效果（震动、闪屏等）
+  screenEffects?: CGScreenEffect[]
+
+  // 选项列表
+  options?: CGOption[]
+
+  // 帧显示条件，如果不满足，按照序号自动顺延下一个帧显示
+  displayCondition?: Condition
+}
+
+// CG文本
+export interface CGText {
+  // 文本内容
+  content: string
+
+  // 显示条件
+  condition?: Condition
+
+  // 显示延迟（毫秒）
+  displayDelay?: number
+
+  // 文本变动（根据SAN值等条件显示不同文本）
+  variations?: CGTextVariation[]
+
+  // 文本样式
+  style?: CGTextStyle
+}
+
+// CG文本样式
+export interface CGTextStyle {
+  // 字体大小
+  fontSize?: number
+  // 字体颜色
+  color?: string
+  // 字体粗细
+  fontWeight?: 'normal' | 'bold'
+  // 字体样式
+  fontStyle?: 'normal' | 'italic'
+  // 文本对齐
+  textAlign?: 'left' | 'center' | 'right'
+  // 文本装饰
+  textDecoration?: 'none' | 'underline' | 'line-through'
+  // 文本阴影
+  textShadow?: string
+  // 特殊效果
+  specialEffect?: 'none' | 'glitch' | 'fade' | 'shake' | 'distortion'
+  // 字体家族
+  fontFamily?: string
+
+  position?: CGTextPosition
+}
+
+// CG文本位置
+export enum CGTextPosition {
+  TOP = 'top',
+  MIDDLE = 'middle',
+  BOTTOM = 'bottom',
+  TOP_LEFT = 'top-left',
+  TOP_RIGHT = 'top-right',
+  BOTTOM_LEFT = 'bottom-left',
+  BOTTOM_RIGHT = 'bottom-right',
+  CENTER = 'center',
+  CUSTOM = 'custom',
+}
+
+// CG文本变体（根据条件显示不同文本）
+export interface CGTextVariation {
+  // 变体文本
+  content: string
+  // 显示条件（如SAN值范围）
+  condition: Condition
+  // 变体样式
+  style?: CGTextStyle
+}
+
+// CG精灵（图片元素）
+export interface CGSprite {
+  // 图片URL或资源ID
+  imageId: string
+  // 位置
+  position: {
+    x: number | string
+    y: number | string
+  }
+  // 大小
+  size?: {
+    width: number | string
+    height: number | string
+  }
+  // 透明度 (0-1)
+  opacity?: number
+  // 显示条件
+  condition?: Condition
+  // 图层顺序
+  zIndex?: number
+}
+
+// 屏幕效果
+export interface CGScreenEffect {
+  // 效果类型
+  type: CGScreenEffectType
+  // 强度 (0-1)
+  intensity: number
+  // 持续时间（毫秒）
+  duration: number
+  // 延迟（毫秒）
+  delay?: number
+  // 效果条件
+  condition?: Condition
+}
+
+// 屏幕效果类型
+export enum CGScreenEffectType {
+  SHAKE = 'shake',
+  FLASH = 'flash',
+  FADE_TO_BLACK = 'fadeToBlack',
+  FADE_FROM_BLACK = 'fadeFromBlack',
+  FADE_TO_WHITE = 'fadeToWhite',
+  BLUR = 'blur',
+  COLOR_GRADING = 'colorGrading',
+  INVERT = 'invert',
+  SEPIA = 'sepia',
+  RED_TINT = 'redTint',
+}
+
+// CG选项
+export interface CGOption {
+  // 选项文本
+  text: string
+  // 选项描述（可选）
+  description?: string
+  // 选项文本变体（根据条件）
+  textVariations?: CGTextVariation[]
+  // 选项可用条件
+  availableCondition?: Condition
+  // 选项不可用时的文本
+  unavailableText?: string
+  // 选项结果
+  result: CGOptionResult
+  // 选项显示的优先级顺序
+  priority?: number
+  // 是否隐藏（不满足条件时）
+  hideWhenUnavailable?: boolean
+  // 选项样式
+  style?: 'default' | 'danger' | 'special' | 'hidden'
+  // 选项提示
+  tooltip?: string
+}
+
+// CG选项结果（联合类型版本）
+export type CGOptionResult =
+  | CGNextFrameResult
+  | CGNextCGResult
+  | CGEnterSceneResult
+  | CGTriggerEventResult
+  | CGTriggerBattleResult
+  | CGEndingResult
+
+// 跳转到下一帧
+export interface CGNextFrameResult {
+  type: 'nextFrame'
+  // 目标帧ID（必填）
+  nextFrameId: string
+  // 触发的效果列表
+  effects?: EffectResult[]
+  // 设置标志位
+  setFlags?: Record<string, number | string | boolean>
+}
+
+// 跳转到另一个CG
+export interface CGNextCGResult {
+  type: 'nextCG'
+  // 目标CG的ID（必填）
+  nextCGId: string
+  // 触发的效果列表
+  effects?: EffectResult[]
+  // 设置标志位
+  setFlags?: Record<string, number | string | boolean>
+}
+
+// 结束CG，进入游戏场景
+export interface CGEnterSceneResult {
+  type: 'enterScene'
+  // 场景信息（必填）
+  sceneInfo: {
+    sceneId: string
+    subSceneId?: string
+  }
+  // 触发的效果列表
+  effects?: EffectResult[]
+  // 设置标志位
+  setFlags?: Record<string, number | string | boolean>
+}
+
+// 触发事件
+export interface CGTriggerEventResult {
+  type: 'triggerEvent'
+  // 事件ID（必填）
+  eventId: string
+  // 触发的效果列表
+  effects?: EffectResult[]
+  // 设置标志位
+  setFlags?: Record<string, number | string | boolean>
+}
+
+// 触发战斗
+export interface CGTriggerBattleResult {
+  type: 'triggerBattle'
+  // 敌人ID（必填）
+  enemyId: string
+  // 胜利后跳转的帧ID
+  victoryFrameId?: string
+  // 失败后跳转的帧ID
+  defeatFrameId?: string
+  // 逃跑后跳转的帧ID
+  escapeFrameId?: string
+  // 触发的效果列表
+  effects?: EffectResult[]
+  // 设置标志位
+  setFlags?: Record<string, number | string | boolean>
+}
+
+// 进入结局
+export interface CGEndingResult {
+  type: 'ending'
+  // 结局ID
+  endingId: string
+  // 触发的效果列表
+  effects?: EffectResult[]
+  // 设置标志位
+  setFlags?: Record<string, number | string | boolean>
+}
+export interface CGRegistry {
+  cgs: Record<string, CGScene>
+}
+// character.ts - 玩家职业/角色配置
+
+import type { EffectResult } from './effect'
+import type { AttributeType } from './effect'
+import type { FlagValue } from './flag'
+
+// ============================================================
+// 职业定义
+// ============================================================
+
+/**
+ * 职业配置
+ * 定义玩家可选的初始职业，决定开局属性、物品、技能和独特能力。
+ */
+export interface CharacterClass {
+  /** 职业唯一ID */
+  id: string
+  /** 职业名称（显示用） */
+  name: string
+  /** 职业备注（开发者可见） */
+  notes?: string
+
+  /** 职业描述（选择界面展示） */
+  description: string
+  /** 职业详细说明（展示在确认界面） */
+  detailedDescription?: string
+
+  /** 职业图标资源ID */
+  iconId: string
+  /** 职业立绘/插画资源ID（选择界面展示） */
+  portraitImageId?: string
+
+  /** 职业难度（1-5，在选择界面显示） */
+  difficulty: number
+  /** 职业难度描述（如"适合新手"、"挑战性极高"） */
+  difficultyDescription?: string
+
+  // ============================================================
+  // 初始属性
+  // ============================================================
+
+  /** 初始基础属性 */
+  initialAttributes: CharacterAttributes
+
+  /** 初始生存属性（覆盖默认值） */
+  initialSurvivalAttributes?: CharacterSurvivalAttributes
+
+  // ============================================================
+  // 初始物品
+  // ============================================================
+
+  /** 初始装备（直接装备在身上） */
+  initialEquipment: CharacterInitialEquipment[]
+
+  /** 初始背包物品 */
+  initialInventory: CharacterInitialItem[]
+
+  // ============================================================
+  // 初始技能
+  // ============================================================
+
+  /** 初始已解锁的被动技能ID列表 */
+  initialPassiveSkillIds: string[]
+
+  /** 初始生存技能等级 */
+  initialSurvivalSkillLevels: CharacterInitialSkillLevel[]
+
+  /** 初始武器熟练度 */
+  initialWeaponProficiency: CharacterInitialWeaponProficiency[]
+
+  /** 初始已解锁的战斗技能ID列表 */
+  initialBattleSkillIds?: string[]
+
+  // ============================================================
+  // 初始配方
+  // ============================================================
+
+  /** 初始已解锁的制作配方ID列表 */
+  initialCraftRecipeIds: string[]
+  /** 初始已解锁的烹饪配方ID列表 */
+  initialCookRecipeIds: string[]
+  /** 初始已解锁的建造配方ID列表 */
+  initialBuildRecipeIds: string[]
+
+  // ============================================================
+  // 职业专属能力
+  // ============================================================
+
+  /** 职业专属被动加成（非技能，与职业绑定的特殊效果） */
+  classBonuses: ClassBonus[]
+
+  /** 职业专属配方（仅此职业可解锁的配方ID列表） */
+  exclusiveRecipeIds?: string[]
+  /** 职业专属技能（仅此职业可解锁的技能ID列表） */
+  exclusiveSkillIds?: string[]
+
+  // ============================================================
+  // 初始剧情
+  // ============================================================
+
+  /** 初始标志位（开局时设置的标志位，用于引导不同职业的初始剧情） */
+  initialFlags: Record<string, FlagValue>
+}
+
+// ============================================================
+// 初始属性
+// ============================================================
+
+/**
+ * 初始基础属性
+ */
+export interface CharacterAttributes {
+  /** 力量（默认10，取值范围0-100） */
+  strength: number
+  /** 敏捷（默认10） */
+  agility: number
+  /** 智力（默认10） */
+  intelligence: number
+  /** 体质（默认10） */
+  constitution: number
+}
+
+/**
+ * 初始生存属性（仅需覆写的字段）
+ */
+export interface CharacterSurvivalAttributes {
+  /** 生命值（默认由体质计算） */
+  hp?: number
+  /** 饱食度（默认100） */
+  satiety?: number
+  /** 体力值（默认100） */
+  stamina?: number
+  /** SAN值（默认100） */
+  san?: number
+}
+
+// ============================================================
+// 初始物品
+// ============================================================
+
+/**
+ * 初始装备
+ */
+export interface CharacterInitialEquipment {
+  /** 物品ID */
+  itemId: string
+  /** 装备槽位 */
+  slot: string
+  /** 初始耐久度（为空则使用物品默认耐久） */
+  initialDurability?: number
+}
+
+/**
+ * 初始背包物品
+ */
+export interface CharacterInitialItem {
+  /** 物品ID */
+  itemId: string
+  /** 数量 */
+  quantity: number
+  /** 物品耐久度（如有耐久度系统，为空则使用默认值） */
+  durability?: number
+}
+
+// ============================================================
+// 初始技能
+// ============================================================
+
+/**
+ * 初始生存技能等级
+ */
+export interface CharacterInitialSkillLevel {
+  /** 技能ID */
+  skillId: string
+  /** 初始等级 */
+  level: number
+  /** 初始经验值（0为从该等级0经验开始） */
+  exp?: number
+}
+
+/**
+ * 初始武器熟练度
+ */
+export interface CharacterInitialWeaponProficiency {
+  /** 武器类型ID */
+  weaponTypeId: string
+  /** 初始熟练度等级 */
+  level: number
+  /** 初始经验值 */
+  exp?: number
+}
+
+// ============================================================
+// 职业专属加成
+// ============================================================
+
+/**
+ * 职业专属加成
+ * 与职业绑定的永久被动效果，非技能系统管理，无法通过其他方式获得或移除。
+ */
+export interface ClassBonus {
+  /** 加成ID */
+  id: string
+  /** 加成名称 */
+  name: string
+  /** 加成描述 */
+  description: string
+
+  /** 加成效果列表 */
+  effects: EffectResult[]
+
+  /** 直接属性修正（显示在属性面板） */
+  attributeModifiers?: ClassAttributeModifier[]
+
+  /** 触发条件（部分加成有条件触发，如"烹饪时有30%概率产出双倍"） */
+  triggerCondition?: string
+}
+
+/**
+ * 职业属性修正
+ */
+export interface ClassAttributeModifier {
+  /** 属性类型 */
+  attribute: AttributeType
+  /** 修正值 */
+  value: number
+  /** 修正类型 */
+  modifierType: 'add' | 'multiply'
+  /** 子类型 */
+  subType?: string
+}
+
+// ============================================================
+// 职业注册表
+// ============================================================
+
+/**
+ * 职业注册表
+ */
+export interface CharacterRegistry {
+  /** 所有职业 */
+  classes: Record<string, CharacterClass>
+  /** 职业选择界面排序（职业ID列表，按此顺序展示） */
+  selectionOrder: string[]
+  /** 默认职业ID（快速开始时使用） */
+  defaultClassId: string
+}
+// cook.ts - 烹饪配方数据结构
+
+import type {
+  BaseRecipe,
+  RequiredMaterial,
+  RecipeRequirements,
+  RecipeCost,
+  RecipeProduct,
+} from './recipe'
+import type { RecipeType } from './recipe'
+
+// ============================================================
+// 烹饪配方
+// ============================================================
+
+/**
+ * 烹饪配方配置
+ * 在火堆/厨房等加热设备上进行的食物烹饪。
+ * 例如：烤肉、炖汤、烘焙面包等。
+ */
+export interface CookRecipe extends BaseRecipe {
+  recipeType: RecipeType.COOK
+
+  /** 烹饪类型细分 */
+  cookMode: CookMode
+  /** 所需设备等级 */
+  requiredDeviceLevel: number
+
+  /** 烹饪时间（游戏内分钟数，覆写 requirements.timeMinutes 用于烹饪系统特有计算） */
+  cookTimeMinutes: number
+
+  /** 烹饪经验奖励 */
+  experienceReward: CookExperienceReward
+
+  /** 烹饪产物品质 */
+  qualityLevels?: CookQualityLevel[]
+}
+
+/**
+ * 烹饪类型
+ */
+export enum CookMode {
+  /** 即食 */
+  COOK = 'cook',
+  /** 酿造 */
+  BREW = 'brew',
+}
+
+/**
+ * 烹饪经验奖励
+ */
+export interface CookExperienceReward {
+  /** 技能ID（通常为cooking） */
+  skillId: string
+  /** 每次烹饪获得的经验 */
+  expPerCook: number
+  /** 完美烹饪额外经验 */
+  perfectBonusExp: number
+  /** 首次烹饪此配方额外经验 */
+  firstTimeBonusExp: number
+}
+
+/**
+ * 烹饪品质等级
+ * 根据技能等级和随机因素，烹饪可能产出不同品质的食物
+ */
+export interface CookQualityLevel {
+  /** 品质等级（0=失败，1=普通，2=良好，3=完美） */
+  level: number
+  /** 品质名称，描述品质特征，例如完满的烹饪、普通烹饪等 */
+  name: string
+  /** 对应产出的物品ID（不同品质可能是不同物品） */
+  productItemId?: string
+  /** 达到此品质所需的最低技能等级 */
+  minSkillLevel: number
+  /** 此品质的概率权重（与技能等级相关，高技能等级高权重） */
+  weight: number
+}
+
+// ============================================================
+// 烹饪配方注册表
+// ============================================================
+
+/**
+ * 烹饪配方注册表
+ */
+export interface CookRecipeRegistry {
+  recipes: Record<string, CookRecipe>
+}
+// craft.ts - 制作配方数据结构
+
+import type {
+  BaseRecipe,
+  RequiredMaterial,
+  RecipeRequirements,
+  RecipeCost,
+  RecipeProduct,
+} from './recipe'
+import type { RecipeType } from './recipe'
+
+// ============================================================
+// 制作配方
+// ============================================================
+
+/**
+ * 制作配方配置
+ * 在工作台/设备上进行的物品制作。
+ * 例如：制作木剑、制作绷带、制作箭矢等。
+ */
+export interface CraftRecipe extends BaseRecipe {
+  recipeType: RecipeType.CRAFT
+
+  /** 制作类型细分 */
+  craftCategory: CraftCategory
+
+  /** 所需设备等级（0=徒手，1=简易工作台，2=铁砧/高级工作台，3=精密设备等） */
+  requiredDeviceLevel: number
+
+  /** 制作经验奖励（完成时获得的生存技能经验） */
+  experienceReward: CraftExperienceReward
+
+  /** 最小制作数量（批量制作） */
+  minCraftQuantity: number
+  /** 最大制作数量（批量制作，-1=无上限，取决于材料） */
+  maxCraftQuantity: number
+  /** 批量制作时，后续每件额外消耗时间（分钟，用于计算批量总时间） */
+  additionalTimePerItem: number
+}
+
+/**
+ * 制作类型
+ */
+export enum CraftCategory {
+  /** 武器 */
+  WEAPON = 'weapon',
+  /** 防具 */
+  ARMOR = 'armor',
+  /** 工具 */
+  TOOL = 'tool',
+  /** 弹药 */
+  AMMUNITION = 'ammunition',
+  /** 消耗品/药品 */
+  CONSUMABLE = 'consumable',
+  /** 建筑组件（用于建造的中间材料） */
+  BUILDING_COMPONENT = 'buildingComponent',
+  /** 容器 */
+  CONTAINER = 'container',
+  /** 陷阱 */
+  TRAP = 'trap',
+  /** 照明 */
+  LIGHT = 'light',
+  /** 其他 */
+  OTHER = 'other',
+}
+
+/**
+ * 制作经验奖励
+ */
+export interface CraftExperienceReward {
+  /** 技能ID */
+  skillId: string
+  /** 每次制作获得的经验（批量制作时每件获得此经验） */
+  expPerCraft: number
+  /** 首次制作额外经验 */
+  firstTimeBonusExp: number
+}
+
+// ============================================================
+// 制作配方注册表
+// ============================================================
+
+/**
+ * 制作配方注册表
+ */
+export interface CraftRecipeRegistry {
+  /** 所有制作配方 */
+  recipes: Record<string, CraftRecipe>
+}
+// damage.ts - 伤害类型数据结构
+
+// ============================================================
+// 伤害类型定义
+// ============================================================
+
+/**
+ * 伤害类型配置
+ */
+export interface DamageType {
+  /** 伤害类型唯一ID */
+  id: string
+  /** 伤害类型名称（显示用） */
+  name: string
+  /** 伤害类型描述 */
+  description: string
+  /** 伤害类型图标资源ID */
+  iconId: string
+  /** 伤害类型对应文字颜色（用于战斗日志中显示伤害数值） */
+  textColor: string
+  // 无视防御系数（1为无视防御，0为不无视防御，中间值为部分无视）
+  defensePenetration: number
+}
+
+// ============================================================
+// 伤害类型注册表
+// ============================================================
+
+/**
+ * 伤害类型注册表
+ */
+export interface DamageTypeRegistry {
+  damageTypes: Record<string, DamageType>
+}
+// effect.ts - 效果数据结构
+
+import type { RecipeType } from './recipe'
+import type { FlagOperation } from './flag'
+
+// ============================================================
+// 效果类型枚举
+// ============================================================
+
+export enum EffectType {
+  /** 属性变动 */
+  ATTRIBUTE = 'attribute',
+  /** 状态施加/移除 */
+  STATUS = 'status',
+  /** 物品获得/失去 */
+  ITEM = 'item',
+  /** 场景切换 */
+  SCENE = 'scene',
+  /** 标志位设置 */
+  FLAG = 'flag',
+  /** 战斗触发 */
+  BATTLE = 'battle',
+  /** CG触发 */
+  CG = 'cg',
+  /** 事件触发 */
+  EVENT = 'event',
+  /** 解锁/锁配方 */
+  RECIPE = 'recipe',
+  /** 解锁/丢失技能 */
+  SKILL = 'skill',
+  /** 获得经验 */
+  GAIN_EXP = 'gainExp',
+  /** 条件判断 */
+  CONDITION = 'condition',
+  /** 复合效果（多个效果组合） */
+  COMPOSITE = 'composite',
+}
+
+// ============================================================
+// 属性类型
+// ============================================================
+
+export enum AttributeType {
+  // 生存属性
+  HP = 'hp',
+  SATIETY = 'satiety',
+  STAMINA = 'stamina',
+  SAN = 'san',
+  WARMTH = 'warmth',
+  CARRY_WEIGHT = 'carryWeight',
+
+  // 基础属性
+  STRENGTH = 'strength',
+  AGILITY = 'agility',
+  INTELLIGENCE = 'intelligence',
+  CONSTITUTION = 'constitution',
+
+  // 经验值
+  STRENGTH_EXP = 'strengthExp',
+  AGILITY_EXP = 'agilityExp',
+  INTELLIGENCE_EXP = 'intelligenceExp',
+  CONSTITUTION_EXP = 'constitutionExp',
+
+  // 武器熟练度
+  WEAPON_PROFICIENCY = 'weaponProficiency',
+  WEAPON_PROFICIENCY_EXP = 'weaponProficiencyExp',
+
+  // 防御属性
+  SLASH_DEFENSE = 'slashDefense',
+  BLUNT_DEFENSE = 'bluntDefense',
+  RANGED_DEFENSE = 'rangedDefense',
+  POISON_DEFENSE = 'poisonDefense',
+  FIRE_DEFENSE = 'fireDefense',
+
+  // 技能等级
+  SKILL_LEVEL = 'skillLevel',
+  SKILL_EXP = 'skillExp',
+
+  // 系数属性
+  RECOVERY_RATE_COEFFICIENT = 'recoveryRateCoefficient',
+  SATIETY_UPPER_LIMIT_COEFFICIENT = 'satietyUpperLimitCoefficient',
+  SATIETY_LOSS_COEFFICIENT = 'satietyLossCoefficient',
+  STAMINA_CONSUMPTION_COEFFICIENT = 'staminaConsumptionCoefficient',
+  STAMINA_RECOVERY_COEFFICIENT = 'staminaRecoveryCoefficient',
+  STAMINA_RECOVERY_FIX = 'staminaRecoveryFix',
+  SAN_MODIFIER = 'sanModifier',
+  TEMPERATURE_LOW = 'temperatureLow',
+  TEMPERATURE_HIGH = 'temperatureHigh',
+  CARRY_WEIGHT_MODIFIER = 'carryWeightModifier',
+}
+
+// ============================================================
+// 属性操作
+// ============================================================
+
+export enum AttributeOperation {
+  SET = 'set',
+  ADD = 'add',
+  SUBTRACT = 'subtract',
+  MULTIPLY = 'multiply',
+  DIVIDE = 'divide',
+}
+
+// ============================================================
+// 效果接口
+// ============================================================
+
+/** 属性效果 */
+export interface AttributeEffect {
+  type: EffectType.ATTRIBUTE
+  attribute: AttributeType
+  operation: AttributeOperation
+  value: number
+  /** 子类型（武器熟练度/技能等需要指定具体类型时使用） */
+  subType?: string
+}
+
+/** 状态效果（施加或移除异常状态） */
+export interface StatusEffect {
+  type: EffectType.STATUS
+  /** 状态模板ID（对应 status.ts 中的 StatusConfig.id） */
+  statusId: string
+  /** 是施加(true)还是移除(false) */
+  apply: boolean
+  /** 持续时间值（-1=使用状态模板默认值） */
+  duration?: number
+  /** 持续时间单位（不填则使用状态模板默认单位） */
+  durationUnit?: 'turn' | 'minute' | 'hour' | 'permanent'
+  /** 施加层数（apply=true时生效，受状态模板叠加规则约束） */
+  stackCount?: number
+  /** 来源描述（用于战斗日志等，如"来自毒蛇之咬"） */
+  sourceId?: string
+  /** 覆盖状态模板的参数 */
+  params?: Record<string, number>
+}
+
+/** 物品效果 */
+export interface ItemEffect {
+  type: EffectType.ITEM
+  itemId: string
+  changeType: ItemChangeType
+  quantity?: number
+  randomQuantity?: {
+    min: number
+    max: number
+  }
+  probability?: number
+  condition?: Condition
+}
+
+export enum ItemChangeType {
+  ADD = 'add',
+  REMOVE = 'remove',
+  EQUIP = 'equip',
+  UNEQUIP = 'unequip',
+}
+
+/** 场景切换效果 */
+export interface SceneEffect {
+  type: EffectType.SCENE
+  sceneId: string
+  subSceneId?: string
+  immediate?: boolean
+}
+
+/** 标志位效果 */
+export interface FlagEffect {
+  type: EffectType.FLAG
+  flagId: string
+  operation: FlagOperation
+  value?: number | string | boolean
+}
+
+/** 战斗效果 */
+export interface BattleEffect {
+  type: EffectType.BATTLE
+  enemyId: string[]
+  victoryEffects?: Effect[]
+  defeatEffects?: Effect[]
+  canEscape?: boolean
+  firstEncounterBonus?: boolean
+}
+
+/** CG效果 */
+export interface CGEffect {
+  type: EffectType.CG
+  cgId: string
+}
+
+/** 事件触发效果 */
+export interface EventTriggerEffect {
+  type: EffectType.EVENT
+  eventId: string
+  triggerTiming: 'immediate' | 'onSceneEnter' | 'onConditionMet'
+  condition?: Condition
+}
+
+/** 解锁配方效果 */
+export interface RecipeEffect {
+  type: EffectType.RECIPE
+  recipeId: string
+  recipeType: RecipeType
+  // 解锁还是删除配方
+  unlock: boolean
+}
+
+/** 解锁/丢失技能效果 */
+export interface SkillEffect {
+  type: EffectType.SKILL
+  skillId: string
+  // 解锁还是丢失技能
+  unlock: boolean
+}
+
+/** 获得经验效果 */
+export interface GainExpEffect {
+  type: EffectType.GAIN_EXP
+  /** 经验目标类型 */
+  target: GainExpTarget
+  /** 目标ID（技能ID/武器类型ID/属性类型） */
+  targetId: string
+  /** 经验值 */
+  amount: number
+}
+
+export enum GainExpTarget {
+  /** 生存技能 */
+  SURVIVAL_SKILL = 'survivalSkill',
+  /** 武器熟练度 */
+  WEAPON_PROFICIENCY = 'weaponProficiency',
+  /** 战斗技能 */
+  BATTLE_SKILL = 'battleSkill',
+  /** 基础属性（力量/敏捷/智力/体质） */
+  ATTRIBUTE = 'attribute',
+}
+
+/** 复合效果 */
+export interface CompositeEffect {
+  type: EffectType.COMPOSITE
+  effects: Effect[]
+  executionMode: 'sequential' | 'random' | 'weighted_random'
+  weights?: number[]
+}
+
+// ============================================================
+// 效果联合类型
+// ============================================================
+
+export type Effect =
+  | AttributeEffect
+  | StatusEffect
+  | ItemEffect
+  | SceneEffect
+  | FlagEffect
+  | BattleEffect
+  | CGEffect
+  | EventTriggerEffect
+  | RecipeEffect
+  | SkillEffect
+  | GainExpEffect
+  | CompositeEffect
+
+// ============================================================
+// 效果结果
+// ============================================================
+
+export interface EffectResult {
+  effect: Effect
+  probability?: number
+  condition?: Condition
+  description?: string
+}
+
+// ============================================================
+// 条件系统
+// ============================================================
+
+export enum ComparisonOperator {
+  EQUAL = 'equal',
+  NOT_EQUAL = 'notEqual',
+  GREATER = 'greater',
+  GREATER_EQUAL = 'greaterEqual',
+  LESS = 'less',
+  LESS_EQUAL = 'lessEqual',
+  BETWEEN = 'between',
+  IN = 'in',
+  NOT_IN = 'notIn',
+  EXISTS = 'exists',
+  NOT_EXISTS = 'notExists',
+}
+
+export enum LogicOperator {
+  AND = 'and',
+  OR = 'or',
+  NOT = 'not',
+}
+
+export interface Condition {
+  logic?: LogicOperator
+  subConditions?: Condition[]
+  target?: ConditionTarget
+  operator?: ComparisonOperator
+  value?: number | string | boolean | number[]
+  value2?: number
+}
+
+export enum ConditionTargetType {
+  ATTRIBUTE = 'attribute',
+  FLAG = 'flag',
+  ITEM = 'item',
+  STATUS = 'status',
+  SCENE = 'scene',
+  TIME = 'time',
+  WEATHER = 'weather',
+  SEASON = 'season',
+  SAN_LEVEL = 'sanLevel',
+  CORRUPTION = 'corruption',
+  SKILL = 'skill',
+  WEAPON_PROFICIENCY = 'weaponProficiency',
+  /** 配方是否已解锁 */
+  RECIPE_UNLOCKED = 'recipeUnlocked',
+  /** 玩家金币数量 */
+  PLAYER_GOLD = 'playerGold',
+  /** 负重率 */
+  CARRY_WEIGHT_RATE = 'carryWeightRate',
+}
+
+export interface ConditionTarget {
+  type: ConditionTargetType
+  id?: string
+  attributeType?: AttributeType
+  subType?: string
+}
+// enemy.ts - 敌人数据结构
+
+import type { Condition } from './effect'
+import type { EffectResult } from './effect'
+import type { FlagValue } from './flag'
+
+// ============================================================
+// 敌人配置
+// ============================================================
+
+/**
+ * 敌人配置
+ */
+export interface Enemy {
+  /** 敌人唯一ID */
+  id: string
+  /** 敌人名称（显示用） */
+  name: string
+  /** 敌人名称变体（根据条件显示不同名称，如SAN值影响认知） */
+  nameVariations?: EnemyNameVariation[]
+  /** 敌人备注（开发者可见） */
+  notes?: string
+
+  /** 敌人类型 */
+  enemyType: EnemyType
+
+  /** 敌人描述（战斗中的观察/分析结果） */
+  description: string
+  /** 描述变体（不同SAN值下观察结果不同） */
+  descriptionVariations?: EnemyDescriptionVariation[]
+
+  /** 敌人图标/立绘资源ID */
+  imageId: string
+  /** 图片变体（根据SAN值等条件显示不同外观） */
+  imageVariations?: EnemyImageVariation[]
+
+  // ============================================================
+  // 基础属性
+  // ============================================================
+
+  /** 生命值 */
+  hp: number
+  /** 力量（影响伤害） */
+  strength: number
+  /** 敏捷（影响出手顺序和逃跑难度） */
+  agility: number
+
+  // ============================================================
+  // 防御属性
+  // ============================================================
+
+  /** 防御属性 */
+  defenses: Record<string, number>
+
+  // ============================================================
+  // 战斗行为
+  // ============================================================
+
+  /** 敌人技能列表，至少包含一个默认普攻技能 */
+  skills: EnemySkill[]
+
+  /** AI行为参数 */
+  behavior: EnemyBehavior
+
+  // ============================================================
+  // 特殊机制
+  // ============================================================
+
+  /** 腐化度修正（腐化度影响敌人强度） */
+  corruptionScaling?: EnemyCorruptionScaling
+
+  /** 逃跑难度修正系数（逃跑公式：玩家敏捷/(玩家敏捷+敌人敏捷*此系数)） */
+  escapeDifficultyModifier: number
+
+  /** 是否禁止逃跑 */
+  canNotEscape: boolean
+
+  // ============================================================
+  // 战利品
+  // ============================================================
+
+  /** 战利品列表 */
+  loot: EnemyLoot[]
+
+  /** 击败后设置标志位 */
+  defeatFlag?: string
+  /** 击败后触发的效果 */
+  onDefeatEffects?: EffectResult[]
+
+  /** 首次击败额外战利品 */
+  firstDefeatBonusLoot?: EnemyLoot[]
+
+  // ============================================================
+  // 出现条件
+  // ============================================================
+
+  /** 出现条件（用于随机遭遇生成时筛选） */
+  spawnCondition?: Condition
+  /** 出现权重（多个敌人满足条件时，权重越高出现概率越大） */
+  spawnWeight?: number
+  /** 出现所需最低腐化度 */
+  minCorruption?: number
+  /** 出现所需最高腐化度 */
+  maxCorruption?: number
+}
+
+// ============================================================
+// 敌人类型
+// ============================================================
+
+/**
+ * 敌人类型
+ */
+export enum EnemyType {
+  /** 普通生物（野兽、人类等） */
+  NORMAL = 'normal',
+  /** 变异生物（受孢子影响的生物） */
+  MUTATED = 'mutated',
+  /** 梦境怪物（低SAN值时出现，半真实半幻觉） */
+  DREAM_CREATURE = 'dreamCreature',
+  /** 变异人（曾经是人类） */
+  MUTATED_HUMAN = 'mutatedHuman',
+  /** BOSS */
+  BOSS = 'boss',
+  /** 不可战胜的敌人（剧情用，战斗必败或通过特定方式解决） */
+  INVINCIBLE = 'invincible',
+  /** 友好/中立单位（可对话，不应主动触发战斗） */
+  NEUTRAL = 'neutral',
+}
+
+// ============================================================
+// 名称与描述变体
+// ============================================================
+
+/**
+ * 敌人名称变体
+ * 例如：SAN值正常时显示"野狼"，低SAN值时显示"扭曲的狼形生物"
+ */
+export interface EnemyNameVariation {
+  /** 变体名称 */
+  name: string
+  /** 显示条件 */
+  condition: Condition
+}
+
+/**
+ * 敌人描述变体
+ * 不同SAN值下观察/分析获得的描述不同
+ */
+export interface EnemyDescriptionVariation {
+  /** 变体描述 */
+  description: string
+  /** 显示条件 */
+  condition: Condition
+}
+
+/**
+ * 敌人图片变体
+ */
+export interface EnemyImageVariation {
+  /** 图片资源ID */
+  imageId: string
+  /** 显示条件 */
+  condition: Condition
+  /** 过渡效果 */
+  transitionEffect?: 'fade' | 'glitch' | 'instant'
+}
+
+// ============================================================
+// 敌人技能
+// ============================================================
+
+/**
+ * 敌人技能
+ */
+export interface EnemySkill {
+  /** 技能ID（敌人内唯一） */
+  id: string
+  /** 技能名称 */
+  name: string
+  /** 技能描述（玩家观察成功时可见） */
+  description?: string
+
+  /** 使用优先级（数字越大越优先，优先级相同时按概率选取） */
+  priority: number
+  /** 使用概率权重（同一优先级下按权重比例随机） */
+  weight: number
+
+  /** 使用条件（不满足时此技能不会被选取） */
+  useCondition?: EnemySkillCondition
+
+  /** 一场战斗中最多使用次数（-1表示无限） */
+  maxUses: number
+
+  /** 伤害类型 */
+  damageTypeId?: string
+
+  /** 技能数值 */
+  stats: EnemySkillStats
+
+  /** 技能消耗（敌人通常不消耗资源，留空即可；特殊敌人可消耗自身HP等） */
+  costs?: EnemySkillCost[]
+
+  /** 冷却（回合数，0表示无冷却） */
+  cooldown: number
+
+  /** 目标类型 */
+  targetType: EnemySkillTargetType
+
+  /** 发动延迟（蓄力回合数，0表示立即生效） */
+  chargeTime: number
+  /** 蓄力时的提示文本列表（如"敌人正在蓄力..."） */
+  chargeText?: string[]
+
+  /** 命中后施加的效果 */
+  onHitEffects?: EffectResult[]
+
+  /** 技能使用时的描述文本（用于战斗日志） */
+  useTextTemplate?: string
+}
+
+/**
+ * 敌人技能使用条件
+ */
+export interface EnemySkillCondition {
+  /** 自身HP低于此比例时可用（0-1） */
+  hpBelowRatio?: number
+  /** 自身HP高于此比例时可用（0-1） */
+  hpAboveRatio?: number
+  /** 战斗回合数大于等于此值时可用 */
+  minTurn?: number
+  /** 战斗回合数小于等于此值时可用 */
+  maxTurn?: number
+  /** 仅在满足此条件时可用 */
+  customCondition?: Condition
+}
+
+/**
+ * 敌人技能数值
+ */
+export interface EnemySkillStats {
+  /** 基础伤害 */
+  baseDamage: number
+  /** 伤害浮动范围（最终伤害 = baseDamage * (1 ± variance)） */
+  damageVariance: number
+  /** 力量对伤害的加成系数 */
+  strengthScaling: number
+  /** 敏捷对伤害的加成系数 */
+  agilityScaling: number
+
+  /** 命中修正 */
+  accuracyModifier: number
+  /** 暴击率（0-1） */
+  criticalChance: number
+  /** 暴击倍率 */
+  criticalMultiplier: number
+}
+
+/**
+ * 敌人技能消耗
+ */
+export interface EnemySkillCost {
+  /** 消耗类型 */
+  costType: 'hp' | 'stamina'
+  /** 消耗值（固定值或百分比，百分比为0-1） */
+  value: number | { type: 'percentage'; value: number }
+}
+
+/**
+ * 敌人技能目标类型
+ */
+export enum EnemySkillTargetType {
+  /** 单个玩家 */
+  SINGLE_PLAYER = 'singlePlayer',
+  /** 全体（仅玩家，单人游戏中等同于singlePlayer） */
+  ALL_PLAYERS = 'allPlayers',
+  /** 自身 */
+  SELF = 'self',
+  /** 随机目标（若有多个友方） */
+  RANDOM = 'random',
+}
+
+// ============================================================
+// AI行为
+// ============================================================
+
+/**
+ * 敌人AI行为参数
+ */
+export interface EnemyBehavior {
+  /** 攻击倾向（0-1，0=完全随机选择技能，1=总是选择伤害最高的技能） */
+  aggression: number
+  /** HP低于此比例时行为改变（0-1，如0.3表示低于30%HP时触发） */
+  desperationThreshold?: number
+  /** 濒死时行为变化 */
+  desperationBehavior?: EnemyDesperationBehavior
+}
+
+/**
+ * 敌人濒死行为
+ */
+export interface EnemyDesperationBehavior {
+  /** 行为类型 */
+  type: 'flee' | 'enrage' | 'selfDestruct' | 'transform'
+  /** 行为参数（如逃跑概率、狂暴伤害加成、自爆伤害等） */
+  params?: Record<string, number>
+  /** 触发时的文本描述 */
+  triggerText?: string
+  /** 触发时执行的效果 */
+  effects?: EffectResult[]
+}
+
+// ============================================================
+// 腐化度缩放
+// ============================================================
+
+/**
+ * 腐化度对敌人强度的修正
+ */
+export interface EnemyCorruptionScaling {
+  /** 腐化度对HP的加成（每点腐化度增加多少%HP） */
+  hpPerCorruption: number
+  /** 腐化度对伤害的加成（每点腐化度增加多少%伤害） */
+  damagePerCorruption: number
+  /** 腐化度对新技能解锁（腐化度达到阈值时解锁新技能） */
+  skillUnlocks?: {
+    corruptionThreshold: number
+    skillIds: string[]
+  }[]
+}
+
+// ============================================================
+// 属性修正
+// ============================================================
+
+/**
+ * 敌人属性修正（SAN值效果、腐化度缩放等使用）
+ */
+export interface EnemyStatModifier {
+  /** 目标属性 */
+  stat:
+    | 'hp'
+    | 'strength'
+    | 'agility'
+    | 'slashDefense'
+    | 'bluntDefense'
+    | 'rangedDefense'
+    | 'poisonDefense'
+    | 'fireDefense'
+    | 'mentalDefense'
+  /** 修正类型 */
+  modifierType: 'add' | 'multiply' | 'set'
+  /** 修正值 */
+  value: number
+}
+
+// ============================================================
+// 战利品
+// ============================================================
+
+/**
+ * 敌人战利品
+ */
+export interface EnemyLoot {
+  /** 物品ID */
+  itemId: string
+  /** 掉落概率（0-1） */
+  probability: number
+  /** 最小数量 */
+  minQuantity: number
+  /** 最大数量 */
+  maxQuantity: number
+  /** 是否受玩家属性/技能影响掉落概率（如剥皮技能提升皮革掉落） */
+  affectedByPlayerSkill?: {
+    skillId: string
+    /** 每级技能增加的概率 */
+    bonusPerLevel: number
+    /** 每级额外增加的最大数量（可选） */
+    quantityBonusPerLevel?: number
+  }
+}
+
+// ============================================================
+// 敌人注册表
+// ============================================================
+
+/**
+ * 敌人注册表（全局敌人配置汇总）
+ */
+export interface EnemyRegistry {
+  /** 所有敌人配置，按ID索引 */
+  enemies: Record<string, Enemy>
+  /** 按类型分组的敌人ID列表 */
+  enemiesByType: Record<EnemyType, string[]>
+  /** 按出现场景分组的敌人ID列表 */
+  enemiesByScene?: Record<string, string[]>
+}
+// event.ts - 事件数据结构
+
+import type { Condition } from './effect'
+import type { EffectResult } from './effect'
+import type { FlagValue } from './flag'
+
+// ============================================================
+// 事件配置
+// ============================================================
+
+/**
+ * 事件配置
+ * 事件是游戏内容的核心载体，负责：
+ * - 展示叙事文本（含根据条件变化的文本变体）
+ * - 提供选项供玩家选择
+ * - 通过选项结果驱动：属性变动、物品获得、战斗触发、CG播放、场景切换、标志位设置等
+ *
+ * 事件由多帧（EventFrame）组成，每帧可包含多个选项。
+ * 事件总是以某个结束型选项终止（结束事件、进入战斗、切换场景、播放CG等）。
+ */
+export interface GameEvent {
+  /** 事件唯一ID */
+  id: string
+  /** 事件名称（开发者可见） */
+  name: string
+  /** 事件备注 */
+  notes?: string
+
+  /** 事件帧序列（至少一帧） */
+  frames: EventFrame[]
+
+  /** 事件触发条件（不满足则无法进入此事件） */
+  triggerCondition?: Condition
+
+  /** 事件开始时自动触发的效果（进入事件时立即执行） */
+  onEnterEffects?: EffectResult[]
+
+  /** 事件类型 */
+  eventType: EventType
+
+  /** 事件是否可重复触发（false表示只能触发一次） */
+  isRepeatable: boolean
+  /** 触发后设置的标志位（用于追踪是否已触发过） */
+  triggeredFlag?: string
+
+  /** 事件是否可被中断（如战斗中逃跑返回事件） */
+  isInterruptible: boolean
+
+  /** 事件图片（覆盖场景图片） */
+  backgroundImage?: string
+  /** 事件图片变体（根据条件显示不同图片） */
+  backgroundImageVariations?: EventImageVariation[]
+}
+
+/**
+ * 事件类型
+ */
+export enum EventType {
+  /** 普通事件 */
+  NORMAL = 'normal',
+  /** 战斗事件（可直接进入战斗） */
+  BATTLE = 'battle',
+  /** 交易事件 */
+  TRADE = 'trade',
+  /** CG事件（播放CG） */
+  CG = 'cg',
+  /** 遭遇事件（移动途中触发的随机事件） */
+  ENCOUNTER = 'encounter',
+  /** 梦境事件（低SAN值时触发） */
+  DREAM = 'dream',
+  /** 特殊事件（结局、关键剧情等） */
+  SPECIAL = 'special',
+}
+
+/**
+ * 事件图片变体
+ */
+export interface EventImageVariation {
+  /** 图片资源ID */
+  imageId: string
+  /** 显示条件 */
+  condition: Condition
+  /** 过渡效果 */
+  transitionEffect?: 'fade' | 'glitch' | 'instant'
+}
+
+// ============================================================
+// 事件帧
+// ============================================================
+
+/**
+ * 事件帧
+ * 事件的每个步骤/页面，包含描述文本和选项列表。
+ * 当玩家选择某个选项后，根据选项结果跳转到下一帧或结束事件。
+ */
+export interface EventFrame {
+  /** 帧ID（事件内唯一） */
+  id: string
+  /** 帧序号（用于排序） */
+  order: number
+
+  /** 帧文本（展示给玩家的内容，支持换行） */
+  text: string
+  /** 文本变体（根据条件显示不同文本，如SAN值影响叙事） */
+  textVariations?: EventTextVariation[]
+
+  /** 帧图片（可选，覆盖事件的背景图） */
+  imageId?: string
+
+  /** 帧选项列表 */
+  options: EventOption[]
+
+  /** 帧显示条件（满足条件时才显示此帧，否则跳过） */
+  displayCondition?: Condition
+
+  /** 进入此帧时自动触发的效果 */
+  onEnterEffects?: EffectResult[]
+  /** 离开此帧时自动触发的效果 */
+  onExitEffects?: EffectResult[]
+}
+
+/**
+ * 事件文本变体
+ */
+export interface EventTextVariation {
+  /** 变体文本 */
+  content: string
+  /** 显示条件 */
+  condition: Condition
+}
+
+// ============================================================
+// 事件选项
+// ============================================================
+
+/**
+ * 事件选项
+ * 玩家在事件帧中可点击的选项按钮。
+ * 选项可以：
+ * - 跳转到同一事件的另一个帧（继续叙事）
+ * - 结束事件（返回场景）
+ * - 触发战斗
+ * - 播放CG
+ * - 进入交易界面
+ * - 切换场景
+ * - 触发其他事件
+ */
+export interface EventOption {
+  /** 选项ID（帧内唯一） */
+  id: string
+
+  /** 选项文本（显示在按钮上） */
+  text: string
+  /** 文本变体（根据条件显示不同文本） */
+  textVariations?: EventTextVariation[]
+
+  /** 选项描述（可选，长按或tooltip显示） */
+  description?: string
+
+  /** 选项显示条件（满足条件时才显示此选项） */
+  displayCondition?: Condition
+  /** 选项可用条件（满足条件时才可点击，不满足时灰显） */
+  availableCondition?: Condition
+  /** 不可用时的提示文本 */
+  unavailableTooltip?: string
+
+  /** 选项样式 */
+  optionStyle?: EventOptionStyle
+
+  /** 选择此选项消耗的资源 */
+  costs?: EventOptionCost[]
+
+  /** 选项结果（选择后发生的事情） */
+  result: EventOptionResult
+
+  /** 选项优先级（数字越大显示越靠前） */
+  displayPriority?: number
+
+  /** 是否需要确认弹窗（防止误操作重要选项） */
+  requiresConfirmation?: boolean
+  /** 确认弹窗文本 */
+  confirmationText?: string
+
+  /** 此选项是否只能选择一次（再次进入此帧时灰显或隐藏） */
+  isOneTime?: boolean
+  /** 选择后设置的标志位 */
+  selectedFlag?: string
+
+  /** 选择后选项文本的变化（如"敲门"→"再次敲门"） */
+  textAfterSelected?: string
+}
+
+/**
+ * 事件选项样式
+ */
+export enum EventOptionStyle {
+  /** 默认样式 */
+  DEFAULT = 'default',
+  /** 危险操作（红色，如攻击、跳崖等） */
+  DANGER = 'danger',
+  /** 特殊/关键操作（金色/高亮） */
+  SPECIAL = 'special',
+  /** 隐藏选项（满足条件才显示，显示时可能是半透明或特殊效果） */
+  HIDDEN = 'hidden',
+  /** 理智相关选项（低SAN值下特有样式） */
+  MADNESS = 'madness',
+}
+
+/**
+ * 事件选项消耗
+ */
+export interface EventOptionCost {
+  /** 消耗类型 */
+  costType: EventOptionCostType
+  /** 消耗值 */
+  value: number
+  /** 消耗的物品ID（costType为ITEM时使用） */
+  itemId?: string
+  /** 消耗的物品数量（costType为ITEM时使用） */
+  itemQuantity?: number
+}
+
+/**
+ * 事件选项消耗类型
+ */
+export enum EventOptionCostType {
+  STAMINA = 'stamina',
+  SATIETY = 'satiety',
+  SAN = 'san',
+  HP = 'hp',
+  ITEM = 'item',
+}
+
+// ============================================================
+// 事件选项结果
+// ============================================================
+
+/**
+ * 事件选项结果（联合类型）
+ * 选项的结果必为以下之一：
+ * - 跳转到同一事件的另一个帧
+ * - 结束事件返回场景
+ * - 触发战斗
+ * - 播放CG
+ * - 进入交易
+ * - 切换场景
+ * - 触发另一个事件
+ */
+export type EventOptionResult =
+  | NextFrameResult
+  | EndEventResult
+  | TriggerBattleResult
+  | PlayCGResult
+  | OpenTradeResult
+  | SwitchSceneResult
+  | TriggerEventResult
+
+/**
+ * 跳转到同一事件的另一个帧
+ */
+export interface NextFrameResult {
+  type: 'nextFrame'
+  /** 目标帧ID（同一事件内） */
+  targetFrameId: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, FlagValue>
+}
+
+/**
+ * 结束事件，返回场景
+ */
+export interface EndEventResult {
+  type: 'endEvent'
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, FlagValue>
+  /** 返回场景后显示的文字（可选，如"你离开了小屋"） */
+  exitText?: string
+}
+
+/**
+ * 触发战斗
+ */
+export interface TriggerBattleResult {
+  type: 'triggerBattle'
+  /** 敌人配置ID */
+  enemyId: string[]
+  /** 战斗胜利后跳转的帧ID（同一事件内） */
+  victoryFrameId?: string
+  /** 战斗失败后跳转的帧ID（不填则战斗失败进入结局判定） */
+  defeatFrameId?: string
+  /** 战斗逃跑后跳转的帧ID（不填则逃跑后返回场景） */
+  escapeFrameId?: string
+  /** 是否可逃跑 */
+  canEscape?: boolean
+  /** 战前执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, FlagValue>
+  /** 是否有初见加成（初见时逃跑概率翻倍） */
+  firstEncounterBonus?: boolean
+}
+
+/**
+ * 播放CG
+ */
+export interface PlayCGResult {
+  type: 'playCG'
+  /** CG配置ID */
+  cgId: string
+  /** CG结束后跳转的帧ID（不填则CG结束后返回场景） */
+  returnFrameId?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, FlagValue>
+}
+
+/**
+ * 进入交易界面
+ */
+export interface OpenTradeResult {
+  type: 'openTrade'
+  /** 交易对象ID */
+  traderId: string
+  /** 交易结束后跳转的帧ID（不填则交易结束后返回场景） */
+  returnFrameId?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, FlagValue>
+}
+
+/**
+ * 切换场景
+ */
+export interface SwitchSceneResult {
+  type: 'switchScene'
+  /** 目标场景ID */
+  sceneId: string
+  /** 目标子场景ID（可选） */
+  subSceneId?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, FlagValue>
+  /** 进入新场景后显示的文字（可选） */
+  enterText?: string
+}
+
+/**
+ * 触发另一个事件
+ */
+export interface TriggerEventResult {
+  type: 'triggerEvent'
+  /** 目标事件ID */
+  eventId: string
+  /** 目标事件结束后跳转的帧ID（不填则返回场景） */
+  returnFrameId?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, FlagValue>
+}
+
+// ============================================================
+// 事件注册表
+// ============================================================
+
+/**
+ * 事件注册表（全局事件配置汇总）
+ */
+export interface EventRegistry {
+  /** 所有事件配置，按ID索引 */
+  events: Record<string, GameEvent>
+  /** 按类型分组的事件ID列表 */
+  eventsByType: Record<EventType, string[]>
+}
+// flag.ts - 标志位数据结构
+
+// ============================================================
+// 标志位定义
+// ============================================================
+
+/**
+ * 标志位配置
+ * 标志位用于追踪游戏中的各种状态：
+ * - 事件是否已触发
+ * - 场景描述是否已看过
+ * - 物品是否已获得过
+ * - 任务进度
+ * - 各种解锁状态
+ * 等等
+ */
+export interface Flag {
+  /** 标志位唯一ID */
+  id: string
+  /** 标志位名称（开发者可见，便于调试） */
+  name: string
+  /** 标志位备注 */
+  notes?: string
+
+  /** 标志位数据类型 */
+  type: FlagType
+
+  /** 默认值 */
+  defaultValue: FlagValue
+}
+
+// ============================================================
+// 标志位类型
+// ============================================================
+
+/**
+ * 标志位数据类型
+ */
+export enum FlagType {
+  /** 布尔型（最常用，如"是否触发过某事件"） */
+  BOOLEAN = 'boolean',
+  /** 数值型（如"击杀某敌人次数"、"捐赠物资数量"） */
+  NUMBER = 'number',
+  /** 字符串型（如"当前任务阶段名称"、"NPC好感度等级"） */
+  STRING = 'string',
+}
+
+// ============================================================
+// 标志位值
+// ============================================================
+
+/**
+ * 标志位值类型
+ */
+export type FlagValue = boolean | number | string
+
+/**
+ * 标志位操作
+ */
+export enum FlagOperation {
+  /** 设置值 */
+  SET = 'set',
+  /** 布尔取反 */
+  TOGGLE = 'toggle',
+  /** 数值增加 */
+  ADD = 'add',
+  /** 数值减少 */
+  SUBTRACT = 'subtract',
+}
+
+// ============================================================
+// 标志位注册表
+// ============================================================
+
+/**
+ * 标志位注册表（全局标志位配置汇总）
+ */
+export interface FlagRegistry {
+  /** 所有标志位配置，按ID索引 */
+  flags: Record<string, Flag>
+}
+// types/index.ts - 类型统一导出
+
+// 核心系统
+export * from './effect'
+export * from './flag'
+
+// 内容系统
+export * from './cg'
+export * from './scene'
+export * from './event'
+export * from './item'
+export * from './weapon'
+export * from './damage'
+export * from './skill'
+export * from './enemy'
+
+// 配方系统
+export * from './recipe'
+export * from './craft'
+export * from './cook'
+export * from './build'
+
+// 世界系统
+export * from './seasonWeather'
+export * from './map'
+
+// 角色系统
+export * from './character'
+export * from './status'
+
+// 经济系统
+export * from './trade'
+
+// 注册表
+export * from './registry'
+
+export * from './player'
+// item.ts - 物品数据结构
+
+import type { Condition } from './effect'
+import type { EffectResult } from './effect'
+import type { AttributeType } from './effect'
+import type { RecipeType } from './recipe'
+// ============================================================
+// 基础标识类型
+// ============================================================
+
+/** 物品类别 */
+export enum ItemCategory {
+  /** 武器 */
+  WEAPON = 'weapon',
+  /** 防具（身体/头部/手部等装备） */
+  ARMOR = 'armor',
+  /** 工具（斧、镐、火把等非武器功能装备） */
+  TOOL = 'tool',
+  /** 消耗品（食物、药品、一次性道具） */
+  CONSUMABLE = 'consumable',
+  /** 材料（木材、石头、草药等） */
+  MATERIAL = 'material',
+  /** 贵重物品（金币、宝石等，主要用于交易） */
+  VALUABLE = 'valuable',
+  /** 文档（信件、日记、研究笔记等可阅读物品） */
+  DOCUMENT = 'document',
+  /** 蓝图/配方（解锁制作、建造、烹饪配方） */
+  RECIPE = 'recipe',
+  /** 杂项（不属于以上分类的物品） */
+  MISC = 'misc',
+}
+
+/** 物品稀有度 */
+export enum ItemRarity {
+  /** 普通（白色） */
+  COMMON = 'common',
+  /** 不凡（绿色） */
+  UNCOMMON = 'uncommon',
+  /** 稀有（蓝色） */
+  RARE = 'rare',
+  /** 史诗（紫色） */
+  EPIC = 'epic',
+  /** 传说（橙色） */
+  LEGENDARY = 'legendary',
+  /** 神话（红色/暗金色，关联克苏鲁元素） */
+  MYTHIC = 'mythic',
+}
+
+// ============================================================
+// 物品基础定义
+// ============================================================
+
+/**
+ * 物品基础配置（所有物品的公共字段）
+ */
+export interface BaseItem {
+  /** 物品唯一ID */
+  id: string
+  /** 物品名称（显示用） */
+  name: string
+  /** 物品备注（开发者可见） */
+  notes?: string
+  /** 物品描述（显示给玩家的说明文本） */
+  description: string
+  /** 描述变体（根据条件显示不同描述，如SAN值影响对物品的认知） */
+  descriptionVariations?: ItemDescriptionVariation[]
+
+  /** 物品类别 */
+  category: ItemCategory
+  /** 物品稀有度 */
+  rarity: ItemRarity
+
+  /** 物品图标资源ID */
+  iconId: string
+
+  /** 单个物品重量（kg） */
+  weight: number
+  /** 物品最大堆叠数量（1表示不可堆叠，-1表示无限堆叠） */
+  maxStackSize: number
+
+  /** 是否可在交易中出售 */
+  isSellable: boolean
+  /** 基础售价（货币单位） */
+  basePrice: number
+
+  /** 使用/装备条件 */
+  useCondition?: Condition
+  /** 条件不满足时的提示文本 */
+  useConditionHint?: string
+
+  /** 物品标签（用于过滤、分类、事件判定等） */
+  tags?: string[]
+
+  /** 是否为关键物品（关键物品不可丢弃、不可出售、不可销毁） */
+  isKeyItem: boolean
+}
+
+/**
+ * 物品描述变体
+ * 根据条件（如SAN值）显示不同的物品描述
+ * 例如：低SAN值下，普通肉干的描述可能变成"这块肉似乎在微微蠕动"
+ */
+export interface ItemDescriptionVariation {
+  /** 变体描述文本 */
+  description: string
+  /** 显示条件 */
+  condition: Condition
+}
+
+// ============================================================
+// 耐久度系统
+// ============================================================
+
+/**
+ * 耐久度配置（武器、防具、工具等可损耗物品使用）
+ */
+export interface DurabilityConfig {
+  /** 最大耐久度 */
+  maxDurability: number
+  /** 初始耐久度（通常等于maxDurability） */
+  initialDurability: number
+  /** 是否可修理 */
+  isRepairable: boolean
+  /** 修理所需的材料及数量 */
+  repairMaterials?: RepairMaterial[]
+  /** 修理所需工作台等级（0表示徒手可修） */
+  repairWorkbenchLevel?: number
+  /** 耐久度归零后物品是否销毁（false则变为"损坏的XXX"状态，不可用但可修理） */
+  destroyOnBreak: boolean
+  /** 损坏后的替代物品ID（destroyOnBreak为false时生效） */
+  brokenItemId?: string
+}
+
+/**
+ * 修理材料
+ */
+export interface RepairMaterial {
+  /** 材料物品ID */
+  itemId: string
+  /** 所需数量 */
+  quantity: number
+}
+
+// ============================================================
+// 武器
+// ============================================================
+
+/**
+ * 武器配置
+ */
+export interface WeaponItem extends BaseItem {
+  category: ItemCategory.WEAPON
+
+  /** 武器类型ID（关联武器类型配置，如'sword'、'bow'、'spear'等） */
+  weaponTypeId: string
+
+  /** 耐久度配置 */
+  durability: DurabilityConfig
+
+  /** 装备槽位 */
+  equipmentSlot: EquipmentSlot.WEAPON
+
+  /** 武器基础属性 */
+  weaponStats: WeaponStats
+
+  /** 武器是否可双持（双持时可装备两把同类型武器） */
+  isDualWieldable: boolean
+
+  /** 是否为双手武器（双手武器占用两个武器槽位） */
+  isTwoHanded: boolean
+
+  /** 装备此武器时提供的属性修正 */
+  attributeModifiers?: AttributeModifier[]
+
+  /** 装备此武器时解锁的战斗技能ID列表 */
+  grantedSkillIds?: string[]
+
+  /** 装备此武器时提供的被动技能ID列表 */
+  grantedPassiveIds?: string[]
+
+  /** 使用条件（覆盖BaseItem的useCondition，可额外要求武器熟练度等） */
+  proficiencyRequirement?: {
+    weaponTypeId: string
+    minLevel: number
+  }
+}
+
+/**
+ * 武器属性
+ */
+export interface WeaponStats {
+  /** 基础伤害 */
+  baseDamage: number
+  /** 伤害类型ID（如'slash'、'pierce'、'blunt'等） */
+  damageTypeId: string
+  /** 伤害浮动范围（最终伤害 = baseDamage * (1 ± damageVariance)） */
+  damageVariance: number
+
+  /** 基础命中修正（加到命中计算中） */
+  accuracyModifier: number
+  /** 基础暴击率修正（0.1 = +10%暴击率） */
+  criticalChanceModifier: number
+  /** 暴击倍率（默认2.0，即暴击时伤害×2） */
+  criticalMultiplier: number
+}
+
+// ============================================================
+// 防具
+// ============================================================
+
+/**
+ * 防具配置
+ */
+export interface ArmorItem extends BaseItem {
+  category: ItemCategory.ARMOR
+
+  /** 耐久度配置 */
+  durability: DurabilityConfig
+
+  /** 装备槽位 */
+  equipmentSlot: ArmorSlot
+
+  /** 防具提供的防御属性 */
+  defenseStats: Record<string, number>
+
+  /** 防具提供的属性修正 */
+  attributeModifiers?: AttributeModifier[]
+
+  /** 装备此防具时提供的被动技能ID列表 */
+  grantedPassiveIds?: string[]
+
+  /** 防具提供的温度抗性修正（影响温暖度计算中的适宜温度范围） */
+  temperatureResistance?: {
+    /** 低温适宜值修正（增加此值可耐受更冷环境） */
+    lowModifier: number
+    /** 高温适宜值修正（增加此值可耐受更热环境） */
+    highModifier: number
+  }
+}
+
+// ============================================================
+// 工具
+// ============================================================
+
+/**
+ * 工具配置（斧、镐、火把、钓鱼竿等非武器功能装备）
+ */
+export interface ToolItem extends BaseItem {
+  category: ItemCategory.TOOL
+
+  /** 耐久度配置（火把等消耗品可选填，无耐久则省略） */
+  durability?: DurabilityConfig
+
+  /** 工具类型ID（如'axe'、'pickaxe'、'torch'、'fishingRod'等） */
+  toolTypeId: string
+
+  /** 工具等级（影响采集效率、可采集资源等级等） */
+  toolLevel: number
+}
+
+// ============================================================
+// 消耗品
+// ============================================================
+
+/**
+ * 消耗品配置（食物、药品、一次性道具）
+ */
+export interface ConsumableItem extends BaseItem {
+  category: ItemCategory.CONSUMABLE
+
+  /** 消耗品类型 */
+  consumableType: ConsumableType
+
+  /** 保质期（游戏内分钟数）0代表永久保质 */
+  perishMinutes: number
+  /** 过期后变质的产物物品ID（如"腐烂的鱼"，不填则超期后直接消失） */
+  spoiledItemId?: string
+
+  /** 使用消耗品后触发的效果列表 */
+  effects: EffectResult[]
+
+  /** 使用消耗品后可能施加的状态 */
+  applyStatus?: ConsumableStatusEffect[]
+
+  /** 是否可以多次使用（如某种药膏可以用3次） */
+  usesRemaining?: number
+  /** 使用完毕后是否留下容器（如喝完水留下空瓶） */
+  remainingItemId?: string
+
+  /** 使用时的文本描述（覆盖默认的"使用了XXX"） */
+  useText?: string
+  /** 使用文本变体 */
+  useTextVariations?: ItemDescriptionVariation[]
+}
+
+/**
+ * 消耗品类型
+ */
+export enum ConsumableType {
+  /** 食物（恢复饱食度） */
+  FOOD = 'food',
+  /** 饮料（恢复口渴度/提供特殊效果） */
+  DRINK = 'drink',
+  /** 药品（恢复生命值/治疗状态） */
+  MEDICINE = 'medicine',
+  /** 一次性道具（照明弹、绳索等） */
+  TOOL = 'consumableTool',
+  /** 书籍（阅读后获得经验/解锁技能/触发事件） */
+  BOOK = 'book',
+  /** 特殊消耗品（仪式用品、注射剂等） */
+  SPECIAL = 'special',
+}
+
+/**
+ * 消耗品施加的状态效果
+ */
+export interface ConsumableStatusEffect {
+  /** 状态ID */
+  statusId: string
+  /** 持续时间（游戏内分钟数，-1表示永久直到被移除） */
+  durationMinutes: number
+  /** 触发概率（0-1） */
+  probability: number
+}
+
+// ============================================================
+// 材料
+// ============================================================
+
+/**
+ * 材料配置（木材、石头、草药、金属锭等）
+ */
+export interface MaterialItem extends BaseItem {
+  category: ItemCategory.MATERIAL
+
+  /** 材料类型（用于分类和配方匹配） */
+  materialType: string
+}
+
+// ============================================================
+// 贵重物品
+// ============================================================
+
+/**
+ * 贵重物品配置（金币、宝石、艺术品等交易用物品）
+ */
+export interface ValuableItem extends BaseItem {
+  category: ItemCategory.VALUABLE
+
+  /** 实际售价倍率（最终售价 = basePrice * priceMultiplier） */
+  priceMultiplier: number
+}
+
+// ============================================================
+// 文档
+// ============================================================
+
+/**
+ * 文档配置（信件、日记、研究笔记等可阅读物品）
+ */
+export interface DocumentItem extends BaseItem {
+  category: ItemCategory.DOCUMENT
+
+  /** 文档内容（纯文本，支持换行） */
+  content: string
+  /** 文档内容变体（根据条件显示不同内容，如SAN值影响阅读到的文字） */
+  contentVariations?: DocumentContentVariation[]
+  /** 阅读后触发的效果（如获得线索、解锁配方、触发事件等） */
+  onReadEffects?: EffectResult[]
+  /** 阅读后是否消耗此文档 */
+  isConsumedOnRead: boolean
+  /** 阅读文档是否需要特定条件（如语言能力） */
+  readCondition?: Condition
+  /** 文档作者/来源（显示用） */
+  author?: string
+}
+
+/**
+ * 文档内容变体
+ */
+export interface DocumentContentVariation {
+  /** 变体内容 */
+  content: string
+  /** 显示条件 */
+  condition: Condition
+}
+
+// ============================================================
+// 蓝图/配方
+// ============================================================
+
+/**
+ * 蓝图/配方配置
+ */
+export interface RecipeItem extends BaseItem {
+  category: ItemCategory.RECIPE
+  /** 配方类型 */
+  recipeType: RecipeType
+  /** 解锁的配方ID（关联制作表/建造表/烹饪表的配方ID） */
+  unlocksRecipeId: string[]
+}
+
+// ============================================================
+// 杂项
+// ============================================================
+
+/**
+ * 杂项物品配置（不属于以上任何分类的物品）
+ */
+export interface MiscItem extends BaseItem {
+  category: ItemCategory.MISC
+
+  /** 是否可以与其他物品组合 */
+  isCombinable: boolean
+  /** 组合配方（组合目标物品ID -> 产物物品ID） */
+  combineRecipes?: Record<string, string>
+  /** 使用效果（如果可"使用"的话） */
+  useEffects?: EffectResult[]
+}
+
+// ============================================================
+// 联合类型
+// ============================================================
+
+/** 所有物品类型的联合 */
+export type Item =
+  | WeaponItem
+  | ArmorItem
+  | ToolItem
+  | ConsumableItem
+  | MaterialItem
+  | ValuableItem
+  | DocumentItem
+  | RecipeItem
+  | MiscItem
+
+/** 可装备物品类型 */
+export type EquippableItem = WeaponItem | ArmorItem
+
+/** 可堆叠物品类型（排除装备和不可堆叠的消耗品） */
+export type StackableItem = MaterialItem | ConsumableItem | ValuableItem | MiscItem
+
+// ============================================================
+// 装备槽位
+// ============================================================
+
+/**
+ * 装备槽位枚举
+ */
+export enum EquipmentSlot {
+  /** 主手武器 */
+  WEAPON = 'weapon',
+  /** 副手武器/盾牌 */
+  OFF_HAND = 'offHand',
+  /** 头部 */
+  HEAD = 'head',
+  /** 身体/躯干 */
+  BODY = 'body',
+  /** 手部 */
+  HANDS = 'hands',
+  /** 脚部 */
+  FEET = 'feet',
+  /** 背部（背包、披风等） */
+  BACK = 'back',
+  /** 颈部（护身符、项链等） */
+  NECK = 'neck',
+  /** 手指（戒指） */
+  FINGER = 'finger',
+}
+
+/** 防具槽位（排除武器和工具） */
+export type ArmorSlot =
+  | EquipmentSlot.HEAD
+  | EquipmentSlot.BODY
+  | EquipmentSlot.HANDS
+  | EquipmentSlot.FEET
+  | EquipmentSlot.BACK
+  | EquipmentSlot.NECK
+  | EquipmentSlot.FINGER
+
+// ============================================================
+// 属性修正
+// ============================================================
+
+/**
+ * 属性修正（装备、消耗品等对属性的加成）
+ */
+export interface AttributeModifier {
+  /** 目标属性类型 */
+  attribute: AttributeType
+  /** 修正值（可为负数表示惩罚） */
+  value: number
+  /** 修正类型 */
+  modifierType: 'add' | 'multiply'
+  /** 如果是武器熟练度/技能等，指定具体子类型 */
+  subType?: string
+}
+
+/**
+ * 技能加成（工具对技能的加成）
+ */
+export interface SkillBonus {
+  /** 技能ID */
+  skillId: string
+  /** 加成值 */
+  bonus: number
+}
+
+// ============================================================
+// 物品注册表
+// ============================================================
+
+/**
+ * 物品注册表（全局物品配置汇总）
+ */
+export interface ItemRegistry {
+  /** 所有物品配置，按ID索引 */
+  items: Record<string, Item>
+  /** 按类别分组的物品ID列表（便于快速查找） */
+  itemsByCategory: Record<ItemCategory, string[]>
+  /** 按标签分组的物品ID列表 */
+  itemsByTag: Record<string, string[]>
+}
+// map.ts - 大地图数据结构
+
+import type { Condition } from './effect'
+
+// ============================================================
+// 大地图配置
+// ============================================================
+
+/**
+ * 大地图配置
+ * 一张完整的地图，包含多个场景节点和它们之间的移动路径。
+ * 支持多地图扩展（如主岛地图、地下洞窟地图、异空间地图等）。
+ */
+export interface GameMap {
+  /** 地图唯一ID */
+  id: string
+  /** 地图名称（显示用） */
+  name: string
+
+  /** 地图背景图片资源ID（完整的大地图图片） */
+  backgroundImageId: string
+
+  /** 地图上的场景节点列表 */
+  nodes: MapNode[]
+}
+
+// ============================================================
+// 地图节点
+// ============================================================
+
+/**
+ * 地图节点
+ * 地图上的一个场景点位，关联到场景配置中的 Scene 或 SubScene。
+ */
+export interface MapNode {
+  /** 节点唯一ID（在地图内唯一） */
+  id: string
+
+  /** 关联的场景ID（对应 Scene.id） */
+  sceneId: string
+
+  /** 节点在地图图片上的像素坐标（用于在大地图上标记位置） */
+  position: MapPosition
+
+  /** 节点名称（显示用，可覆写场景名称。为空则使用场景配置中的名称） */
+  displayName?: string
+  /** 节点名称变体（根据条件显示不同名称） */
+  displayNameVariations?: MapNodeNameVariation[]
+
+  // ============================================================
+  // 节点视觉
+  // ============================================================
+
+  /** 节点图标资源ID（未探索时显示） */
+  unexploredIconId: string
+  /** 节点图标资源ID（已探索但不可进入时显示） */
+  exploredIconId?: string
+  /** 节点图标资源ID（已探索且可进入时显示，为空则使用exploredIconId） */
+  activeIconId?: string
+  /** 节点图标资源ID（特殊状态，如腐化区域闪烁） */
+  specialIconId?: string
+
+  /** 节点在地图上的显示大小 */
+  iconSize?: {
+    width: number
+    height: number
+  }
+
+  // ============================================================
+  // 探索机制
+  // ============================================================
+
+  /** 此节点是否初始可见（即使在迷雾中也显示为"???"标记） */
+  isInitiallyVisible: boolean
+  /** 此节点是否初始已探索（游戏开始时即可前往） */
+  isInitiallyExplored: boolean
+}
+
+/**
+ * 地图坐标
+ */
+export interface MapPosition {
+  /** X坐标（像素，相对于地图图片左上角） */
+  x: number
+  /** Y坐标（像素，相对于地图图片左上角） */
+  y: number
+}
+
+/**
+ * 节点名称变体
+ */
+export interface MapNodeNameVariation {
+  /** 变体名称 */
+  name: string
+  /** 显示条件 */
+  condition: Condition
+}
+
+// ============================================================
+// 地图注册表
+// ============================================================
+
+/**
+ * 地图注册表（全局地图配置汇总）
+ */
+export interface MapRegistry {
+  /** 所有地图配置，按ID索引 */
+  maps: Record<string, GameMap>
+
+  /** 初始地图ID */
+  initialMapId: string
+  /** 初始节点ID（玩家初始所在节点） */
+  initialNodeId: string
+}
+// player.ts - 玩家运行时状态数据结构
+
+import type { FlagValue } from './flag'
+
+// ============================================================
+// 玩家运行时状态
+// ============================================================
+
+/**
+ * 玩家运行时状态
+ * 存档的核心数据，记录玩家的一切动态信息。
+ * 与配置数据分离——配置定义"游戏中有哪些东西"，运行时记录"玩家当前是什么状态"。
+ */
+export interface PlayerState {
+  /** 玩家唯一标识 */
+  id: string
+  /** 玩家名称 */
+  name: string
+  /** 所选职业ID */
+  classId: string
+  /** 所选背景故事ID（可选） */
+  backgroundId?: string
+
+  // ============================================================
+  // 生存属性
+  // ============================================================
+
+  survival: PlayerSurvival
+
+  // ============================================================
+  // 基础属性
+  // ============================================================
+
+  attributes: PlayerAttributes
+
+  // ============================================================
+  // 技能
+  // ============================================================
+
+  skills: PlayerSkills
+
+  // ============================================================
+  // 装备与背包
+  // ============================================================
+
+  /** 当前装备 */
+  equipment: PlayerEquipment
+
+  /** 背包物品列表 */
+  inventory: PlayerInventoryItem[]
+
+  // ============================================================
+  // 状态
+  // ============================================================
+
+  /** 当前激活的异常状态 */
+  activeStatuses: ActiveStatus[]
+
+  // ============================================================
+  // 配方解锁
+  // ============================================================
+
+  unlockedRecipes: PlayerUnlockedRecipes
+
+  // ============================================================
+  // 位置
+  // ============================================================
+
+  currentLocation: PlayerLocation
+
+  // ============================================================
+  // 游戏进度
+  // ============================================================
+
+  progress: PlayerProgress
+
+  // ============================================================
+  // 标志位
+  // ============================================================
+
+  /** 运行时标志位（当前值） */
+  flags: Record<string, FlagValue>
+
+  // ============================================================
+  // 经济
+  // ============================================================
+
+  /** 金币数量 */
+  gold: number
+
+  // ============================================================
+  // 统计
+  // ============================================================
+
+  statistics: PlayerStatistics
+}
+
+// ============================================================
+// 生存属性
+// ============================================================
+
+/**
+ * 玩家生存属性
+ */
+export interface PlayerSurvival {
+  /** 当前生命值 */
+  hp: number
+  /** 生命值上限 */
+  maxHp: number
+
+  /** 当前饱食度 */
+  satiety: number
+  /** 饱食度上限 */
+  maxSatiety: number
+
+  /** 当前体力值 */
+  stamina: number
+  /** 体力值上限 */
+  maxStamina: number
+
+  /** 当前SAN值 */
+  san: number
+  /** SAN值上限 */
+  maxSan: number
+
+  /** 当前负重（kg） */
+  carryWeight: number
+  /** 最大负重（kg） */
+  maxCarryWeight: number
+
+  /** 当前温暖度等级 */
+  warmthLevel: 'comfortable' | 'cold' | 'hot' | 'freezing' | 'scorching'
+  /** 适宜温度低值（低于此温度进入寒冷） */
+  comfortTempLow: number
+  /** 适宜温度高值（高于此温度进入炎热） */
+  comfortTempHigh: number
+  // ============================================================
+  // 小数累计值（策划书要求：变动值<1时累计，>=1时更新）
+  // ============================================================
+
+  /** HP变动累计值 */
+  pendingHpChange: number
+  /** 饱食度变动累计值 */
+  pendingSatietyChange: number
+  /** 体力变动累计值 */
+  pendingStaminaChange: number
+  /** SAN变动累计值 */
+  pendingSanChange: number
+}
+
+// ============================================================
+// 基础属性
+// ============================================================
+
+/**
+ * 玩家基础属性
+ */
+export interface PlayerAttributes {
+  // 基础值（永久，通过经验升级）
+  strength: number
+  agility: number
+  intelligence: number
+  constitution: number
+
+  // 经验值
+  strengthExp: number
+  agilityExp: number
+  intelligenceExp: number
+  constitutionExp: number
+
+  // 临时修正（来自装备、状态、效果等，可为负数）
+  strengthModifier: number
+  agilityModifier: number
+  intelligenceModifier: number
+  constitutionModifier: number
+
+  // 防御属性（基础值 + 装备加成 + 状态修正）
+  defenses: PlayerDefenses
+
+  // 系数属性（来自装备、状态、被动技能等）
+  coefficients: PlayerCoefficients
+}
+
+/**
+ * 玩家防御属性
+ */
+export interface PlayerDefenses {
+  slashDefense: number
+  bluntDefense: number
+  rangedDefense: number
+  poisonDefense: number
+  fireDefense: number
+}
+
+/**
+ * 玩家系数属性
+ * 策划书中定义的各类系数，影响生存属性的计算
+ */
+export interface PlayerCoefficients {
+  /** 生命值恢复速率系数（默认1） */
+  recoveryRateCoefficient: number
+  /** 饱食度上限系数（默认1） */
+  satietyUpperLimitCoefficient: number
+  /** 饱食度损失系数（默认1） */
+  satietyLossCoefficient: number
+  /** 体力消耗系数（默认1） */
+  staminaConsumptionCoefficient: number
+  /** 体力恢复系数（默认1） */
+  staminaRecoveryCoefficient: number
+  /** 体力恢复修正值（默认0） */
+  staminaRecoveryFix: number
+  /** SAN修正指数（默认0） */
+  sanModifier: number
+  /** 适宜温度低值修正 */
+  temperatureLowModifier: number
+  /** 适宜温度高值修正 */
+  temperatureHighModifier: number
+  /** 负重修正值（kg） */
+  carryWeightModifier: number
+  /** SAN值保护系数（0-1，减少SAN损失比例） */
+  sanProtection: number
+}
+
+// ============================================================
+// 技能
+// ============================================================
+
+/**
+ * 玩家技能状态
+ */
+export interface PlayerSkills {
+  /** 生存技能等级 */
+  survivalSkills: Record<string, PlayerSkillLevel>
+
+  /** 武器熟练度 */
+  weaponProficiencies: Record<string, PlayerSkillLevel>
+
+  /** 战斗技能等级 */
+  battleSkills: Record<string, PlayerSkillLevel>
+
+  /** 已解锁的战斗技能ID列表 */
+  unlockedBattleSkillIds: string[]
+
+  /** 已习得的被动技能ID列表 */
+  passiveSkillIds: string[]
+}
+
+/**
+ * 技能等级（含经验）
+ */
+export interface PlayerSkillLevel {
+  /** 当前等级 */
+  level: number
+  /** 当前经验值 */
+  exp: number
+}
+
+// ============================================================
+// 装备与背包
+// ============================================================
+
+/**
+ * 玩家装备
+ * 键为装备槽位，值为装备的物品ID（null表示空）
+ */
+export interface PlayerEquipment {
+  weapon: string | null
+  offHand: string | null
+  head: string | null
+  body: string | null
+  hands: string | null
+  feet: string | null
+  back: string | null
+  neck: string | null
+  finger: string | null
+  tool: string | null
+  light: string | null
+}
+
+/**
+ * 背包物品实例
+ * 物品在背包中的运行时状态（配置中的物品属性 + 运行时特有字段）
+ */
+export interface PlayerInventoryItem {
+  /** 物品唯一实例ID（用于追踪同一物品的不同实例，如两把耐久不同的铁剑） */
+  instanceId: string
+  /** 物品配置ID */
+  itemId: string
+  /** 数量（可堆叠物品） */
+  quantity: number
+  /** 当前耐久度（有耐久度的物品，-1表示无耐久度系统） */
+  durability: number
+  /** 获得时间（游戏内分钟数，用于新鲜度等计算） */
+  acquiredTime: number
+}
+
+// ============================================================
+// 异常状态
+// ============================================================
+
+/**
+ * 激活的异常状态实例
+ * 配置模板（StatusConfig）+ 运行时数据
+ */
+export interface ActiveStatus {
+  /** 状态模板ID */
+  statusId: string
+  /** 剩余持续时间值 */
+  remainingDuration: number
+  /** 持续时间单位 */
+  durationUnit: 'turn' | 'minute' | 'hour' | 'permanent'
+  /** 当前层数 */
+  stackCount: number
+  /** 施加来源描述 */
+  sourceId?: string
+  /** 施加时的游戏时间（用于计算经过时间） */
+  appliedTime: number
+  /** 状态参数覆盖 */
+  params?: Record<string, number>
+}
+
+// ============================================================
+// 配方
+// ============================================================
+
+/**
+ * 已解锁的配方
+ */
+export interface PlayerUnlockedRecipes {
+  /** 已解锁的制作配方ID列表 */
+  craftRecipes: string[]
+  /** 已解锁的烹饪配方ID列表 */
+  cookRecipes: string[]
+  /** 已解锁的建造配方ID列表 */
+  buildRecipes: string[]
+  /** 已解锁的修复配方ID列表 */
+  repairRecipes: string[]
+}
+
+// ============================================================
+// 位置
+// ============================================================
+
+/**
+ * 玩家当前位置
+ */
+export interface PlayerLocation {
+  /** 当前地图ID */
+  mapId: string
+  /** 当前场景ID */
+  sceneId: string
+  /** 当前子场景ID（可选，不在子场景中则为null） */
+  subSceneId: string | null
+}
+
+// ============================================================
+// 游戏进度
+// ============================================================
+
+/**
+ * 玩家游戏进度
+ */
+export interface PlayerProgress {
+  /** 当前天数（从游戏开始算起） */
+  day: number
+  /** 当前时间（游戏内分钟数，0-1439） */
+  timeMinutes: number
+  /** 当前季节 */
+  season: 'spring' | 'summer' | 'autumn' | 'winter'
+  /** 当前季节阶段 */
+  seasonPhase: 'early' | 'mid' | 'late'
+  /** 当前天气ID */
+  weatherId: string
+  /** 当前腐化度 */
+  corruption: number
+
+  /** 玩家总生存天数 */
+  totalDaysSurvived: number
+  /** 是否已完成游戏 */
+  isGameCompleted: boolean
+  /** 已解锁的结局ID列表 */
+  unlockedEndingIds: string[]
+
+  /** 基地位置（无基地则为null） */
+  baseLocation: PlayerLocation | null
+}
+
+// ============================================================
+// 统计
+// ============================================================
+
+/**
+ * 玩家统计数据
+ */
+export interface PlayerStatistics {
+  /** 击杀敌人数 */
+  enemiesKilled: number
+  /** 总战斗次数 */
+  totalBattles: number
+  /** 逃跑次数 */
+  escapesAttempted: number
+  /** 制作物品数 */
+  itemsCrafted: number
+  /** 烹饪次数 */
+  mealsCooked: number
+  /** 建造建筑数 */
+  buildingsConstructed: number
+  /** 探索场景数 */
+  scenesExplored: number
+  /** 触发事件数 */
+  eventsTriggered: number
+  /** 总移动距离（km，估算） */
+  totalDistanceTraveled: number
+  /** 死亡次数（如果有重生机制） */
+  deaths: number
+}
+
+// ============================================================
+// 存档
+// ============================================================
+
+/**
+ * 存档数据结构
+ */
+export interface SaveData {
+  /** 存档版本号（用于存档兼容性检查） */
+  version: string
+  /** 存档时间戳 */
+  timestamp: number
+  /** 存档槽位（0=自动存档，1+ =手动存档） */
+  slot: number
+  /** 存档名称（手动存档可自定义） */
+  name: string
+  /** 游戏总时长（现实时间，秒） */
+  playTimeSeconds: number
+  /** 玩家状态 */
+  playerState: PlayerState
+}
+
+/**
+ * 新游戏初始状态
+ * 用于开始新游戏时根据职业配置初始化玩家状态
+ */
+export interface NewGameConfig {
+  /** 职业ID */
+  classId: string
+  /** 玩家名称 */
+  playerName: string
+  /** 初始地图ID */
+  initialMapId: string
+  /** 初始场景ID */
+  initialSceneId: string
+  /** 初始子场景ID（可选） */
+  initialSubSceneId?: string
+  /** 初始天数 */
+  initialDay: number
+  /** 初始时间（分钟） */
+  initialTimeMinutes: number
+  /** 初始季节 */
+  initialSeason: 'spring' | 'summer' | 'autumn' | 'winter'
+  /** 初始季节阶段 */
+  initialSeasonPhase: 'early' | 'mid' | 'late'
+  /** 初始天气ID */
+  initialWeatherId: string
+  /** 初始腐化度 */
+  initialCorruption: number
+}
+// recipe.ts - 配方基础数据结构
+
+import type { Condition } from './effect'
+
+// ============================================================
+// 配方基础类型（共用）
+// ============================================================
+
+/**
+ * 配方类型枚举
+ */
+export enum RecipeType {
+  /** 制作（工作台系统） */
+  CRAFT = 'craft',
+  /** 烹饪（火堆/厨房系统） */
+  COOK = 'cook',
+  /** 建造（基地系统） */
+  BUILD = 'build',
+  /** 修复（修理系统） */
+  REPAIR = 'repair',
+}
+
+// ============================================================
+// 所需材料
+// ============================================================
+
+/**
+ * 所需材料
+ */
+export interface RequiredMaterial {
+  /** 物品ID */
+  itemId: string
+  /** 所需数量 */
+  quantity: number
+  /** 是否消耗（某些配方中材料作为工具使用，不消耗） */
+  isConsumed: boolean
+  /** 是否接受替代品（如"任意木材"） */
+  acceptSubstitutes?: string[]
+}
+
+// ============================================================
+// 所需条件
+// ============================================================
+
+/**
+ * 配方所需条件
+ */
+export interface RecipeRequirements {
+  /** 所需生存技能等级 */
+  skillRequirements?: SkillRequirement[]
+
+  /** 所需基础属性 */
+  attributeRequirements?: AttributeRequirement[]
+
+  /** 所需设备ID（如工作台、火堆、铁砧等） */
+  requiredDeviceId?: string
+  /** 所需设备等级 */
+  requiredDeviceLevel?: number
+
+  /** 所需时间（游戏内分钟数） */
+  timeMinutes: number
+}
+
+/**
+ * 技能等级要求
+ */
+export interface SkillRequirement {
+  /** 技能ID */
+  skillId: string
+  /** 最低等级 */
+  minLevel: number
+}
+
+/**
+ * 基础属性要求
+ */
+export interface AttributeRequirement {
+  /** 属性类型 */
+  attribute: 'strength' | 'agility' | 'intelligence' | 'constitution'
+  /** 最低值 */
+  minValue: number
+}
+
+// ============================================================
+// 消耗
+// ============================================================
+
+/**
+ * 配方消耗（玩家生存属性）
+ */
+export interface RecipeCost {
+  /** 消耗类型 */
+  costType: RecipeCostType
+  /** 消耗值 */
+  value: number
+  /** 是否受玩家属性/技能系数影响 */
+  affectedByCoefficient: boolean
+}
+
+/**
+ * 配方消耗类型
+ */
+export enum RecipeCostType {
+  STAMINA = 'stamina',
+  SATIETY = 'satiety',
+  SAN = 'san',
+  HP = 'hp',
+}
+
+// ============================================================
+// 产物
+// ============================================================
+
+/**
+ * 配方产物
+ */
+export interface RecipeProduct {
+  /** 产物物品ID */
+  itemId: string
+  /** 基础产出数量 */
+  baseQuantity: number
+}
+
+// ============================================================
+// 基础配方接口
+// ============================================================
+
+/**
+ * 基础配方配置（所有配方类型的公共字段）
+ */
+export interface BaseRecipe {
+  /** 配方唯一ID */
+  id: string
+  /** 配方名称（显示用） */
+  name: string
+  /** 配方备注（开发者可见） */
+  notes?: string
+
+  /** 配方类型 */
+  recipeType: RecipeType
+
+  /** 配方图标资源ID（通常使用产物的图标） */
+  iconId?: string
+
+  /** 解锁条件（蓝图物品ID、事件标志位、技能等级等）（仅文档/编辑器展示用途，游戏逻辑不读取此字段） */
+  unlockCondition?: Condition
+
+  /** 解锁条件描述（显示给玩家的提示，如"需要获得铁匠蓝图"） */
+  unlockHint?: string
+
+  /** 所需材料 */
+  materials: RequiredMaterial[]
+
+  /** 所需条件 */
+  requirements: RecipeRequirements
+
+  /** 执行消耗 */
+  costs: RecipeCost[]
+
+  /** 产物 */
+  products: RecipeProduct[]
+
+  /** 是否可以重复制作/烹饪（建造通常为一次性） */
+  isRepeatable: boolean
+}
+
+export interface RecipeRegistry {
+  recipes: Record<string, BaseRecipe>
+  recipesByType: Record<RecipeType, string[]>
+
+  /**
+   * 技能等级 → 配方ID列表 的反向索引
+   * 用于技能升级时自动解锁对应配方
+   * 例：{ "cooking": { 3: ["recipe_stew", "recipe_bread"], 5: ["recipe_feast"] } }
+   */
+  skillLevelUnlocks?: Record<string, Record<number, string[]>>
+}
+// registry.ts - 全局配置注册表总入口
+
+import type { SceneRegistry } from './scene'
+import type { EventRegistry } from './event'
+import type { CGRegistry } from './cg'
+import type { ItemRegistry } from './item'
+import type { WeaponTypeRegistry } from './weapon'
+import type { DamageTypeRegistry } from './damage'
+import type { SkillRegistry } from './skill'
+import type { EnemyRegistry } from './enemy'
+import type { CraftRecipeRegistry } from './craft'
+import type { CookRecipeRegistry } from './cook'
+import type { BuildRecipeRegistry } from './build'
+import type { StatusRegistry } from './status'
+import type { TradeRegistry } from './trade'
+import type { FlagRegistry } from './flag'
+import type { SeasonWeatherRegistry } from './seasonWeather'
+import type { MapRegistry } from './map'
+import type { CharacterRegistry } from './character'
+
+/**
+ * 游戏全局配置注册表
+ * 汇总所有子系统的配置数据，作为游戏初始化的唯一入口。
+ *
+ * 使用方式：
+ * 1. 各子系统配置文件分别导出各自的 Registry 对象
+ * 2. 在此文件中 import 并组装为 GameRegistry
+ * 3. 游戏启动时加载 GameRegistry 到运行时
+ *
+ * 扩展方式：
+ * 新增子系统时：
+ * - 在对应子系统的配置文件中定义 XXXRegistry 接口
+ * - 在此文件新增对应的 import 和字段
+ * - 在对应的配置文件目录中新增配置数据
+ */
+export interface GameRegistry {
+  /** 场景注册表 */
+  scenes: SceneRegistry
+
+  /** 事件注册表 */
+  events: EventRegistry
+
+  /** CG注册表 */
+  cgs: CGRegistry
+
+  /** 物品注册表 */
+  items: ItemRegistry
+
+  /** 武器类型注册表 */
+  weaponTypes: WeaponTypeRegistry
+
+  /** 伤害类型注册表 */
+  damageTypes: DamageTypeRegistry
+
+  /** 技能注册表（生存/战斗/被动） */
+  skills: SkillRegistry
+
+  /** 敌人注册表 */
+  enemies: EnemyRegistry
+
+  /** 制作配方注册表 */
+  craftRecipes: CraftRecipeRegistry
+
+  /** 烹饪配方注册表 */
+  cookRecipes: CookRecipeRegistry
+
+  /** 建造配方注册表 */
+  buildRecipes: BuildRecipeRegistry
+
+  /** 异常状态注册表 */
+  statuses: StatusRegistry
+
+  /** 交易注册表 */
+  traders: TradeRegistry
+
+  /** 标志位注册表 */
+  flags: FlagRegistry
+
+  /** 季节天气注册表 */
+  seasonWeather: SeasonWeatherRegistry
+
+  /** 大地图注册表 */
+  maps: MapRegistry
+
+  /** 职业注册表 */
+  characters: CharacterRegistry
+}
+// scene.ts - 场景数据结构
+
+import type { Condition } from './effect'
+import type { EffectResult } from './effect'
+import type { TimeOfDay, WeatherType, SeasonPhase } from './seasonWeather'
+// ============================================================
+// 基础场景类型（Scene 和 SubScene 的公共字段）
+// ============================================================
+
+/**
+ * 场景基础配置
+ * Scene 和 SubScene 共享的公共属性
+ */
+export interface BaseScene {
+  // 唯一ID
+  id: string
+  // 名称（显示用）
+  name: string
+  // 备注（开发者可见）
+  notes?: string
+
+  // 场景描述/事件入口列表
+  descriptions: SceneDescription[]
+
+  // 背景图资源ID
+  backgroundImage?: string
+  // 图片变体（根据条件显示不同图片，如SAN值影响视觉效果）
+  backgroundImageVariations?: SceneImageVariation[]
+
+  // 温度影响（-50到50，叠加到环境温度计算中）
+  temperatureModifier: number
+
+  // 固定交互按钮
+  interactions: SceneInteraction[]
+
+  // 是否为地牢场景
+  isDungeon: boolean
+  // 是否为安全区（安全区内不会自动触发战斗类事件）
+  isSafeZone: boolean
+  // 是否可以扎营（临时营地）
+  canCamp: boolean
+
+  // BGM资源ID
+  bgmId?: string
+}
+
+// ============================================================
+// 场景配置
+// ============================================================
+
+/**
+ * 场景配置
+ * 场景是游戏世界的核心容器，负责：
+ * 1. 展示环境描述（文字+图片）
+ * 2. 提供事件入口（可点击的蓝色链接或自动触发的事件）
+ * 3. 提供固定的交互按钮（探索、进入子场景、建造、休息等功能）
+ * 场景本身不直接触发效果、战斗、采集资源等，
+ * 这些逻辑统一通过"进入事件"来实现，由事件系统处理。
+ */
+export interface Scene extends BaseScene {
+  // 该场景是否可以作为基地建造地点
+  canBuildBase: boolean
+
+  // 该场景包含的子场景ID列表（与 SubScene.parentSceneId 形成双向关联）
+  subSceneIds?: string[]
+}
+
+// ============================================================
+// 子场景配置
+// ============================================================
+
+/**
+ * 子场景配置
+ * 子场景是场景的子集，例如森林中的小溪、沙滩上的洞穴等。
+ * 子场景不会触发母场景的descriptions，不显示母场景的interactions，
+ * 但温度影响与母场景叠加。
+ * 图片、描述等为空时使用母场景的对应内容。
+ */
+export interface SubScene extends BaseScene {
+  // 母场景ID
+  parentSceneId: string
+
+  // ========== 地牢场景特有 ==========
+  // 相邻子场景映射（方向 -> 相邻子场景ID）
+  // 非地牢场景忽略此字段
+  adjacentSubScenes?: {
+    north?: string
+    south?: string
+    east?: string
+    west?: string
+    up?: string
+    down?: string
+  }
+}
+
+// ============================================================
+// 场景描述
+// ============================================================
+
+/**
+ * 场景描述条目
+ * 场景中显示的文字内容，可以包含多个事件入口。
+ * 多个描述条目根据优先级和显示条件竞争展示。
+ */
+export interface SceneDescription {
+  // 描述ID
+  id: string
+  // 优先级（数字越大优先级越高，同优先级时随机选取一条展示）
+  priority: number
+  // 显示条件（满足条件时此描述才可能被选中展示）
+  displayCondition?: Condition
+
+  // 文本内容（展示给玩家的主文本）
+  // 使用 {eventKey} 占位符标记事件入口位置，例如：
+  // "你看到{strange_altar}矗立在林间空地中央，旁边{footprints}通向密林深处。"
+  // {strange_altar} 和 {footprints} 会被替换为蓝色下划线文本，对应 eventEntries 中的 key
+  text: string
+  // 文本变体（根据条件显示不同文本，例如根据SAN值改变描述风格）
+  textVariations?: SceneTextVariation[]
+
+  // 文本样式（特殊效果，受SAN值等影响）
+  style?: SceneTextStyle
+
+  // ========== 事件入口配置 ==========
+  // 文本中可点击的事件入口列表
+  // key 对应 text 中的 {key} 占位符
+  eventEntries?: SceneEventEntry[]
+
+  // ========== 自动触发配置 ==========
+  // 是否可自动触发（满足条件时自动进入某个事件）
+  isAutoTrigger: boolean
+  // 自动触发对应的事件入口 key（若不填则取 eventEntries 中的第一个）
+  autoTriggerEventKey?: string
+  // 自动触发的概率（0-1，1为必定触发，仅在isAutoTrigger为true时有效）
+  autoTriggerProbability?: number
+  // 自动触发是否需要先展示描述（若为true，则先展示描述再自动进入事件；false则跳过描述直接进入事件）
+  showDescriptionBeforeAutoTrigger?: boolean
+  // 自动触发延迟（毫秒，showDescriptionBeforeAutoTrigger为true时，展示描述后延迟多久自动进入事件）
+  autoTriggerDelayMs?: number
+
+  // 是否在任意事件入口触发后清除此描述（通过设置seenFlag实现）
+  removeAfterInteraction?: boolean
+
+  // ========== 展示频率控制 ==========
+  // 此描述是否只能被看到一次
+  isOneTime: boolean
+  // 看过此描述后设置的标志位（用于后续判定是否已看过）
+  seenFlag?: string
+  // 此描述可被看到的次数上限（-1表示无限次，配合seenFlag使用）
+  viewLimit?: number
+
+  // ========== 环境限制 ==========
+  // 是否在特定时间段显示
+  timeOfDayRestriction?: TimeOfDay[]
+  // 是否在特定天气显示
+  weatherRestriction?: WeatherType[]
+  // 是否在特定季节阶段显示
+  seasonRestriction?: SeasonPhase[]
+  // 显示所需的腐化度范围
+  corruptionRange?: {
+    min: number
+    max: number
+  }
+}
+
+/**
+ * 场景事件入口
+ * 描述文本中的可点击蓝色链接，点击后进入对应事件
+ */
+export interface SceneEventEntry {
+  // 入口唯一标识（对应 text 中的占位符 {key}）
+  key: string
+  // 显示文本（即蓝色下划线文字的内容）
+  displayText: string
+  // 事件ID（点击后进入此事件）
+  eventId: string
+  // 显示条件（满足条件时此入口才显示并可点击）
+  displayCondition?: Condition
+  // 可用条件（满足条件时此入口才可点击，不满足时仅显示文本但不可点击）
+  availableCondition?: Condition
+  // 不可用时的提示文本
+  unavailableTooltip?: string
+  // 是否在不满足条件时完全隐藏（不渲染此入口文本）
+  hideWhenUnavailable?: boolean
+  // 点击后是否移除此入口（下次展示此描述时不再出现）
+  removeAfterClick?: boolean
+  // 点击后设置的标志位
+  clickFlag?: string
+  // 点击后的文本变体（如点击前"奇怪的祭坛"，点击后变为"已被调查的祭坛"）
+  textAfterClick?: string
+}
+
+/**
+ * 场景文本变体
+ * 根据条件（如SAN值）替换描述文本及事件入口
+ */
+export interface SceneTextVariation {
+  // 变体文本内容（同样支持 {eventKey} 占位符）
+  content: string
+  // 显示条件
+  condition: Condition
+  // 变体样式（覆盖默认样式）
+  style?: SceneTextStyle
+  // 变体对应的事件入口列表（覆盖 SceneDescription 的 eventEntries）
+  eventEntries?: SceneEventEntry[]
+}
+
+/**
+ * 场景文本样式
+ * 用于实现不同SAN值下的文字效果变化
+ */
+export interface SceneTextStyle {
+  // 字体大小
+  fontSize?: number
+  // 字体颜色
+  color?: string
+  // 字体粗细
+  fontWeight?: 'normal' | 'bold'
+  // 字体样式
+  fontStyle?: 'normal' | 'italic'
+  // 特殊效果（对应SAN值不同档位的视觉表现）
+  specialEffect?: 'none' | 'glitch' | 'distortion' | 'shiver' | 'bloodDrip' | 'blur' | 'scramble'
+}
+
+/**
+ * 场景图片变体
+ * 根据条件（如SAN值、腐化度）替换背景图
+ */
+export interface SceneImageVariation {
+  // 图片资源ID
+  imageId: string
+  // 显示条件
+  condition: Condition
+  // 过渡效果
+  transitionEffect?: 'fade' | 'glitch' | 'instant'
+  // 过渡持续时间（毫秒）
+  transitionDuration?: number
+}
+
+// ============================================================
+// 场景交互
+// ============================================================
+
+/**
+ * 场景固定交互按钮
+ * 显示在界面下方右侧的按钮，提供场景固有的功能入口
+ */
+export interface SceneInteraction {
+  // 交互ID
+  id: string
+  // 交互名称（显示在按钮上）
+  name: string
+  // 交互描述（可选，长按或tooltip显示）
+  description?: string
+  // 交互名称变体（根据条件显示不同名称）
+  nameVariations?: SceneTextVariation[]
+
+  // 交互类型（决定 behaviorParams 的结构）
+  interactionType: InteractionType
+
+  // ========== 显示控制 ==========
+  // 显示条件（满足条件时此交互按钮才显示）
+  displayCondition?: Condition
+  // 可用条件（满足条件时此按钮才可点击，不满足时灰显）
+  availableCondition?: Condition
+  // 不可用时的提示文本
+  unavailableTooltip?: string
+  // 是否在不满足可用条件时完全隐藏按钮
+  hideWhenUnavailable: boolean
+
+  // ========== 消耗 ==========
+  // 执行此交互消耗的资源
+  costs: InteractionCost[]
+
+  // ========== 交互行为参数 ==========
+  behaviorParams: InteractionBehaviorParams
+
+  // 交互是否需要确认弹窗
+  requiresConfirmation: boolean
+  // 确认弹窗文本
+  confirmationText?: string
+
+  // ========== 限制 ==========
+  // 交互优先级（数字越大显示越靠前）
+  displayPriority: number
+
+  // 此交互是否只能使用一次
+  isOneTime: boolean
+  // 使用后设置的标志位
+  usedFlag?: string
+
+  // 交互冷却时间（游戏内分钟数，-1表示无冷却）
+  cooldownMinutes: number
+  // 冷却标志位前缀（实际冷却标志位为 前缀+交互ID）
+  cooldownFlagPrefix?: string
+
+  // ========== 视觉效果 ==========
+  // 交互动画效果
+  animationEffect?: 'none' | 'fade' | 'slide' | 'shake'
+  // 按钮图标资源ID
+  iconId?: string
+  // 按钮样式
+  buttonStyle?: 'default' | 'primary' | 'danger' | 'special'
+}
+
+/**
+ * 交互类型
+ */
+export enum InteractionType {
+  // 探索：刷新当前场景的描述展示
+  EXPLORE = 'explore',
+  // 进入事件
+  EVENT = 'event',
+  // 打开功能面板：建造/制作/烹饪/修理/种植/钓鱼等
+  FUNCTION = 'function',
+  // 进入子场景
+  ENTER_SUB_SCENE = 'enterSubScene',
+  // 离开子场景返回母场景
+  EXIT_SUB_SCENE = 'exitSubScene',
+  // 移动（地牢场景中向指定方向移动）
+  MOVE = 'move',
+  // 休息/睡觉
+  REST = 'rest',
+  // 与NPC对话（本质是进入事件，语义区分）
+  TALK = 'talk',
+  // 交易（进入交易界面）
+  TRADE = 'trade',
+  // 移动到场景（跨地图移动）
+  MOVE_TO_SCENE = 'moveToScene',
+}
+
+/**
+ * 交互行为参数（根据交互类型联合）
+ */
+export type InteractionBehaviorParams =
+  | ExploreBehaviorParams
+  | EventBehaviorParams
+  | FunctionBehaviorParams
+  | EnterSubSceneBehaviorParams
+  | ExitSubSceneBehaviorParams
+  | MoveBehaviorParams
+  | MoveToSceneBehaviorParams
+  | RestBehaviorParams
+  | TalkBehaviorParams
+  | TradeBehaviorParams
+
+/** 探索行为（无额外参数） */
+export interface ExploreBehaviorParams {
+  interactionType: InteractionType.EXPLORE
+}
+
+/** 事件行为 */
+export interface EventBehaviorParams {
+  interactionType: InteractionType.EVENT
+  /** 事件ID */
+  eventId: string
+}
+
+/** 功能面板行为 */
+export interface FunctionBehaviorParams {
+  interactionType: InteractionType.FUNCTION
+  /** 功能类型 */
+  functionType: FunctionType
+}
+
+/** 进入子场景行为 */
+export interface EnterSubSceneBehaviorParams {
+  interactionType: InteractionType.ENTER_SUB_SCENE
+  /** 目标子场景ID */
+  subSceneId: string
+}
+
+/** 离开子场景行为 */
+export interface ExitSubSceneBehaviorParams {
+  interactionType: InteractionType.EXIT_SUB_SCENE
+}
+
+/** 方向移动行为（地牢） */
+export interface MoveBehaviorParams {
+  interactionType: InteractionType.MOVE
+  /** 移动方向 */
+  direction: Direction
+}
+// 移动到场景行为
+export interface MoveToSceneBehaviorParams {
+  interactionType: InteractionType.MOVE_TO_SCENE
+  /** 目标场景ID */
+  targetSceneId: string
+  /** 目标子场景ID（可选） */
+  targetSubSceneId?: string
+  /** 目标地图ID（跨地图移动时使用，为空则在当前地图内移动） */
+  targetMapId?: string
+  /** 目标地图节点ID（用于地图上定位） */
+  targetNodeId: string
+  /** 移动所需时间（游戏内分钟数） */
+  travelTimeMinutes: number
+  /** 移动消耗体力 */
+  staminaCost: number
+  /** 路径描述（如"沿着海岸线步行"） */
+  pathDescription: string
+  /** 移动途中遭遇事件池（随机触发） */
+  encounterEventPool?: EncounterEventPoolEntry[]
+  /** 移动条件（如需要特定物品、技能等级等） */
+  requirements?: MoveRequirement[]
+  /** 天气对移动时间的影响系数 */
+  weatherImpactCoefficient?: number
+}
+
+/** 休息行为 */
+export interface RestBehaviorParams {
+  interactionType: InteractionType.REST
+}
+
+/** 对话行为（本质是进入事件） */
+export interface TalkBehaviorParams {
+  interactionType: InteractionType.TALK
+  /** NPC ID 或事件ID */
+  eventId: string
+}
+
+/** 交易行为 */
+export interface TradeBehaviorParams {
+  interactionType: InteractionType.TRADE
+  /** 交易对象ID */
+  traderId: string
+}
+
+/**
+ * 功能面板类型
+ */
+export enum FunctionType {
+  BUILD = 'build',
+  CRAFT = 'craft',
+  COOK = 'cook',
+  REPAIR = 'repair',
+  PLANT = 'plant',
+  FISH = 'fish',
+}
+
+/**
+ * 方向枚举（地牢移动用）
+ */
+export enum Direction {
+  NORTH = 'north',
+  SOUTH = 'south',
+  EAST = 'east',
+  WEST = 'west',
+  UP = 'up',
+  DOWN = 'down',
+}
+// ============================================================
+// 移动相关
+// ============================================================
+
+export interface EncounterEventPoolEntry {
+  eventId: string
+  weight: number
+  condition?: Condition
+}
+
+export interface MoveRequirement {
+  type: 'item' | 'skill' | 'flag' | 'attribute' | 'carryWeight'
+  id: string
+  value?: number
+  operator?: 'equal' | 'greaterEqual' | 'greater' | 'lessEqual' | 'less'
+  hint: string
+  isConsumed?: boolean
+}
+
+/**
+ * 交互消耗
+ */
+export interface InteractionCost {
+  // 消耗类型
+  costType: InteractionCostType
+  // 消耗值（基础值，可能受系数影响）
+  value: number
+  // 消耗值是否受玩家体力消耗系数影响
+  affectedByCoefficient: boolean
+
+  // ========== 物品消耗专用 ==========
+  // 消耗的物品ID（仅当 costType 为 ITEM 时使用）
+  itemId?: string
+  // 消耗的物品数量（仅当 costType 为 ITEM 时使用，默认1）
+  itemQuantity?: number
+}
+
+/**
+ * 交互消耗类型
+ */
+export enum InteractionCostType {
+  // 体力
+  STAMINA = 'stamina',
+  // 饱食度
+  SATIETY = 'satiety',
+  // SAN值
+  SAN = 'san',
+  // 生命值
+  HP = 'hp',
+  // 物品（需配合 itemId 和 itemQuantity）
+  ITEM = 'item',
+}
+
+// ============================================================
+// 场景注册表
+// ============================================================
+
+/**
+ * 场景注册表（全局场景配置汇总）
+ */
+export interface SceneRegistry {
+  // 所有场景
+  scenes: Record<string, Scene>
+  // 所有子场景
+  subScenes: Record<string, SubScene>
+  // 玩家初始场景ID（游戏开始时所在场景）
+  initialSceneId: string
+  // 玩家初始子场景ID（可选，如游戏开始在沙滩上的飞机残骸旁）
+  initialSubSceneId?: string
+}
+// seasonWeather.ts - 季节与天气数据结构
+
+import type { Condition } from './effect'
+
+// ============================================================
+// 季节
+// ============================================================
+
+/**
+ * 季节枚举
+ */
+export enum Season {
+  SPRING = 'spring',
+  SUMMER = 'summer',
+  AUTUMN = 'autumn',
+  WINTER = 'winter',
+}
+
+/**
+ * 季节阶段
+ */
+export enum SeasonPhase {
+  /** 初（前10天） */
+  EARLY = 'early',
+  /** 盛（中10天） */
+  MID = 'mid',
+  /** 末（后10天） */
+  LATE = 'late',
+}
+
+/**
+ * 季节配置
+ */
+export interface SeasonConfig {
+  /** 季节 */
+  season: Season
+  /** 季节名称（显示用） */
+  name: string
+  /** 季节图标资源ID */
+  iconId: string
+
+  /** 各阶段的基准温度（摄氏度） */
+  baseTemperatures: Record<SeasonPhase, number>
+
+  /** 季节天数（每个阶段的天数） */
+  phaseDurationDays: number
+
+  /** 该季节可出现的天气及概率 */
+  weatherPool: Record<string, number>
+
+  /** 季节描述 */
+  description: string
+}
+
+// ============================================================
+// 天气
+// ============================================================
+
+/**
+ * 天气配置
+ */
+export interface WeatherConfig {
+  /** 天气唯一ID */
+  id: string
+  /** 天气名称（显示用） */
+  name: string
+  /** 天气图标资源ID */
+  iconId: string
+
+  /** 天气类型 */
+  weatherType: WeatherType
+
+  /** 环境温度修正值（叠加到季节基准温度） */
+  temperatureModifier: number
+
+  /** 能见度（0-10，0=完全不可见） */
+  visibility: number
+
+  /** 天气描述 */
+  description: string
+
+  /** 天气描述变体（根据SAN值等条件显示不同描述） */
+  descriptionVariations?: WeatherDescriptionVariation[]
+
+  /** 天气是否影响移动速度 */
+  movementSpeedModifier: number
+
+  /** 天气画面效果 */
+  screenEffect?: WeatherScreenEffect
+}
+
+/**
+ * 天气类型枚举
+ */
+export enum WeatherType {
+  SUNNY = 'sunny',
+  CLOUDY = 'cloudy',
+  OVERCAST = 'overcast',
+  RAIN = 'rain',
+  SNOW = 'snow',
+  STORM = 'storm',
+  BLIZZARD = 'blizzard',
+  DUST = 'dust',
+  FOG = 'fog',
+  THUNDERSTORM = 'thunderstorm',
+  ACID_RAIN = 'acidRain',
+  BLOOD_RAIN = 'bloodRain',
+}
+
+/**
+ * 天气描述变体
+ */
+export interface WeatherDescriptionVariation {
+  /** 变体文本 */
+  content: string
+  /** 显示条件（如SAN值） */
+  condition: Condition
+}
+
+/**
+ * 天气画面效果
+ */
+export interface WeatherScreenEffect {
+  /** 效果类型 */
+  type: 'rain' | 'snow' | 'fog' | 'dust' | 'lightning' | 'none'
+  /** 效果强度（0-1） */
+  intensity: number
+  /** 粒子效果资源ID */
+  particleEffectId?: string
+  /** 画面滤镜 */
+  colorFilter?: string
+}
+
+// ============================================================
+// 昼夜
+// ============================================================
+
+/**
+ * 时间段枚举
+ */
+export enum TimeOfDay {
+  /** 深夜 23:00-01:00 */
+  LATE_NIGHT = 'lateNight',
+  /** 凌晨 02:00-04:00 */
+  EARLY_MORNING = 'earlyMorning',
+  /** 清晨 05:00-07:00 */
+  DAWN = 'dawn',
+  /** 上午 08:00-12:00 */
+  MORNING = 'morning',
+  /** 下午 13:00-17:00 */
+  AFTERNOON = 'afternoon',
+  /** 傍晚 18:00-20:00 */
+  DUSK = 'dusk',
+  /** 夜晚 21:00-22:00 */
+  NIGHT = 'night',
+}
+
+/**
+ * 时间段配置
+ */
+export interface TimeOfDayConfig {
+  /** 时间段 */
+  timeOfDay: TimeOfDay
+  /** 时间段名称（显示用） */
+  name: string
+  /** 时间段图标资源ID */
+  iconId: string
+  /** 开始小时（含） */
+  startHour: number
+  /** 结束小时（不含，如startHour=23 endHour=2表示23:00-02:00） */
+  endHour: number
+
+  /** 环境亮度（0-1，0=完全黑暗） */
+  ambientLight: number
+  /** 温度修正值 */
+  temperatureModifier: number
+
+  /** 睡眠恢复倍率（深夜和凌晨默认为2.0） */
+  sleepRecoveryMultiplier?: number
+  /** 体力消耗系数修正（深夜和凌晨默认为+0.5） */
+  staminaConsumptionModifier?: number
+}
+
+// ============================================================
+// 腐化度
+// ============================================================
+
+/**
+ * 腐化度配置
+ * 腐化度影响：敌人出现概率、事件内容、场景描述、种植钓鱼结果等
+ */
+export interface CorruptionConfig {
+  /** 初始腐化度 */
+  initialValue: number
+  /** 最小值 */
+  minValue: number
+  /** 最大值 */
+  maxValue: number
+
+  /** 腐化度等级阈值 */
+  thresholds: CorruptionThreshold[]
+}
+
+/**
+ * 腐化度等级阈值
+ */
+export interface CorruptionThreshold {
+  /** 腐化度达到此值时触发 */
+  value: number
+  /** 等级名称（显示用，如"轻微腐化"、"深度腐化"） */
+  name: string
+  /** 等级描述 */
+  description: string
+  /** 到达此等级时触发的效果 */
+  onReachEffects?: string[]
+  /** 该等级下的特殊规则 */
+  rules?: CorruptionLevelRule[]
+}
+
+/**
+ * 腐化度等级规则
+ */
+export interface CorruptionLevelRule {
+  /** 规则描述 */
+  description: string
+  /** 影响范围 */
+  affectedSystem:
+    | 'enemySpawn'
+    | 'eventPool'
+    | 'sceneDescription'
+    | 'farming'
+    | 'fishing'
+    | 'crafting'
+    | 'sanLoss'
+  /** 规则参数 */
+  params: Record<string, number>
+}
+
+// ============================================================
+// 全局配置注册表
+// ============================================================
+
+/**
+ * 季节天气注册表
+ */
+export interface SeasonWeatherRegistry {
+  /** 季节配置 */
+  seasons: Record<Season, SeasonConfig>
+  /** 天气配置 */
+  weathers: Record<string, WeatherConfig>
+  /** 时间段配置 */
+  timeOfDayConfigs: Record<TimeOfDay, TimeOfDayConfig>
+  /** 腐化度配置 */
+  corruption: CorruptionConfig
+  /** 当前游戏开始的初始季节 */
+  initialSeason: Season
+  /** 当前游戏开始的初始季节阶段 */
+  initialSeasonPhase: SeasonPhase
+  /** 初始天气ID */
+  initialWeatherId: string
+  /** 初始天数（游戏开始时的天数，通常为1） */
+  initialDay: number
+  /** 初始时间（游戏开始时的分钟数，如480=上午8:00） */
+  initialTimeMinutes: number
+}
+// skill.ts - 技能数据结构
+
+import type { Condition } from './effect'
+import type { EffectResult } from './effect'
+import type { AttributeType } from './effect'
+import type { FlagValue } from './flag'
+
+// ============================================================
+// 公共基础
+// ============================================================
+
+/**
+ * 技能属性加成
+ * 用于技能对玩家属性的被动修正
+ */
+export interface SkillAttributeBonus {
+  /** 目标属性 */
+  attribute: AttributeType
+  /** 加成值 */
+  value: number
+  /** 加成类型 */
+  modifierType: 'add' | 'multiply'
+  /** 子类型（武器熟练度、特定技能等需要指定） */
+  subType?: string
+}
+
+// ============================================================
+// 生存技能
+// ============================================================
+
+/**
+ * 生存技能配置
+ * 非战斗状态下使用的技能，影响对应的交互效率、结果及判定条件。
+ * 如：探索、砍伐、挖掘、采集、制作、种植、烹饪
+ */
+export interface SurvivalSkill {
+  /** 技能唯一ID */
+  id: string
+  /** 技能名称 */
+  name: string
+  /** 技能描述 */
+  description: string
+  /** 技能图标资源ID */
+  iconId: string
+
+  /** 技能类型 */
+  skillType: 'survival'
+
+  /** 技能等级上限 */
+  maxLevel: number
+
+  /** 升级所需经验公式（当前等级 -> 所需经验） */
+  expToNextLevel: (currentLevel: number) => number
+
+  /** 技能等级对交互效果的加成公式 */
+  levelBonus: SurvivalSkillLevelBonus
+
+  /** 该技能相关的交互ID列表（用于判断哪些交互可获得此技能经验） */
+  relatedInteractionIds?: string[]
+
+  /** 执行相关交互时获得的经验值 */
+  expPerAction: number
+}
+
+/**
+ * 生存技能等级加成配置
+ */
+export interface SurvivalSkillLevelBonus {
+  /** 效果倍率（如采集数量倍率 = 1 + level * bonusPerLevel） */
+  bonusPerLevel: number
+  /** 高等级解锁的特殊能力 */
+  specialAbilities?: SurvivalSkillSpecialAbility[]
+}
+
+/**
+ * 生存技能特殊能力
+ */
+export interface SurvivalSkillSpecialAbility {
+  /** 所需技能等级 */
+  requiredLevel: number
+  /** 能力描述 */
+  description: string
+  /** 能力效果（解锁后产生的被动效果） */
+  effects: EffectResult[]
+}
+
+// ============================================================
+// 战斗技能
+// ============================================================
+
+/**
+ * 战斗技能配置
+ * 在战斗中使用的能力，由武器熟练度、事件或道具解锁。
+ * 包括普攻（默认解锁）和各类主动技能。
+ */
+export interface BattleSkill {
+  /** 技能唯一ID */
+  id: string
+  /** 技能名称 */
+  name: string
+  /** 技能描述 */
+  description: string
+  /** 技能图标资源ID */
+  iconId: string
+
+  /** 技能类型 */
+  skillType: 'battle'
+
+  /** 技能等级（部分技能可升级，0表示不可升级） */
+  level: number
+  /** 最大等级 */
+  maxLevel: number
+
+  /** 解锁条件 */
+  unlockCondition: string //仅作备注，逻辑不生效
+
+  /** 武器类型限制（为空则不限武器，徒手或任意武器均可使用） */
+  weaponRestriction?: string
+
+  /** 伤害类型（普攻时使用武器自身的伤害类型） */
+  damageTypeId?: string
+
+  /** 技能数值 */
+  stats: BattleSkillStats
+
+  /** 技能消耗 */
+  costs: BattleSkillCost[]
+
+  /** 技能冷却（回合数） */
+  cooldown: number
+
+  /** 目标选择 */
+  targetType: BattleSkillTargetType
+
+  /** 命中后施加的效果 */
+  onHitEffects?: EffectResult[]
+  /** 暴击时额外施加的效果 */
+  onCritEffects?: EffectResult[]
+
+  /** 技能使用时的描述文本（用于战斗日志，支持占位符如 {damage}） */
+  useTextTemplate?: string
+  /** 技能未命中时的描述文本 */
+  missTextTemplate?: string
+
+  /** 此技能是否为默认普攻（武器熟练度0时自动解锁） */
+  isDefaultAttack?: boolean
+}
+
+/**
+ * 战斗技能数值
+ */
+export interface BattleSkillStats {
+  /** 伤害倍率（基于武器基础伤害的倍率，1.0 = 普攻伤害） */
+  damageMultiplier: number
+  /** 额外固定伤害（不受武器影响） */
+  bonusDamage?: number
+  /** 力量对伤害的加成系数（0表示不受力量加成） */
+  strengthScaling: number
+  /** 敏捷对伤害的加成系数（0表示不受敏捷加成） */
+  agilityScaling: number
+  /** 智力对伤害的加成系数（0表示不受智力加成） */
+  intelligenceScaling: number
+
+  /** 命中修正（加到基础命中上） */
+  accuracyModifier: number
+  /** 暴击率修正（0.1 = +10%） */
+  criticalChanceModifier: number
+  /** 暴击倍率修正（加到武器暴击倍率上） */
+  criticalMultiplierBonus: number
+}
+
+/**
+ * 战斗技能消耗
+ */
+export interface BattleSkillCost {
+  /** 消耗类型 */
+  costType: 'stamina' | 'hp' | 'san' | 'satiety'
+  /** 消耗值 */
+  value: number
+}
+
+/**
+ * 战斗技能目标类型
+ */
+export enum BattleSkillTargetType {
+  /** 单个敌人 */
+  SINGLE_ENEMY = 'singleEnemy',
+  /** 所有敌人 */
+  ALL_ENEMIES = 'allEnemies',
+  /** 自身 */
+  SELF = 'self',
+  /** 随机一个敌人 */
+  RANDOM_ENEMY = 'randomEnemy',
+}
+
+// ============================================================
+// 被动技能
+// ============================================================
+
+/**
+ * 被动技能配置
+ * 习得后永久生效的技能，不会成长，不可移除。
+ * 通过事件、道具习得。
+ * 效果持续生效于角色属性或战斗计算中。
+ */
+export interface PassiveSkill {
+  /** 技能唯一ID */
+  id: string
+  /** 技能名称 */
+  name: string
+  /** 技能描述 */
+  description: string
+  /** 技能图标资源ID */
+  iconId: string
+
+  /** 技能类型 */
+  skillType: 'passive'
+
+  /** 被动效果列表（习得后永久生效） */
+  effects: EffectResult[]
+
+  /** 属性加成（直接作用于玩家属性面板） */
+  attributeBonuses?: SkillAttributeBonus[]
+
+  /** 该被动是否可重复习得（多数被动仅可习得一次） */
+  isStackable: boolean
+  /** 最大叠层数（isStackable为true时有效） */
+  maxStacks?: number
+
+  /** 习得条件（仅用于事件或道具中引用，被动技能本身不主动触发习得） */
+  acquireCondition?: Condition
+}
+
+// ============================================================
+// 联合类型
+// ============================================================
+
+/** 所有技能类型 */
+export type Skill = SurvivalSkill | BattleSkill | PassiveSkill
+
+/** 可成长的技能（生存技能和战斗技能有等级/经验） */
+export type GrowableSkill = SurvivalSkill | BattleSkill
+
+// ============================================================
+// 技能注册表
+// ============================================================
+
+/**
+ * 技能注册表（全局技能配置汇总）
+ */
+export interface SkillRegistry {
+  /** 生存技能 */
+  survivalSkills: Record<string, SurvivalSkill>
+  /** 战斗技能 */
+  battleSkills: Record<string, BattleSkill>
+  /** 被动技能 */
+  passiveSkills: Record<string, PassiveSkill>
+}
+// status.ts - 异常状态数据结构
+
+import type { EffectResult } from './effect'
+import type { Condition } from './effect'
+import type { AttributeType } from './effect'
+
+// ============================================================
+// 状态配置
+// ============================================================
+
+/**
+ * 异常状态配置
+ * 定义一种可施加到玩家或敌人身上的临时状态模板。
+ * 状态的实例化（施加到具体目标、带剩余时间）是运行时数据。
+ * 施加/移除通过 Effect 系统中的 StatusEffect 触发。
+ */
+export interface StatusConfig {
+  /** 状态唯一ID */
+  id: string
+  /** 状态名称（显示用） */
+  name: string
+  /** 状态备注（开发者可见） */
+  notes?: string
+  /** 状态描述（显示给玩家） */
+  description: string
+  /** 状态描述变体（根据条件显示不同文本） */
+  descriptionVariations?: StatusDescriptionVariation[]
+
+  /** 状态图标资源ID */
+  iconId: string
+
+  // ============================================================
+  // 状态分类
+  // ============================================================
+
+  /** 状态类型 */
+  statusType: StatusType
+
+  // ============================================================
+  // 时间与叠层
+  // ============================================================
+
+  /** 默认持续时间，具体以施加的事件时间为准 */
+  defaultDuration: StatusDuration
+
+  /** 叠加规则 */
+  stackingRule: StatusStackingRule
+
+  // ============================================================
+  // 效果
+  // ============================================================
+
+  /** 状态效果（每周期触发） */
+  effects: StatusEffectConfig[]
+
+  /** 状态施加时立即触发的效果（仅一次） */
+  onApplyEffects?: EffectResult[]
+  /** 状态移除时触发的效果（仅一次） */
+  onRemoveEffects?: EffectResult[]
+
+  // ============================================================
+  // 显示与视听
+  // ============================================================
+
+  /** 视觉效果 */
+  visualEffects?: StatusVisualEffect[]
+
+  // ============================================================
+  // 移除与互斥
+  // ============================================================
+
+  /** 可否被驱散（某些状态如诅咒不可被常规手段移除） */
+  isDispellable: boolean
+
+  /** 被移除时的提示文本 */
+  exclusiveRemovalText?: string
+
+  // ============================================================
+  // 死亡相关
+  // ============================================================
+
+  /** 此状态是否在战斗结束后移除 */
+  removeOnBattleEnd: boolean
+  /** 此状态是否在休息/睡觉后移除 */
+  removeOnRest: boolean
+}
+
+// ============================================================
+// 状态类型
+// ============================================================
+
+/**
+ * 状态类型
+ */
+export enum StatusType {
+  /** 负面状态（中毒、流血、恐惧等） */
+  DEBUFF = 'debuff',
+  /** 正面状态（力量增强、护盾、加速等） */
+  BUFF = 'buff',
+  /** 中立状态（标记类，如"被猎人标记"，本身无害） */
+  NEUTRAL = 'neutral',
+  /** 特殊状态（诅咒、感染、腐化等，有独特机制） */
+  SPECIAL = 'special',
+}
+
+// ============================================================
+// 时间与叠层
+// ============================================================
+
+/**
+ * 状态持续时间
+ */
+export interface StatusDuration {
+  /** 持续时间值 */
+  value: number
+  /** 时间单位 */
+  unit: 'turn' | 'minute' | 'hour' | 'permanent'
+  /** 最小持续时间限制（施加时若指定时间小于此值则使用此值） */
+  minValue?: number
+  /** 最大持续时间限制（施加时若指定时间大于此值则使用此值） */
+  maxValue?: number
+}
+
+/**
+ * 状态叠加规则
+ */
+export enum StatusStackingRule {
+  /** 不可叠加：已存在时忽略新施加（不刷新时间） */
+  NONE = 'none',
+  /** 刷新时间：已存在时仅刷新持续时间，不增加层数 */
+  REFRESH = 'refresh',
+  /** 独立叠加：每层独立计时，效果×层数 */
+  STACK_INDEPENDENT = 'stackIndependent',
+  /** 刷新叠加：层数+1且刷新所有层持续时间 */
+  STACK_REFRESH = 'stackRefresh',
+  /** 仅叠层：层数+1但保持原有持续时间不变 */
+  STACK_NO_REFRESH = 'stackNoRefresh',
+}
+
+// ============================================================
+// 状态效果
+// ============================================================
+
+/**
+ * 状态效果配置
+ * 定义状态每个周期（回合/分钟/小时）对属性的影响
+ */
+export interface StatusEffectConfig {
+  /** 效果的触发周期 ， 单位为分钟和回合*/
+  interval: number
+
+  /** 属性变动列表 */
+  attributeChanges: StatusAttributeChange[]
+
+  /** 效果触发时的描述文本（战斗日志/状态提示） */
+  triggerText?: string
+
+  /** 效果触发概率（0-1，1=必定触发） */
+  triggerChance: number
+
+  /** 效果是否受层数影响（如每层中毒独立造成伤害） */
+  scalesWithStacks: boolean
+
+  /** 触发条件（满足条件才触发此效果） */
+  condition?: Condition
+}
+
+/**
+ * 状态属性变动
+ */
+export interface StatusAttributeChange {
+  /** 目标属性 */
+  attribute: StatusAffectedAttribute
+  /** 变动类型 */
+  operation: 'add' | 'multiply' | 'set'
+  /** 变动值（正数为增益，负数为减益） */
+  value: number
+  /** 子类型（用于武器熟练度、特定技能等） */
+  subType?: string
+}
+
+/**
+ * 状态可影响的属性（涵盖策划书中临时状态可影响的全部属性）
+ */
+export enum StatusAffectedAttribute {
+  // 生存属性
+  HP = 'hp',
+  SATIETY = 'satiety',
+  STAMINA = 'stamina',
+  SAN = 'san',
+
+  // 基础属性
+  STRENGTH = 'strength',
+  AGILITY = 'agility',
+  INTELLIGENCE = 'intelligence',
+  CONSTITUTION = 'constitution',
+
+  // 系数属性
+  RECOVERY_RATE_COEFFICIENT = 'recoveryRateCoefficient',
+  SATIETY_LOSS_COEFFICIENT = 'satietyLossCoefficient',
+  STAMINA_CONSUMPTION_COEFFICIENT = 'staminaConsumptionCoefficient',
+  STAMINA_RECOVERY_COEFFICIENT = 'staminaRecoveryCoefficient',
+  STAMINA_RECOVERY_FIX = 'staminaRecoveryFix',
+
+  // 防御
+  SLASH_DEFENSE = 'slashDefense',
+  BLUNT_DEFENSE = 'bluntDefense',
+  RANGED_DEFENSE = 'rangedDefense',
+  POISON_DEFENSE = 'poisonDefense',
+  FIRE_DEFENSE = 'fireDefense',
+
+  // 温度
+  TEMPERATURE_LOW = 'temperatureLow',
+  TEMPERATURE_HIGH = 'temperatureHigh',
+
+  // 其他
+  CARRY_WEIGHT_MODIFIER = 'carryWeightModifier',
+  SAN_MODIFIER = 'sanModifier',
+}
+
+// ============================================================
+// 视觉效果
+// ============================================================
+
+/**
+ * 状态视觉效果
+ */
+export interface StatusVisualEffect {
+  /** 效果类型 */
+  type: StatusVisualEffectType
+  /** 效果强度（0-1） */
+  intensity: number
+  /** 是否随状态剩余时间渐变（时间越少效果越强/弱） */
+  intensityByRemainingTime?: 'increase' | 'decrease'
+  /** 效果颜色 */
+  color?: string
+}
+
+/**
+ * 视觉效果类型
+ */
+export enum StatusVisualEffectType {
+  /** 屏幕边框闪烁 */
+  SCREEN_BORDER_FLASH = 'screenBorderFlash',
+  /** 屏幕边框常驻颜色 */
+  SCREEN_BORDER_STATIC = 'screenBorderStatic',
+  /** 屏幕抖动 */
+  SCREEN_SHAKE = 'screenShake',
+  /** 画面模糊 */
+  BLUR = 'blur',
+  /** 画面色调偏移 */
+  COLOR_SHIFT = 'colorShift',
+  /** 画面暗角 */
+  VIGNETTE = 'vignette',
+  /** 粒子效果（血滴、冰晶等） */
+  PARTICLES = 'particles',
+  /** 角色头顶图标 */
+  OVERHEAD_ICON = 'overheadIcon',
+}
+
+// ============================================================
+// 状态描述变体
+// ============================================================
+
+/**
+ * 状态描述变体
+ */
+export interface StatusDescriptionVariation {
+  /** 变体描述 */
+  description: string
+  /** 显示条件 */
+  condition: Condition
+}
+
+// ============================================================
+// 状态注册表
+// ============================================================
+
+/**
+ * 状态注册表
+ */
+export interface StatusRegistry {
+  statuses: Record<string, StatusConfig>
+}
+// trade.ts - 交易数据结构
+
+import type { Condition } from './effect'
+
+// ============================================================
+// 商人配置
+// ============================================================
+
+/**
+ * 商人配置
+ * 定义交易NPC的基本信息、价格体系和商品清单。
+ * 玩家可向商人出售任何非关键物品，商人只出售清单中的商品。
+ */
+export interface TraderConfig {
+  /** 商人唯一ID */
+  id: string
+  /** 商人名称（显示用） */
+  name: string
+  /** 商人备注（开发者可见） */
+  notes?: string
+
+  /** 商人描述（交易界面展示） */
+  description: string
+  /** 商人立绘/头像资源ID */
+  portraitImageId?: string
+
+  // ============================================================
+  // 价格体系
+  // ============================================================
+
+  /** 商人出售物品的价格倍率（最终售价 = 物品basePrice × 此倍率） */
+  sellPriceMultiplier: number
+  /** 商人收购物品的价格倍率（最终收购价 = 物品basePrice × 此倍率） */
+  buyPriceMultiplier: number
+
+  // ============================================================
+  // 商品清单
+  // ============================================================
+
+  /** 商人出售的商品列表 */
+  goods: TraderGoods[]
+
+  // ============================================================
+  // 交易条件
+  // ============================================================
+
+  /** 价格浮动条件（满足条件时价格变动） */
+  priceModifiers?: TraderPriceModifier[]
+}
+
+// ============================================================
+// 商品
+// ============================================================
+
+/**
+ * 商人商品
+ */
+export interface TraderGoods {
+  /** 物品ID */
+  itemId: string
+  /** 物品数量（-1=无限供应） */
+  stock: number
+  /** 补货周期（游戏内分钟数，-1=不自动补货，0=每次打开交易都刷新） */
+  restockIntervalMinutes: number
+  /** 补货数量（补货时恢复到多少库存） */
+  restockAmount: number
+
+  /** 此商品是否打折（覆盖商人全局价格倍率） */
+  customPriceMultiplier?: number
+
+  /** 商品出现条件（满足条件才出现在商品列表中） */
+  appearCondition?: Condition
+  /** 条件不满足时是否显示为"???"占位 */
+  showPlaceholderWhenLocked: boolean
+  /** 占位文本 */
+  placeholderText?: string
+}
+
+// ============================================================
+// 资金与价格
+// ============================================================
+
+/**
+ * 价格浮动条件
+ */
+export interface TraderPriceModifier {
+  /** 浮动条件 */
+  condition: Condition
+  /** 出售倍率修正（叠加到 sellPriceMultiplier） */
+  sellPriceMultiplierModifier?: number
+  /** 收购倍率修正（叠加到 buyPriceMultiplier） */
+  buyPriceMultiplierModifier?: number
+  /** 浮动描述（如"好感度高，价格优惠"） */
+  description?: string
+}
+
+// ============================================================
+// 交易注册表
+// ============================================================
+
+/**
+ * 交易注册表
+ */
+export interface TradeRegistry {
+  /** 所有商人配置，按ID索引 */
+  traders: Record<string, TraderConfig>
+}
+// weapon.ts - 武器类型数据结构
+
+// ============================================================
+// 武器类型定义
+// ============================================================
+
+/**
+ * 武器类型配置
+ * 定义一类武器的通用属性，如剑、斧、弓、长矛等。
+ * 具体的武器物品（如"铁剑"、"铜剑"）在 item.ts 中配置，
+ * 通过 weaponTypeId 关联到此类型。
+ */
+export interface WeaponType {
+  /** 武器类型唯一ID */
+  id: string
+  /** 武器类型名称（显示用，如"剑"、"弓"） */
+  name: string
+  /** 武器类型描述 */
+  description: string
+  /** 武器类型图标资源ID */
+  iconId: string
+
+  /** 主要伤害类型ID */
+  primaryDamageTypeId: string
+
+  /** 是否为远程武器 */
+  isRanged: boolean
+
+  /**
+   * 该武器类型的默认属性模板
+   * 创建该类型的具体武器物品时，可作为 WeaponStats 的默认值
+   */
+  defaultStats: WeaponTypeDefaultStats
+
+  /**
+   * 技能解锁表
+   * 键为武器熟练度等级，值为该等级解锁的战斗技能ID列表
+   * 例如：{ 0: ['basic_slash'], 3: ['power_strike'], 7: ['whirlwind'] }
+   * 熟练度0的技能在装备武器时即解锁（普攻等基础技能）
+   */
+  skillUnlocks: Record<number, string[]>
+
+  /**
+   * 熟练度成长配置
+   * 该武器类型的熟练度经验获取倍率
+   */
+  proficiencyGrowth: WeaponProficiencyGrowth
+}
+
+/**
+ * 武器类型默认属性
+ */
+export interface WeaponTypeDefaultStats {
+  /** 基础伤害 */
+  baseDamage: number
+  /** 伤害浮动范围 */
+  damageVariance: number
+  /** 攻击距离 */
+  attackRange: number
+  /** 基础命中修正 */
+  accuracyModifier: number
+  /** 基础暴击率修正 */
+  criticalChanceModifier: number
+  /** 暴击倍率 */
+  criticalMultiplier: number
+  /** 攻击速度 */
+  attackSpeed: number
+  /** 每次攻击基础消耗体力 */
+  staminaCostPerAttack: number
+}
+
+/**
+ * 武器熟练度成长配置
+ */
+export interface WeaponProficiencyGrowth {
+  /** 使用该类型武器技能攻击命中时获得的熟练度经验 */
+  expPerHit: number
+  /** 使用该类型武器技能造成暴击时额外获得的经验 */
+  expPerCriticalHit: number
+  /** 击杀敌人时额外获得的经验 */
+  expPerKill: number
+}
+
+// ============================================================
+// 武器类型注册表
+// ============================================================
+
+/**
+ * 武器类型注册表
+ */
+export interface WeaponTypeRegistry {
+  weaponTypes: Record<string, WeaponType>
+}

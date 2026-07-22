@@ -516,8 +516,5 @@ export interface SkillBonus {
 export interface ItemRegistry {
   /** 所有物品配置，按ID索引 */
   items: Record<string, Item>
-  /** 按类别分组的物品ID列表（便于快速查找） */
-  itemsByCategory: Record<ItemCategory, string[]>
-  /** 按标签分组的物品ID列表 */
-  itemsByTag: Record<string, string[]>
+
 }

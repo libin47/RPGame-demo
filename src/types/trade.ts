@@ -71,7 +71,7 @@ export interface TraderGoods {
   /** 商品出现条件（满足条件才出现在商品列表中） */
   appearCondition?: Condition
   /** 条件不满足时是否显示为"???"占位 */
-  showPlaceholderWhenLocked: boolean
+  showPlaceholderWhenLocked?: boolean
   /** 占位文本 */
   placeholderText?: string
 }

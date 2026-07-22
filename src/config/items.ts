@@ -1,784 +1,537 @@
-// 定义所有物品、装备、武器配置
-// 包括：物品id、类型、名称、描述、属性、效果、重量、耐久度、堆叠等
-// config/items.ts - 物品配置实例（最小可验证集合）
-
-import type { Item, ItemRegistry } from '../types/item'
-import { ItemCategory, ItemRarity, EquipmentSlot, ConsumableType, MaterialType } from '../types/item'
+// config/items.ts
+import type {
+  WeaponItem,
+  ArmorItem,
+  ConsumableItem,
+  MaterialItem,
+  ValuableItem,
+  DocumentItem,
+  RecipeItem,
+  ItemRegistry,
+} from '../types/item'
+import {
+  ItemCategory,
+  ItemRarity,
+  EquipmentSlot,
+  ConsumableType,
+} from '../types/item'
 import { RecipeType } from '../types/recipe'
-import type { AttributeType } from '../types/effect'
+import { EffectType, AttributeType, AttributeOperation } from '../types/effect'
 
-const items: Record<string, Item> = {
-  // ============================================================
-  // 武器
-  // ============================================================
-  item_rusty_sword: {
-    id: 'item_rusty_sword',
-    name: '锈剑',
-    description: '一把生锈的铁剑，虽然状况不佳，但仍能用来防身',
-    category: ItemCategory.WEAPON,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_rusty_sword',
-    weight: 2.5,
-    maxStackSize: 1,
-    isSellable: true,
-    basePrice: 15,
-    isKeyItem: false,
-    tags: ['weapon', 'sword', 'metal', 'starter'],
-    weaponTypeId: 'sword',
-    durability: {
-      maxDurability: 50,
-      initialDurability: 35,
-      isRepairable: true,
-      repairMaterials: [{ itemId: 'item_scrap_metal', quantity: 2 }],
-      repairWorkbenchLevel: 1,
-      destroyOnBreak: false,
-      brokenItemId: 'item_broken_sword',
-    },
-    equipmentSlot: EquipmentSlot.WEAPON,
-    weaponStats: {
-      baseDamage: 10,
-      damageTypeId: 'slash',
-      damageVariance: 0.15,
-      attackRange: 1,
-      accuracyModifier: 0.05,
-      criticalChanceModifier: 0.03,
-      criticalMultiplier: 2.0,
-      attackSpeed: 0.95,
-      staminaCostPerAttack: 12,
-    },
-    isDualWieldable: false,
-    isTwoHanded: false,
-  },
+// ===== 武器 =====
 
-  item_survival_knife: {
-    id: 'item_survival_knife',
-    name: '生存刀',
-    description: '一把多功能求生刀，既可战斗也可用于采集和制作',
-    category: ItemCategory.WEAPON,
-    rarity: ItemRarity.UNCOMMON,
-    iconId: 'icon_survival_knife',
-    weight: 0.8,
-    maxStackSize: 1,
-    isSellable: false,
-    basePrice: 30,
-    isKeyItem: false,
-    tags: ['weapon', 'dagger', 'tool', 'starter'],
-    weaponTypeId: 'dagger',
-    durability: {
-      maxDurability: 80,
-      initialDurability: 80,
-      isRepairable: true,
-      repairMaterials: [{ itemId: 'item_scrap_metal', quantity: 1 }],
-      repairWorkbenchLevel: 1,
-      destroyOnBreak: false,
-      brokenItemId: 'item_broken_knife',
-    },
-    equipmentSlot: EquipmentSlot.WEAPON,
-    weaponStats: {
-      baseDamage: 8,
-      damageTypeId: 'pierce',
-      damageVariance: 0.1,
-      attackRange: 1,
-      accuracyModifier: 0.15,
-      criticalChanceModifier: 0.12,
-      criticalMultiplier: 2.8,
-      attackSpeed: 1.4,
-      staminaCostPerAttack: 7,
-    },
-    isDualWieldable: true,
-    isTwoHanded: false,
-    attributeModifiers: [
-      { attribute: 'gathering' as AttributeType, modifierType: 'add', value: 1, subType: 'gathering' },
-    ],
-    grantedPassiveIds: ['quick_hands'],
+const rustySword: WeaponItem = {
+  id: 'rusty_sword',
+  name: '生锈的铁剑',
+  description: '一把锈迹斑斑的铁剑，虽然破旧但依然锋利',
+  category: ItemCategory.WEAPON,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_rusty_sword',
+  weight: 2.5,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 25,
+  isKeyItem: false,
+  weaponTypeId: 'sword',
+  durability: {
+    maxDurability: 50,
+    initialDurability: 35,
+    isRepairable: true,
+    repairMaterials: [{ itemId: 'iron_scrap', quantity: 2 }],
+    repairWorkbenchLevel: 1,
+    destroyOnBreak: false,
+    brokenItemId: 'broken_rusty_sword',
   },
-
-  item_wooden_spear: {
-    id: 'item_wooden_spear',
-    name: '木矛',
-    description: '一根削尖的木棍，简陋但能让敌人保持距离',
-    category: ItemCategory.WEAPON,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_wooden_spear',
-    weight: 2.0,
-    maxStackSize: 1,
-    isSellable: true,
-    basePrice: 5,
-    isKeyItem: false,
-    tags: ['weapon', 'spear', 'wood', 'craftable'],
-    weaponTypeId: 'spear',
-    durability: {
-      maxDurability: 30,
-      initialDurability: 30,
-      isRepairable: false,
-      destroyOnBreak: true,
-    },
-    equipmentSlot: EquipmentSlot.WEAPON,
-    weaponStats: {
-      baseDamage: 12,
-      damageTypeId: 'pierce',
-      damageVariance: 0.15,
-      attackRange: 2,
-      accuracyModifier: 0.0,
-      criticalChanceModifier: 0.05,
-      criticalMultiplier: 2.0,
-      attackSpeed: 0.8,
-      staminaCostPerAttack: 14,
-    },
-    isDualWieldable: false,
-    isTwoHanded: true,
+  equipmentSlot: EquipmentSlot.WEAPON,
+  weaponStats: {
+    baseDamage: 10,
+    damageTypeId: 'slash',
+    damageVariance: 0.15,
+    accuracyModifier: 0.0,
+    criticalChanceModifier: 0.05,
+    criticalMultiplier: 2.0,
   },
-
-  item_broken_sword: {
-    id: 'item_broken_sword',
-    name: '损坏的锈剑',
-    description: '已经完全断裂的锈剑，或许可以熔炼回收一些金属',
-    category: ItemCategory.MISC,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_broken_sword',
-    weight: 1.5,
-    maxStackSize: 1,
-    isSellable: true,
-    basePrice: 3,
-    isKeyItem: false,
-    tags: ['broken', 'metal', 'salvage'],
-    isCombinable: false,
-  },
-
-  item_broken_knife: {
-    id: 'item_broken_knife',
-    name: '损坏的生存刀',
-    description: '刀刃已经卷曲的生存刀，需要修理才能使用',
-    category: ItemCategory.MISC,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_broken_knife',
-    weight: 0.6,
-    maxStackSize: 1,
-    isSellable: true,
-    basePrice: 5,
-    isKeyItem: false,
-    tags: ['broken', 'metal', 'salvage'],
-    isCombinable: false,
-  },
-
-  // ============================================================
-  // 防具
-  // ============================================================
-  item_tattered_clothes: {
-    id: 'item_tattered_clothes',
-    name: '破旧衣物',
-    description: '飞机失事后身上仅存的衣物，几乎没有防护能力，但聊胜于无',
-    category: ItemCategory.ARMOR,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_tattered_clothes',
-    weight: 0.5,
-    maxStackSize: 1,
-    isSellable: false,
-    basePrice: 1,
-    isKeyItem: false,
-    tags: ['armor', 'cloth', 'starter'],
-    durability: {
-      maxDurability: 20,
-      initialDurability: 10,
-      isRepairable: true,
-      repairMaterials: [{ itemId: 'item_cloth_scrap', quantity: 2 }],
-      destroyOnBreak: true,
-    },
-    equipmentSlot: EquipmentSlot.BODY,
-    defenseStats: {
-      slashDefense: 3,
-      bluntDefense: 1,
-      rangedDefense: 1,
-      poisonDefense: 0,
-      fireDefense: 0,
-    },
-    temperatureResistance: {
-      lowModifier: -2,
-      highModifier: 0,
-    },
-  },
-
-  item_leather_vest: {
-    id: 'item_leather_vest',
-    name: '皮革背心',
-    description: '用变异野兽的皮缝制的简易护甲，比破布强不少',
-    category: ItemCategory.ARMOR,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_leather_vest',
-    weight: 3.0,
-    maxStackSize: 1,
-    isSellable: true,
-    basePrice: 25,
-    isKeyItem: false,
-    tags: ['armor', 'leather', 'craftable'],
-    durability: {
-      maxDurability: 60,
-      initialDurability: 60,
-      isRepairable: true,
-      repairMaterials: [{ itemId: 'item_leather_scrap', quantity: 3 }],
-      repairWorkbenchLevel: 1,
-      destroyOnBreak: true,
-    },
-    equipmentSlot: EquipmentSlot.BODY,
-    defenseStats: {
-      slashDefense: 10,
-      bluntDefense: 5,
-      rangedDefense: 5,
-      poisonDefense: 0,
-      fireDefense: 0,
-    },
-    temperatureResistance: {
-      lowModifier: -5,
-      highModifier: 0,
-    },
-  },
-
-  // ============================================================
-  // 工具
-  // ============================================================
-  item_hand_axe: {
-    id: 'item_hand_axe',
-    name: '手斧',
-    description: '一把伐木手斧，砍树效率不错，紧急时也能当武器',
-    category: ItemCategory.TOOL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_hand_axe',
-    weight: 2.0,
-    maxStackSize: 1,
-    isSellable: true,
-    basePrice: 20,
-    isKeyItem: false,
-    tags: ['tool', 'axe', 'woodcutting'],
-    durability: {
-      maxDurability: 80,
-      initialDurability: 80,
-      isRepairable: true,
-      repairMaterials: [{ itemId: 'item_scrap_metal', quantity: 1 }, { itemId: 'item_wood', quantity: 2 }],
-      repairWorkbenchLevel: 1,
-      destroyOnBreak: false,
-      brokenItemId: 'item_broken_axe',
-    },
-    equipmentSlot: EquipmentSlot.TOOL,
-    toolTypeId: 'axe',
-    toolLevel: 1,
-    skillBonuses: [
-      { skillId: 'woodcutting', bonus: 2 },
-    ],
-    specialFunctions: ['可以砍伐中型树木', '可以作为临时武器使用'],
-  },
-
-  item_torch: {
-    id: 'item_torch',
-    name: '火把',
-    description: '简易火把，提供光照和温暖，但燃烧时间有限',
-    category: ItemCategory.TOOL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_torch',
-    weight: 0.5,
-    maxStackSize: 5,
-    isSellable: true,
-    basePrice: 3,
-    isKeyItem: false,
-    tags: ['tool', 'light', 'fire', 'craftable'],
-    durability: {
-      maxDurability: 30,
-      initialDurability: 30,
-      isRepairable: false,
-      destroyOnBreak: true,
-      performanceDegradation: {
-        enabled: true,
-        threshold: 0.2,
-        maxDegradation: 0.5,
-      },
-    },
-    equipmentSlot: EquipmentSlot.LIGHT,
-    toolTypeId: 'torch',
-    toolLevel: 1,
-    specialFunctions: ['提供光照', '略微提升周围温度', '可以引燃可燃物'],
-  },
-
-  item_fishing_rod: {
-    id: 'item_fishing_rod',
-    name: '简易鱼竿',
-    description: '用树枝和藤蔓制作的钓鱼工具，能不能钓到鱼看运气',
-    category: ItemCategory.TOOL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_fishing_rod',
-    weight: 0.8,
-    maxStackSize: 1,
-    isSellable: true,
-    basePrice: 10,
-    isKeyItem: false,
-    tags: ['tool', 'fishing', 'craftable'],
-    durability: {
-      maxDurability: 40,
-      initialDurability: 40,
-      isRepairable: true,
-      repairMaterials: [{ itemId: 'item_vine', quantity: 1 }],
-      destroyOnBreak: true,
-    },
-    equipmentSlot: EquipmentSlot.TOOL,
-    toolTypeId: 'fishingRod',
-    toolLevel: 1,
-    skillBonuses: [
-      { skillId: 'fishing', bonus: 1 },
-    ],
-    specialFunctions: ['可以在水边钓鱼'],
-  },
-
-  // ============================================================
-  // 消耗品
-  // ============================================================
-  item_bandage: {
-    id: 'item_bandage',
-    name: '绷带',
-    description: '用布料撕成的简易绷带，可以包扎伤口止血',
-    category: ItemCategory.CONSUMABLE,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_bandage',
-    weight: 0.1,
-    maxStackSize: 10,
-    isSellable: true,
-    basePrice: 5,
-    isKeyItem: false,
-    tags: ['consumable', 'medicine', 'craftable'],
-    consumableType: ConsumableType.MEDICINE,
-    useTimeMinutes: 2,
-    effects: [
-      {
-        effect: {
-          type: 'attribute',
-          attribute: 'hp',
-          operation: 'add',
-          value: 15,
-        } as any,
-        description: '恢复15点生命值',
-      },
-      {
-        effect: {
-          type: 'status',
-          statusId: 'bleed',
-          apply: false,
-        } as any,
-        description: '移除流血状态',
-      },
-    ],
-  },
-
-  item_antibiotic: {
-    id: 'item_antibiotic',
-    name: '抗生素',
-    description: '从飞机急救箱中找到的广谱抗生素，可治疗感染',
-    category: ItemCategory.CONSUMABLE,
-    rarity: ItemRarity.UNCOMMON,
-    iconId: 'icon_antibiotic',
-    weight: 0.05,
-    maxStackSize: 5,
-    isSellable: true,
-    basePrice: 40,
-    isKeyItem: false,
-    tags: ['consumable', 'medicine', 'rare'],
-    consumableType: ConsumableType.MEDICINE,
-    useTimeMinutes: 1,
-    effects: [
-      {
-        effect: {
-          type: 'status',
-          statusId: 'infection',
-          apply: false,
-        } as any,
-        description: '移除感染状态',
-      },
-    ],
-    useText: '你吞下一粒抗生素，希望它能对抗体内的感染。',
-  },
-
-  item_cooked_fish: {
-    id: 'item_cooked_fish',
-    name: '烤鱼',
-    description: '在篝火上烤熟的鱼，散发着诱人的香气',
-    category: ItemCategory.CONSUMABLE,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_cooked_fish',
-    weight: 0.3,
-    maxStackSize: 5,
-    isSellable: true,
-    basePrice: 8,
-    isKeyItem: false,
-    tags: ['consumable', 'food', 'cooked'],
-    consumableType: ConsumableType.FOOD,
-    useTimeMinutes: 5,
-    effects: [
-      {
-        effect: {
-          type: 'attribute',
-          attribute: 'satiety',
-          operation: 'add',
-          value: 25,
-        } as any,
-        description: '恢复25点饱食度',
-      },
-      {
-        effect: {
-          type: 'attribute',
-          attribute: 'san',
-          operation: 'add',
-          value: 3,
-        } as any,
-        probability: 0.3,
-        description: '温暖的食物有30%概率恢复3点SAN值',
-      },
-    ],
-    useText: '你大口吃着烤鱼，虽然味道一般，但热食总是让人安心。',
-  },
-
-  item_clean_water: {
-    id: 'item_clean_water',
-    name: '清水',
-    description: '经过净化的饮用水，生存的必需品',
-    category: ItemCategory.CONSUMABLE,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_clean_water',
-    weight: 0.5,
-    maxStackSize: 10,
-    isSellable: true,
-    basePrice: 3,
-    isKeyItem: false,
-    tags: ['consumable', 'drink', 'essential'],
-    consumableType: ConsumableType.DRINK,
-    useTimeMinutes: 1,
-    effects: [
-      {
-        effect: {
-          type: 'attribute',
-          attribute: 'satiety',
-          operation: 'add',
-          value: 5,
-        } as any,
-        description: '略微缓解口渴',
-      },
-    ],
-  },
-
-  // ============================================================
-  // 材料
-  // ============================================================
-  item_wood: {
-    id: 'item_wood',
-    name: '木材',
-    description: '普通的木柴，可用于建造、制作和燃烧',
-    category: ItemCategory.MATERIAL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_wood',
-    weight: 1.0,
-    maxStackSize: 20,
-    isSellable: true,
-    basePrice: 1,
-    isKeyItem: false,
-    tags: ['material', 'wood', 'fuel'],
-    materialType: MaterialType.WOOD,
-    materialTier: 1,
-    burnTimeMinutes: 15,
-    grantsExpOnCollect: {
-      skillTypeId: 'woodcutting',
-      expAmount: 5,
-    },
-  },
-
-  item_stone: {
-    id: 'item_stone',
-    name: '石头',
-    description: '随处可见的石头，建造和制作的基础材料',
-    category: ItemCategory.MATERIAL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_stone',
-    weight: 2.0,
-    maxStackSize: 10,
-    isSellable: true,
-    basePrice: 1,
-    isKeyItem: false,
-    tags: ['material', 'stone'],
-    materialType: MaterialType.STONE,
-    materialTier: 1,
-    burnTimeMinutes: 0,
-    grantsExpOnCollect: {
-      skillTypeId: 'mining',
-      expAmount: 5,
-    },
-  },
-
-  item_vine: {
-    id: 'item_vine',
-    name: '藤蔓',
-    description: '坚韧的藤蔓纤维，可用于捆绑和制作绳索',
-    category: ItemCategory.MATERIAL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_vine',
-    weight: 0.3,
-    maxStackSize: 20,
-    isSellable: true,
-    basePrice: 1,
-    isKeyItem: false,
-    tags: ['material', 'fiber'],
-    materialType: MaterialType.FIBER,
-    materialTier: 1,
-    burnTimeMinutes: 5,
-    grantsExpOnCollect: {
-      skillTypeId: 'gathering',
-      expAmount: 3,
-    },
-  },
-
-  item_herb: {
-    id: 'item_herb',
-    name: '草药',
-    description: '岛上常见的野生草药，可以制作简易药品',
-    category: ItemCategory.MATERIAL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_herb',
-    weight: 0.1,
-    maxStackSize: 15,
-    isSellable: true,
-    basePrice: 3,
-    isKeyItem: false,
-    tags: ['material', 'herb', 'medicine'],
-    materialType: MaterialType.HERB,
-    materialTier: 1,
-    burnTimeMinutes: 3,
-    grantsExpOnCollect: {
-      skillTypeId: 'gathering',
-      expAmount: 8,
-    },
-  },
-
-  item_raw_fish: {
-    id: 'item_raw_fish',
-    name: '生鱼',
-    description: '刚从水里捞上来的鱼，需要煮熟才能安全食用',
-    category: ItemCategory.MATERIAL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_raw_fish',
-    weight: 0.5,
-    maxStackSize: 8,
-    isSellable: true,
-    basePrice: 5,
-    isKeyItem: false,
-    tags: ['material', 'foodRaw', 'perishable'],
-    materialType: MaterialType.FOOD_RAW,
-    materialTier: 1,
-    burnTimeMinutes: 0,
-  },
-
-  item_cloth_scrap: {
-    id: 'item_cloth_scrap',
-    name: '布料碎片',
-    description: '从衣物或残骸上撕下的布料，可用于制作绷带或修补衣物',
-    category: ItemCategory.MATERIAL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_cloth_scrap',
-    weight: 0.2,
-    maxStackSize: 15,
-    isSellable: true,
-    basePrice: 2,
-    isKeyItem: false,
-    tags: ['material', 'fiber', 'cloth'],
-    materialType: MaterialType.FIBER,
-    materialTier: 1,
-    burnTimeMinutes: 8,
-  },
-
-  item_scrap_metal: {
-    id: 'item_scrap_metal',
-    name: '金属碎片',
-    description: '从飞机残骸上回收的金属碎片，修理和制作的基础材料',
-    category: ItemCategory.MATERIAL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_scrap_metal',
-    weight: 1.5,
-    maxStackSize: 10,
-    isSellable: true,
-    basePrice: 5,
-    isKeyItem: false,
-    tags: ['material', 'metal'],
-    materialType: MaterialType.METAL,
-    materialTier: 1,
-    burnTimeMinutes: 0,
-  },
-
-  item_leather_scrap: {
-    id: 'item_leather_scrap',
-    name: '皮革碎片',
-    description: '从变异野兽身上剥下的皮革，可用于制作护甲',
-    category: ItemCategory.MATERIAL,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_leather_scrap',
-    weight: 0.8,
-    maxStackSize: 10,
-    isSellable: true,
-    basePrice: 8,
-    isKeyItem: false,
-    tags: ['material', 'leather'],
-    materialType: MaterialType.LEATHER,
-    materialTier: 1,
-    burnTimeMinutes: 10,
-  },
-
-  // ============================================================
-  // 贵重物品
-  // ============================================================
-  item_gold_coin: {
-    id: 'item_gold_coin',
-    name: '金币',
-    description: '在这个被遗弃的岛屿上意外发现的古老金币，不知出自何人之手',
-    category: ItemCategory.VALUABLE,
-    rarity: ItemRarity.UNCOMMON,
-    iconId: 'icon_gold_coin',
-    weight: 0.01,
-    maxStackSize: 999,
-    isSellable: true,
-    basePrice: 10,
-    isKeyItem: false,
-    tags: ['valuable', 'currency'],
-    priceMultiplier: 1.0,
-  },
-
-  // ============================================================
-  // 文档
-  // ============================================================
-  item_journal_fragment: {
-    id: 'item_journal_fragment',
-    name: '研究笔记残页',
-    description: '一张泛黄的纸，上面潦草地写满了看不懂的公式和疯狂的涂鸦',
-    category: ItemCategory.DOCUMENT,
-    rarity: ItemRarity.UNCOMMON,
-    iconId: 'icon_journal_fragment',
-    weight: 0.05,
-    maxStackSize: 1,
-    isSellable: false,
-    basePrice: 0,
-    isKeyItem: false,
-    tags: ['document', 'lore'],
-    content: '第37天：孢子仍在扩散。收容措施完全失效。我们低估了它的适应能力。\n\n第42天：有人开始听到声音。我也听到了。它们不是幻觉。\n\n第45天：塔必须被修复。如果有人读到这个——不要相信你所看到的。信号可以穿透屏障。在一切都太晚之前。',
-    onReadEffects: [
-      {
-        effect: {
-          type: 'flag',
-          flagId: 'truth_discovered',
-          operation: 'set',
-          value: true,
-        } as any,
-        description: '你得知了部分真相',
-      },
-    ],
-    isConsumedOnRead: false,
-    readTimeMinutes: 3,
-    author: '未知研究员',
-  },
-
-  // ============================================================
-  // 蓝图/配方物品
-  // ============================================================
-  item_recipe_bandage: {
-    id: 'item_recipe_bandage',
-    name: '绷带制作指南',
-    description: '一张皱巴巴的纸，画着如何用布料制作绷带的步骤',
-    category: ItemCategory.RECIPE,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_recipe',
-    weight: 0.05,
-    maxStackSize: 1,
-    isSellable: false,
-    basePrice: 0,
-    isKeyItem: false,
-    tags: ['recipe', 'craft'],
-    recipeType: RecipeType.CRAFT,
-    unlocksRecipeId: 'craft_bandage',
-    isConsumedOnUse: true,
-    learnTimeMinutes: 1,
-  },
-
-  item_recipe_campfire: {
-    id: 'item_recipe_campfire',
-    name: '篝火搭建说明',
-    description: '记录着如何用石头和木材搭建篝火的示意图',
-    category: ItemCategory.RECIPE,
-    rarity: ItemRarity.COMMON,
-    iconId: 'icon_recipe',
-    weight: 0.05,
-    maxStackSize: 1,
-    isSellable: false,
-    basePrice: 0,
-    isKeyItem: false,
-    tags: ['recipe', 'build'],
-    recipeType: RecipeType.BUILD,
-    unlocksRecipeId: 'build_campfire',
-    isConsumedOnUse: true,
-    learnTimeMinutes: 1,
-  },
-
-  // ============================================================
-  // 任务物品
-  // ============================================================
-  item_map_fragment_1: {
-    id: 'item_map_fragment_1',
-    name: '地图碎片（一）',
-    description: '一张被撕碎的地图的一部分，标记着岛屿东侧的地形',
-    category: ItemCategory.QUEST,
-    rarity: ItemRarity.UNCOMMON,
-    iconId: 'icon_map_fragment',
-    weight: 0.05,
-    maxStackSize: 1,
-    isSellable: false,
-    basePrice: 0,
-    isKeyItem: true,
-    tags: ['quest', 'map'],
-    questId: 'quest_find_map_fragments',
-    isQuestCritical: true,
-    removeOnQuestComplete: false,
-  },
+  isDualWieldable: false,
+  isTwoHanded: false,
+  attributeModifiers: [],
+  grantedSkillIds: ['basic_slash'],
+  tags: ['weapon', 'metal', 'sword'],
 }
 
-// ============================================================
-// 按类别索引
-// ============================================================
-
-const itemsByCategory: Record<ItemCategory, string[]> = {
-  [ItemCategory.WEAPON]: ['item_rusty_sword', 'item_survival_knife', 'item_wooden_spear'],
-  [ItemCategory.ARMOR]: ['item_tattered_clothes', 'item_leather_vest'],
-  [ItemCategory.TOOL]: ['item_hand_axe', 'item_torch', 'item_fishing_rod'],
-  [ItemCategory.CONSUMABLE]: ['item_bandage', 'item_antibiotic', 'item_cooked_fish', 'item_clean_water'],
-  [ItemCategory.MATERIAL]: ['item_wood', 'item_stone', 'item_vine', 'item_herb', 'item_raw_fish', 'item_cloth_scrap', 'item_scrap_metal', 'item_leather_scrap'],
-  [ItemCategory.VALUABLE]: ['item_gold_coin'],
-  [ItemCategory.DOCUMENT]: ['item_journal_fragment'],
-  [ItemCategory.RECIPE]: ['item_recipe_bandage', 'item_recipe_campfire'],
-  [ItemCategory.QUEST]: ['item_map_fragment_1'],
-  [ItemCategory.MISC]: ['item_broken_sword', 'item_broken_knife'],
+const makeshiftBow: WeaponItem = {
+  id: 'makeshift_bow',
+  name: '简易木弓',
+  description: '用树枝和藤蔓制作的简易弓，射程有限但聊胜于无',
+  category: ItemCategory.WEAPON,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_makeshift_bow',
+  weight: 1.5,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 15,
+  isKeyItem: false,
+  weaponTypeId: 'bow',
+  durability: {
+    maxDurability: 40,
+    initialDurability: 40,
+    isRepairable: true,
+    repairMaterials: [{ itemId: 'wood', quantity: 3 }],
+    repairWorkbenchLevel: 0,
+    destroyOnBreak: true,
+  },
+  equipmentSlot: EquipmentSlot.WEAPON,
+  weaponStats: {
+    baseDamage: 8,
+    damageTypeId: 'pierce',
+    damageVariance: 0.2,
+    accuracyModifier: -0.05,
+    criticalChanceModifier: 0.1,
+    criticalMultiplier: 2.5,
+  },
+  isDualWieldable: false,
+  isTwoHanded: true,
+  attributeModifiers: [],
+  grantedSkillIds: ['quick_shot'],
+  tags: ['weapon', 'wood', 'bow'],
 }
 
-// ============================================================
-// 按标签索引
-// ============================================================
+// ===== 物品 =====
 
-const itemsByTag: Record<string, string[]> = {
-  'weapon': ['item_rusty_sword', 'item_survival_knife', 'item_wooden_spear'],
-  'armor': ['item_tattered_clothes', 'item_leather_vest'],
-  'tool': ['item_hand_axe', 'item_torch', 'item_fishing_rod'],
-  'consumable': ['item_bandage', 'item_antibiotic', 'item_cooked_fish', 'item_clean_water'],
-  'material': ['item_wood', 'item_stone', 'item_vine', 'item_herb', 'item_raw_fish', 'item_cloth_scrap', 'item_scrap_metal', 'item_leather_scrap'],
-  'medicine': ['item_bandage', 'item_antibiotic', 'item_herb'],
-  'food': ['item_cooked_fish', 'item_raw_fish'],
-  'drink': ['item_clean_water'],
-  'starter': ['item_rusty_sword', 'item_survival_knife', 'item_tattered_clothes'],
-  'craftable': ['item_wooden_spear', 'item_leather_vest', 'item_torch', 'item_fishing_rod', 'item_bandage'],
-  'fuel': ['item_wood'],
-  'lore': ['item_journal_fragment'],
-  'quest': ['item_map_fragment_1'],
-  'perishable': ['item_raw_fish'],
-  'broken': ['item_broken_sword', 'item_broken_knife'],
+const chitinShell: MaterialItem = {
+  id: 'chitin_shell',
+  name: '甲壳碎片',
+  description: '从变异蟹身上剥下的坚硬甲壳碎片，可用于制作护甲',
+  category: ItemCategory.MATERIAL,
+  rarity: ItemRarity.UNCOMMON,
+  iconId: 'icon_chitin_shell',
+  weight: 1.0,
+  maxStackSize: 10,
+  isSellable: true,
+  basePrice: 8,
+  isKeyItem: false,
+  materialType: 'chitin',
+  tags: ['material', 'chitin'],
 }
+
+// ===== 消耗品 =====
+
+const bandage: ConsumableItem = {
+  id: 'bandage',
+  name: '绷带',
+  description: '简易的布质绷带，可用于包扎伤口',
+  category: ItemCategory.CONSUMABLE,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_bandage',
+  weight: 0.1,
+  maxStackSize: 10,
+  isSellable: true,
+  basePrice: 5,
+  isKeyItem: false,
+  consumableType: ConsumableType.MEDICINE,
+  perishMinutes: 0,
+  effects: [
+    {
+      effect: {
+        type: EffectType.ATTRIBUTE,
+        attribute: AttributeType.HP,
+        operation: AttributeOperation.ADD,
+        value: 20,
+      },
+      probability: 1,
+      description: '恢复20点生命值',
+    },
+    {
+      effect: {
+        type: EffectType.STATUS,
+        statusId: 'bleeding',
+        apply: false,
+      },
+      probability: 1,
+      description: '移除流血状态',
+    },
+  ],
+  useText: '你用绷带仔细包扎了伤口',
+  tags: ['consumable', 'medicine'],
+}
+
+const cookedCrab: ConsumableItem = {
+  id: 'cooked_crab',
+  name: '烤蟹肉',
+  description: '烤熟的变异蟹肉，味道尚可',
+  category: ItemCategory.CONSUMABLE,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_cooked_crab',
+  weight: 0.3,
+  maxStackSize: 5,
+  isSellable: true,
+  basePrice: 8,
+  isKeyItem: false,
+  consumableType: ConsumableType.FOOD,
+  perishMinutes: 720,
+  spoiledItemId: 'spoiled_food',
+  effects: [
+    {
+      effect: {
+        type: EffectType.ATTRIBUTE,
+        attribute: AttributeType.SATIETY,
+        operation: AttributeOperation.ADD,
+        value: 30,
+      },
+      probability: 1,
+      description: '恢复30点饱食度',
+    },
+    {
+      effect: {
+        type: EffectType.ATTRIBUTE,
+        attribute: AttributeType.SAN,
+        operation: AttributeOperation.ADD,
+        value: 5,
+      },
+      probability: 1,
+      description: '恢复5点SAN值',
+    },
+  ],
+  useText: '你吃下烤蟹肉，味道还不错',
+  tags: ['consumable', 'food', 'cooked'],
+}
+
+const strengthPotion: ConsumableItem = {
+  id: 'strength_potion',
+  name: '力量药水',
+  description: '一瓶泛着微光的药水，喝下后短时间内力量大增',
+  category: ItemCategory.CONSUMABLE,
+  rarity: ItemRarity.RARE,
+  iconId: 'icon_strength_potion',
+  weight: 0.2,
+  maxStackSize: 3,
+  isSellable: true,
+  basePrice: 50,
+  isKeyItem: false,
+  consumableType: ConsumableType.SPECIAL,
+  perishMinutes: 0,
+  effects: [
+    {
+      effect: {
+        type: EffectType.STATUS,
+        statusId: 'strength_boost',
+        apply: true,
+        duration: 30,
+        durationUnit: 'minute',
+      },
+      probability: 1,
+      description: '获得30分钟力量增强效果',
+    },
+  ],
+  applyStatus: [
+    {
+      statusId: 'strength_boost',
+      durationMinutes: 30,
+      probability: 1,
+    },
+  ],
+  useText: '你喝下力量药水，感觉浑身充满力量',
+  tags: ['consumable', 'potion', 'buff'],
+}
+
+// ===== 材料 =====
+
+const wood: MaterialItem = {
+  id: 'wood',
+  name: '木材',
+  description: '普通的木材，可用于建造和制作',
+  category: ItemCategory.MATERIAL,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_wood',
+  weight: 1.0,
+  maxStackSize: 50,
+  isSellable: true,
+  basePrice: 2,
+  isKeyItem: false,
+  materialType: 'wood',
+  tags: ['material', 'wood'],
+}
+
+const stone: MaterialItem = {
+  id: 'stone',
+  name: '石头',
+  description: '普通的石头，可用于建造基础建筑',
+  category: ItemCategory.MATERIAL,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_stone',
+  weight: 2.0,
+  maxStackSize: 30,
+  isSellable: true,
+  basePrice: 1,
+  isKeyItem: false,
+  materialType: 'stone',
+  tags: ['material', 'stone'],
+}
+
+const crabMeat: MaterialItem = {
+  id: 'crab_meat',
+  name: '蟹肉',
+  description: '从变异蟹身上获取的肉，需要烹饪后才能安全食用',
+  category: ItemCategory.MATERIAL,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_crab_meat',
+  weight: 0.5,
+  maxStackSize: 10,
+  isSellable: true,
+  basePrice: 3,
+  isKeyItem: false,
+  materialType: 'meat',
+  tags: ['material', 'food_raw', 'meat'],
+}
+
+const clothScrap: MaterialItem = {
+  id: 'cloth_scrap',
+  name: '布料碎片',
+  description: '从衣物或织物上撕下的碎片',
+  category: ItemCategory.MATERIAL,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_cloth_scrap',
+  weight: 0.1,
+  maxStackSize: 20,
+  isSellable: true,
+  basePrice: 1,
+  isKeyItem: false,
+  materialType: 'cloth',
+  tags: ['material', 'cloth'],
+}
+
+const ironScrap: MaterialItem = {
+  id: 'iron_scrap',
+  name: '铁片',
+  description: '从残骸中收集的铁片，可用于修理金属物品',
+  category: ItemCategory.MATERIAL,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_iron_scrap',
+  weight: 0.5,
+  maxStackSize: 20,
+  isSellable: true,
+  basePrice: 3,
+  isKeyItem: false,
+  materialType: 'metal',
+  tags: ['material', 'metal'],
+}
+
+// ===== 贵重物品 =====
+
+const goldCoin: ValuableItem = {
+  id: 'gold_coin',
+  name: '金币',
+  description: '一枚闪闪发光的金币，在岛上似乎没什么用',
+  category: ItemCategory.VALUABLE,
+  rarity: ItemRarity.UNCOMMON,
+  iconId: 'icon_gold_coin',
+  weight: 0.01,
+  maxStackSize: 999,
+  isSellable: true,
+  basePrice: 10,
+  isKeyItem: false,
+  priceMultiplier: 1.0,
+  tags: ['valuable', 'currency'],
+}
+
+// ===== 文档 =====
+
+const journalFragment: DocumentItem = {
+  id: 'journal_fragment',
+  name: '研究日志残页',
+  description: '一份被撕下的研究日志，上面记录着令人不安的内容',
+  category: ItemCategory.DOCUMENT,
+  rarity: ItemRarity.UNCOMMON,
+  iconId: 'icon_journal_fragment',
+  weight: 0.1,
+  maxStackSize: 1,
+  isSellable: false,
+  basePrice: 0,
+  isKeyItem: true,
+  content:
+    '...孢子扩散速度远超预期。实验体#7在48小时内完成了全身变异，但它依然保持着理智。它说它能听到孢子说话。我们必须...',
+  onReadEffects: [],
+  isConsumedOnRead: false,
+  author: 'Dr.██████',
+  tags: ['document', 'lore', 'key'],
+}
+
+// ===== 蓝图/配方 =====
+
+const campfireBlueprint: RecipeItem = {
+  id: 'campfire_blueprint',
+  name: '篝火建造图',
+  description: '记录了如何搭建一个简易篝火',
+  category: ItemCategory.RECIPE,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_blueprint',
+  weight: 0.1,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 10,
+  isKeyItem: false,
+  recipeType: RecipeType.BUILD,
+  unlocksRecipeId: ['build_campfire'],
+  tags: ['recipe', 'blueprint'],
+}
+
+
+
+// config/items.ts 中新增以下物品
+
+// ===== 损坏的武器 =====
+
+const brokenRustySword: WeaponItem = {
+  id: 'broken_rusty_sword',
+  name: '断裂的铁剑',
+  description: '这把铁剑已经断成两截，完全无法使用。也许可以回炉重铸',
+  category: ItemCategory.WEAPON,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_broken_rusty_sword',
+  weight: 1.5,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 5,
+  isKeyItem: false,
+  weaponTypeId: 'sword',
+  durability: {
+    maxDurability: 0,
+    initialDurability: 0,
+    isRepairable: true,
+    repairMaterials: [
+      { itemId: 'iron_scrap', quantity: 4 },
+      { itemId: 'wood', quantity: 1 },
+    ],
+    repairWorkbenchLevel: 1,
+    destroyOnBreak: false,
+  },
+  equipmentSlot: EquipmentSlot.WEAPON,
+  weaponStats: {
+    baseDamage: 2,
+    damageTypeId: 'slash',
+    damageVariance: 0.3,
+    accuracyModifier: -0.3,
+    criticalChanceModifier: 0,
+    criticalMultiplier: 1.0,
+  },
+  isDualWieldable: false,
+  isTwoHanded: false,
+  attributeModifiers: [],
+  grantedSkillIds: [],
+  tags: ['weapon', 'metal', 'sword', 'broken'],
+}
+
+const spoiledFood: ConsumableItem = {
+  id: 'spoiled_food',
+  name: '腐坏的食物',
+  description: '这团东西已经看不出原本是什么了，散发着令人作呕的气味',
+  category: ItemCategory.CONSUMABLE,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_spoiled_food',
+  weight: 0.3,
+  maxStackSize: 5,
+  isSellable: false,
+  basePrice: 0,
+  isKeyItem: false,
+  consumableType: ConsumableType.FOOD,
+  perishMinutes: 0,
+  effects: [
+    {
+      effect: {
+        type: EffectType.ATTRIBUTE,
+        attribute: AttributeType.SATIETY,
+        operation: AttributeOperation.ADD,
+        value: 5,
+      },
+      probability: 1,
+      description: '恢复5点饱食度',
+    },
+    {
+      effect: {
+        type: EffectType.STATUS,
+        statusId: 'poisoned',
+        apply: true,
+        duration: 30,
+        durationUnit: 'minute',
+      },
+      probability: 0.7,
+      description: '有概率中毒',
+    },
+    {
+      effect: {
+        type: EffectType.ATTRIBUTE,
+        attribute: AttributeType.SAN,
+        operation: AttributeOperation.SUBTRACT,
+        value: 5,
+      },
+      probability: 1,
+      description: '让你感到恶心',
+    },
+  ],
+  useText: '你强忍着恶心吃下了这团东西',
+  tags: ['consumable', 'food', 'spoiled'],
+}
+
+const chitinArmor: ArmorItem = {
+  id: 'chitin_armor',
+  name: '甲壳护甲',
+  description: '用变异螃蟹的甲壳精心制作的护甲，轻便且坚固',
+  category: ItemCategory.ARMOR,
+  rarity: ItemRarity.UNCOMMON,
+  iconId: 'icon_chitin_armor',
+  weight: 3.5,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 60,
+  isKeyItem: false,
+  durability: {
+    maxDurability: 80,
+    initialDurability: 80,
+    isRepairable: true,
+    repairMaterials: [{ itemId: 'chitin_shell', quantity: 1 }],
+    repairWorkbenchLevel: 1,
+    destroyOnBreak: true,
+  },
+  equipmentSlot: EquipmentSlot.BODY,
+  defenseStats: {
+    slashDefense: 4,
+    bluntDefense: 2,
+    rangedDefense: 2,
+    poisonDefense: 1,
+    fireDefense: 0,
+  },
+  attributeModifiers: [],
+  temperatureResistance: {
+    lowModifier: 0,
+    highModifier: -2,
+  },
+  tags: ['armor', 'chitin'],
+}
+
+
+
+
+
+
 
 export const itemRegistry: ItemRegistry = {
-  items,
-  itemsByCategory,
-  itemsByTag,
+  items: {
+    rusty_sword: rustySword,
+    broken_rusty_sword: brokenRustySword,
+    makeshift_bow: makeshiftBow,
+    chitin_armor: chitinArmor,
+    bandage,
+    cooked_crab: cookedCrab,
+    spoiled_food: spoiledFood,
+    strength_potion: strengthPotion,
+    wood,
+    stone,
+    crab_meat: crabMeat,
+    chitin_shell: chitinShell,
+    cloth_scrap: clothScrap,
+    iron_scrap: ironScrap,
+    gold_coin: goldCoin,
+    journal_fragment: journalFragment,
+    campfire_blueprint: campfireBlueprint,
+  },
+
 }

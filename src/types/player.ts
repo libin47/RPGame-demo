@@ -1,6 +1,7 @@
 // player.ts - 玩家运行时状态数据结构
 
 import type { FlagValue } from './flag'
+import type { Season, SeasonPhase } from './seasonWeather'
 
 // ============================================================
 // 玩家运行时状态
@@ -366,9 +367,9 @@ export interface PlayerProgress {
   /** 当前时间（游戏内分钟数，0-1439） */
   timeMinutes: number
   /** 当前季节 */
-  season: 'spring' | 'summer' | 'autumn' | 'winter'
+  season: Season
   /** 当前季节阶段 */
-  seasonPhase: 'early' | 'mid' | 'late'
+  seasonPhase: SeasonPhase
   /** 当前天气ID */
   weatherId: string
   /** 当前腐化度 */
