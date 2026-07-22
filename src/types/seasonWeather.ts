@@ -45,41 +45,11 @@ export interface SeasonConfig {
   /** 季节天数（每个阶段的天数） */
   phaseDurationDays: number
 
-  /** 该季节可出现的天气ID列表 */
-  allowedWeatherIds: string[]
-
-  /** 该季节的天气转换概率矩阵（当前天气 -> 目标天气 -> 概率） */
-  weatherTransitionMatrix: Record<string, Record<string, number>>
+  /** 该季节可出现的天气及概率 */
+  weatherPool: Record<string, number>
 
   /** 季节描述 */
   description: string
-
-  /** 季节特殊效果（如冬季移动速度降低） */
-  seasonalEffects?: SeasonEffect[]
-}
-
-/**
- * 季节特殊效果
- */
-export interface SeasonEffect {
-  /** 效果描述 */
-  description: string
-  /** 效果生效条件 */
-  condition?: Condition
-  /** 效果影响的属性 */
-  attributeModifiers?: SeasonAttributeModifier[]
-}
-
-/**
- * 季节属性修正
- */
-export interface SeasonAttributeModifier {
-  /** 属性类型 */
-  attribute: 'staminaConsumptionCoefficient' | 'staminaRecoveryCoefficient' | 'satietyLossCoefficient' | 'temperatureLow' | 'temperatureHigh'
-  /** 修正值 */
-  value: number
-  /** 修正类型 */
-  modifierType: 'add' | 'multiply'
 }
 
 // ============================================================
@@ -112,19 +82,9 @@ export interface WeatherConfig {
   /** 天气描述变体（根据SAN值等条件显示不同描述） */
   descriptionVariations?: WeatherDescriptionVariation[]
 
-  /** 天气特殊效果 */
-  weatherEffects?: WeatherEffect[]
-
-  /** 天气是否包含降水 */
-  hasPrecipitation: boolean
-  /** 降水强度（0-1，影响潮湿等状态） */
-  precipitationIntensity: number
-
   /** 天气是否影响移动速度 */
   movementSpeedModifier: number
 
-  /** 天气音效资源ID */
-  ambientSoundId?: string
   /** 天气画面效果 */
   screenEffect?: WeatherScreenEffect
 }
@@ -155,20 +115,6 @@ export interface WeatherDescriptionVariation {
   content: string
   /** 显示条件（如SAN值） */
   condition: Condition
-}
-
-/**
- * 天气特殊效果
- */
-export interface WeatherEffect {
-  /** 效果描述 */
-  description: string
-  /** 对玩家属性的影响 */
-  attributeModifiers?: SeasonAttributeModifier[]
-  /** 是否影响能见度（额外修正） */
-  visibilityModifier?: number
-  /** 是否影响战斗（某些敌人只在特定天气出现） */
-  battleConditionModifier?: Condition
 }
 
 /**
@@ -229,86 +175,10 @@ export interface TimeOfDayConfig {
   /** 温度修正值 */
   temperatureModifier: number
 
-  /** 时间段特殊效果 */
-  effects?: TimeOfDayEffect[]
-}
-
-/**
- * 时间段特殊效果
- */
-export interface TimeOfDayEffect {
-  /** 效果描述 */
-  description: string
-  /** 对玩家属性的影响 */
-  attributeModifiers?: SeasonAttributeModifier[]
   /** 睡眠恢复倍率（深夜和凌晨默认为2.0） */
   sleepRecoveryMultiplier?: number
   /** 体力消耗系数修正（深夜和凌晨默认为+0.5） */
   staminaConsumptionModifier?: number
-  /** 是否可能出现特定敌人 */
-  specialEnemySpawnChance?: number
-}
-
-// ============================================================
-// 温度计算
-// ============================================================
-
-/**
- * 温度计算参数
- * 环境温度 = 季节基准温度 + 天气修正 + 时间段修正 + 场景修正 + 其他修正
- */
-export interface TemperatureCalculation {
-  /** 季节基准温度（来自SeasonConfig.baseTemperatures[当前阶段]） */
-  seasonBaseTemp: number
-  /** 天气修正（来自WeatherConfig.temperatureModifier） */
-  weatherModifier: number
-  /** 时间段修正（来自TimeOfDayConfig.temperatureModifier） */
-  timeOfDayModifier: number
-  /** 场景修正（来自Scene.temperatureModifier + SubScene.temperatureModifier） */
-  sceneModifier: number
-  /** 其他修正（事件、状态等） */
-  otherModifiers: number
-}
-
-// ============================================================
-// 温暖度
-// ============================================================
-
-/**
- * 温暖度等级
- */
-export enum WarmthLevel {
-  /** 适宜 */
-  COMFORTABLE = 'comfortable',
-  /** 寒冷 */
-  COLD = 'cold',
-  /** 炎热 */
-  HOT = 'hot',
-  /** 严寒 */
-  FREEZING = 'freezing',
-  /** 酷热 */
-  SCORCHING = 'scorching',
-}
-
-/**
- * 温暖度状态
- */
-export interface WarmthStatus {
-  /** 当前温暖度等级 */
-  level: WarmthLevel
-  /** 当前环境温度（计算后的最终值） */
-  environmentTemperature: number
-  /** 玩家适宜温度范围 */
-  comfortRange: {
-    low: number
-    high: number
-  }
-  /** 每小时生命值损失百分比（0表示不损失） */
-  hpLossPerHourPercent: number
-  /** 每小时SAN值损失 */
-  sanLossPerHour: number
-  /** 体力恢复系数修正 */
-  staminaRecoveryModifier: number
 }
 
 // ============================================================
@@ -329,9 +199,6 @@ export interface CorruptionConfig {
 
   /** 腐化度等级阈值 */
   thresholds: CorruptionThreshold[]
-
-  /** 腐化度变化因素 */
-  changeFactors: CorruptionChangeFactor[]
 }
 
 /**
@@ -357,23 +224,16 @@ export interface CorruptionLevelRule {
   /** 规则描述 */
   description: string
   /** 影响范围 */
-  affectedSystem: 'enemySpawn' | 'eventPool' | 'sceneDescription' | 'farming' | 'fishing' | 'crafting' | 'sanLoss'
+  affectedSystem:
+    | 'enemySpawn'
+    | 'eventPool'
+    | 'sceneDescription'
+    | 'farming'
+    | 'fishing'
+    | 'crafting'
+    | 'sanLoss'
   /** 规则参数 */
   params: Record<string, number>
-}
-
-/**
- * 腐化度变化因素
- */
-export interface CorruptionChangeFactor {
-  /** 因素ID */
-  id: string
-  /** 因素描述 */
-  description: string
-  /** 每次变化量（正数增加腐化，负数减少） */
-  changeAmount: number
-  /** 触发条件 */
-  triggerCondition: Condition
 }
 
 // ============================================================

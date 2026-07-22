@@ -1,7 +1,6 @@
 // trade.ts - 交易数据结构
 
 import type { Condition } from './effect'
-import type { ItemId } from './item'
 
 // ============================================================
 // 商人配置
@@ -34,11 +33,6 @@ export interface TraderConfig {
   /** 商人收购物品的价格倍率（最终收购价 = 物品basePrice × 此倍率） */
   buyPriceMultiplier: number
 
-  /** 商人初始资金（用于收购玩家物品，-1=无限资金） */
-  initialGold: number
-  /** 商人资金是否会自然刷新 */
-  goldRefresh: TraderGoldRefresh
-
   // ============================================================
   // 商品清单
   // ============================================================
@@ -50,20 +44,8 @@ export interface TraderConfig {
   // 交易条件
   // ============================================================
 
-  /** 交易可用条件（不满足时无法与此商人交易） */
-  tradeCondition?: Condition
-  /** 条件不满足时的提示文本 */
-  tradeConditionHint?: string
-
   /** 价格浮动条件（满足条件时价格变动） */
   priceModifiers?: TraderPriceModifier[]
-
-  // ============================================================
-  // 对话文本
-  // ============================================================
-
-  /** 交易对话文本 */
-  dialogues?: TraderDialogues
 }
 
 // ============================================================
@@ -75,11 +57,11 @@ export interface TraderConfig {
  */
 export interface TraderGoods {
   /** 物品ID */
-  itemId: ItemId
+  itemId: string
   /** 物品数量（-1=无限供应） */
   stock: number
-  /** 补货周期（游戏内天数，-1=不自动补货，0=每次打开交易都刷新） */
-  restockIntervalDays: number
+  /** 补货周期（游戏内分钟数，-1=不自动补货，0=每次打开交易都刷新） */
+  restockIntervalMinutes: number
   /** 补货数量（补货时恢复到多少库存） */
   restockAmount: number
 
@@ -99,18 +81,6 @@ export interface TraderGoods {
 // ============================================================
 
 /**
- * 商人资金刷新配置
- */
-export interface TraderGoldRefresh {
-  /** 刷新周期（游戏内天数） */
-  intervalDays: number
-  /** 刷新时恢复到多少金币（不填则恢复到 initialGold） */
-  refreshAmount?: number
-  /** 是否累积未花完的资金 */
-  accumulate: boolean
-}
-
-/**
  * 价格浮动条件
  */
 export interface TraderPriceModifier {
@@ -122,30 +92,6 @@ export interface TraderPriceModifier {
   buyPriceMultiplierModifier?: number
   /** 浮动描述（如"好感度高，价格优惠"） */
   description?: string
-}
-
-// ============================================================
-// 对话
-// ============================================================
-
-/**
- * 商人对话配置
- */
-export interface TraderDialogues {
-  /** 进入交易时 */
-  onTradeStart?: string
-  /** 离开交易时 */
-  onTradeEnd?: string
-  /** 玩家资金不足时 */
-  onPlayerNotEnoughGold?: string
-  /** 商人资金不足时 */
-  onTraderNotEnoughGold?: string
-  /** 商品库存不足时 */
-  onGoodsOutOfStock?: string
-  /** 交易成功时 */
-  onTradeSuccess?: string
-  /** 条件不满足拒绝交易时（不填则使用 tradeConditionHint） */
-  onTradeDenied?: string
 }
 
 // ============================================================

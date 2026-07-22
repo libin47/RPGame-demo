@@ -1,6 +1,12 @@
 // craft.ts - 制作配方数据结构
 
-import type { BaseRecipe, RequiredMaterial, RecipeRequirements, RecipeCost, RecipeProduct, RecipeFailureConfig } from './recipe'
+import type {
+  BaseRecipe,
+  RequiredMaterial,
+  RecipeRequirements,
+  RecipeCost,
+  RecipeProduct,
+} from './recipe'
 import type { RecipeType } from './recipe'
 
 // ============================================================
@@ -80,10 +86,4 @@ export interface CraftExperienceReward {
 export interface CraftRecipeRegistry {
   /** 所有制作配方 */
   recipes: Record<string, CraftRecipe>
-  /** 按设备等级分组 */
-  recipesByDeviceLevel: Record<number, string[]>
-  /** 按制作类型分组 */
-  recipesByCategory: Record<CraftCategory, string[]>
-  /** 技能等级解锁映射（技能ID -> 等级 -> 配方ID列表） */
-  skillLevelUnlocks: Record<string, Record<number, string[]>>
 }

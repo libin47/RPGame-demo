@@ -1,7 +1,5 @@
 // weaponType.ts - 武器类型数据结构
 
-import type { DamageTypeId } from './damage'
-
 // ============================================================
 // 武器类型定义
 // ============================================================
@@ -23,20 +21,18 @@ export interface WeaponType {
   iconId: string
 
   /** 主要伤害类型ID */
-  primaryDamageTypeId: DamageTypeId
+  primaryDamageTypeId: string
 
   /** 是否为远程武器 */
   isRanged: boolean
-  /** 是否为双手武器（双手武器默认占用两个武器槽位，可通过武器物品的 isTwoHanded 覆盖） */
-  isTwoHandedByDefault: boolean
 
-  /** 
+  /**
    * 该武器类型的默认属性模板
    * 创建该类型的具体武器物品时，可作为 WeaponStats 的默认值
    */
   defaultStats: WeaponTypeDefaultStats
 
-  /** 
+  /**
    * 技能解锁表
    * 键为武器熟练度等级，值为该等级解锁的战斗技能ID列表
    * 例如：{ 0: ['basic_slash'], 3: ['power_strike'], 7: ['whirlwind'] }
@@ -44,7 +40,7 @@ export interface WeaponType {
    */
   skillUnlocks: Record<number, string[]>
 
-  /** 
+  /**
    * 熟练度成长配置
    * 该武器类型的熟练度经验获取倍率
    */
@@ -84,26 +80,6 @@ export interface WeaponProficiencyGrowth {
   /** 击杀敌人时额外获得的经验 */
   expPerKill: number
 }
-
-// ============================================================
-// 预设武器类型ID常量
-// ============================================================
-
-/** 武器类型ID常量 */
-export const WeaponTypeId = {
-  SWORD: 'sword',
-  AXE: 'axe',
-  SPEAR: 'spear',
-  DAGGER: 'dagger',
-  HAMMER: 'hammer',
-  BOW: 'bow',
-  CROSSBOW: 'crossbow',
-  STAFF: 'staff',
-  FIST: 'fist',
-  SHIELD: 'shield',
-} as const
-
-export type WeaponTypeId = (typeof WeaponTypeId)[keyof typeof WeaponTypeId]
 
 // ============================================================
 // 武器类型注册表

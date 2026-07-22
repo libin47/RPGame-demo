@@ -27,9 +27,6 @@ export interface Flag {
 
   /** 默认值 */
   defaultValue: FlagValue
-
-  /** 是否为持久化标志位（存档时保存，false则仅内存中临时使用） */
-  isPersistent: boolean
 }
 
 // ============================================================

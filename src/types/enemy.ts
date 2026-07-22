@@ -2,8 +2,6 @@
 
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
-import type { DamageTypeId } from './damage'
-import type { ItemId } from './item'
 import type { FlagValue } from './flag'
 
 // ============================================================
@@ -52,17 +50,14 @@ export interface Enemy {
   // ============================================================
 
   /** 防御属性 */
-  defenses: EnemyDefenses
+  defenses: Record<string, number>
 
   // ============================================================
   // 战斗行为
   // ============================================================
 
-  /** 敌人技能列表 */
+  /** 敌人技能列表，至少包含一个默认普攻技能 */
   skills: EnemySkill[]
-
-  /** 默认普攻（技能列表为空或所有技能不可用时使用） */
-  defaultAttack: EnemyDefaultAttack
 
   /** AI行为参数 */
   behavior: EnemyBehavior
@@ -71,14 +66,8 @@ export interface Enemy {
   // 特殊机制
   // ============================================================
 
-  /** SAN值相关效果（玩家SAN值低于阈值时触发） */
-  sanEffects?: EnemySANEffect[]
-
   /** 腐化度修正（腐化度影响敌人强度） */
   corruptionScaling?: EnemyCorruptionScaling
-
-  /** 是否为初见敌人（初见时逃跑概率翻倍） */
-  hasFirstEncounterBonus: boolean
 
   /** 逃跑难度修正系数（逃跑公式：玩家敏捷/(玩家敏捷+敌人敏捷*此系数)） */
   escapeDifficultyModifier: number
@@ -178,28 +167,6 @@ export interface EnemyImageVariation {
 }
 
 // ============================================================
-// 防御属性
-// ============================================================
-
-/**
- * 敌人防御属性
- */
-export interface EnemyDefenses {
-  /** 刺砍防御（0-100，按百分比降低伤害） */
-  slashDefense: number
-  /** 钝击防御 */
-  bluntDefense: number
-  /** 远程防御 */
-  rangedDefense: number
-  /** 毒素防御 */
-  poisonDefense: number
-  /** 火焰防御 */
-  fireDefense: number
-  /** 精神防御（降低精神伤害） */
-  mentalDefense: number
-}
-
-// ============================================================
 // 敌人技能
 // ============================================================
 
@@ -226,7 +193,7 @@ export interface EnemySkill {
   maxUses: number
 
   /** 伤害类型 */
-  damageTypeId?: DamageTypeId
+  damageTypeId?: string
 
   /** 技能数值 */
   stats: EnemySkillStats
@@ -242,8 +209,8 @@ export interface EnemySkill {
 
   /** 发动延迟（蓄力回合数，0表示立即生效） */
   chargeTime: number
-  /** 蓄力时的提示文本（如"敌人正在蓄力..."） */
-  chargeText?: string
+  /** 蓄力时的提示文本列表（如"敌人正在蓄力..."） */
+  chargeText?: string[]
 
   /** 命中后施加的效果 */
   onHitEffects?: EffectResult[]
@@ -314,31 +281,6 @@ export enum EnemySkillTargetType {
 }
 
 // ============================================================
-// 默认普攻
-// ============================================================
-
-/**
- * 敌人默认普攻
- * 当所有技能不可用（冷却中/条件不满足/次数耗尽）时使用
- */
-export interface EnemyDefaultAttack {
-  /** 伤害类型 */
-  damageTypeId?: DamageTypeId
-  /** 基础伤害 */
-  baseDamage: number
-  /** 伤害浮动 */
-  damageVariance: number
-  /** 力量加成系数 */
-  strengthScaling: number
-  /** 命中修正 */
-  accuracyModifier: number
-  /** 暴击率 */
-  criticalChance: number
-  /** 使用文本模板 */
-  useTextTemplate?: string
-}
-
-// ============================================================
 // AI行为
 // ============================================================
 
@@ -348,8 +290,6 @@ export interface EnemyDefaultAttack {
 export interface EnemyBehavior {
   /** 攻击倾向（0-1，0=完全随机选择技能，1=总是选择伤害最高的技能） */
   aggression: number
-  /** 是否倾向于攻击低HP目标 */
-  focusWeakTarget: boolean
   /** HP低于此比例时行为改变（0-1，如0.3表示低于30%HP时触发） */
   desperationThreshold?: number
   /** 濒死时行为变化 */
@@ -368,31 +308,6 @@ export interface EnemyDesperationBehavior {
   triggerText?: string
   /** 触发时执行的效果 */
   effects?: EffectResult[]
-}
-
-// ============================================================
-// SAN值效果
-// ============================================================
-
-/**
- * SAN值相关的敌人效果
- * 玩家SAN值低于阈值时，敌人的外观、名称、技能发生变化
- */
-export interface EnemySANEffect {
-  /** 触发所需的玩家SAN值阈值（低于此值时生效） */
-  sanThreshold: number
-  /** 替换的敌人名称（覆盖原名称） */
-  overrideName?: string
-  /** 替换的敌人图片 */
-  overrideImageId?: string
-  /** 替换的敌人描述 */
-  overrideDescription?: string
-  /** 解锁额外技能ID列表（仅在此SAN值下可用） */
-  additionalSkillIds?: string[]
-  /** 禁用技能ID列表（在此SAN值下不可用） */
-  disabledSkillIds?: string[]
-  /** 属性修正 */
-  statModifiers?: EnemyStatModifier[]
 }
 
 // ============================================================
@@ -423,7 +338,16 @@ export interface EnemyCorruptionScaling {
  */
 export interface EnemyStatModifier {
   /** 目标属性 */
-  stat: 'hp' | 'strength' | 'agility' | 'slashDefense' | 'bluntDefense' | 'rangedDefense' | 'poisonDefense' | 'fireDefense' | 'mentalDefense'
+  stat:
+    | 'hp'
+    | 'strength'
+    | 'agility'
+    | 'slashDefense'
+    | 'bluntDefense'
+    | 'rangedDefense'
+    | 'poisonDefense'
+    | 'fireDefense'
+    | 'mentalDefense'
   /** 修正类型 */
   modifierType: 'add' | 'multiply' | 'set'
   /** 修正值 */
@@ -439,7 +363,7 @@ export interface EnemyStatModifier {
  */
 export interface EnemyLoot {
   /** 物品ID */
-  itemId: ItemId
+  itemId: string
   /** 掉落概率（0-1） */
   probability: number
   /** 最小数量 */
@@ -451,6 +375,8 @@ export interface EnemyLoot {
     skillId: string
     /** 每级技能增加的概率 */
     bonusPerLevel: number
+    /** 每级额外增加的最大数量（可选） */
+    quantityBonusPerLevel?: number
   }
 }
 

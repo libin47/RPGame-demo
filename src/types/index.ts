@@ -19,7 +19,6 @@ export * from './recipe'
 export * from './craft'
 export * from './cook'
 export * from './build'
-export * from './repair'
 
 // 世界系统
 export * from './seasonWeather'

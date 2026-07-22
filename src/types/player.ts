@@ -1,7 +1,6 @@
 // player.ts - 玩家运行时状态数据结构
 
 import type { FlagValue } from './flag'
-import type { StatusId } from './status'
 
 // ============================================================
 // 玩家运行时状态
@@ -131,9 +130,10 @@ export interface PlayerSurvival {
 
   /** 当前温暖度等级 */
   warmthLevel: 'comfortable' | 'cold' | 'hot' | 'freezing' | 'scorching'
-  /** 当前环境温度（摄氏度，计算后的最终值） */
-  environmentTemperature: number
-
+  /** 适宜温度低值（低于此温度进入寒冷） */
+  comfortTempLow: number
+  /** 适宜温度高值（高于此温度进入炎热） */
+  comfortTempHigh: number
   // ============================================================
   // 小数累计值（策划书要求：变动值<1时累计，>=1时更新）
   // ============================================================
@@ -290,14 +290,8 @@ export interface PlayerInventoryItem {
   quantity: number
   /** 当前耐久度（有耐久度的物品，-1表示无耐久度系统） */
   durability: number
-  /** 最大耐久度 */
-  maxDurability: number
-  /** 是否被标记为偏好/锁定（锁定物品不可出售不可丢弃） */
-  isLocked: boolean
   /** 获得时间（游戏内分钟数，用于新鲜度等计算） */
   acquiredTime: number
-  /** 物品来源描述（如"从野狼尸体获得"） */
-  sourceDescription?: string
 }
 
 // ============================================================
@@ -310,7 +304,7 @@ export interface PlayerInventoryItem {
  */
 export interface ActiveStatus {
   /** 状态模板ID */
-  statusId: StatusId
+  statusId: string
   /** 剩余持续时间值 */
   remainingDuration: number
   /** 持续时间单位 */
@@ -450,8 +444,6 @@ export interface SaveData {
 export interface NewGameConfig {
   /** 职业ID */
   classId: string
-  /** 背景故事ID（可选） */
-  backgroundId?: string
   /** 玩家名称 */
   playerName: string
   /** 初始地图ID */

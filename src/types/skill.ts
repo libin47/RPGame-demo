@@ -3,14 +3,11 @@
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
 import type { AttributeType } from './effect'
-import type { DamageTypeId } from './damage'
-import type { WeaponTypeId } from './weapon'
 import type { FlagValue } from './flag'
 
 // ============================================================
 // 公共基础
 // ============================================================
-
 
 /**
  * 技能属性加成
@@ -88,23 +85,6 @@ export interface SurvivalSkillSpecialAbility {
 }
 
 // ============================================================
-// 生存技能ID常量
-// ============================================================
-
-export const SurvivalSkillId = {
-  EXPLORATION: 'exploration',
-  WOODCUTTING: 'woodcutting',
-  MINING: 'mining',
-  GATHERING: 'gathering',
-  CRAFTING: 'crafting',
-  FARMING: 'farming',
-  COOKING: 'cooking',
-  FISHING: 'fishing',
-} as const
-
-export type SurvivalSkillId = (typeof SurvivalSkillId)[keyof typeof SurvivalSkillId]
-
-// ============================================================
 // 战斗技能
 // ============================================================
 
@@ -135,10 +115,10 @@ export interface BattleSkill {
   unlockCondition: string //仅作备注，逻辑不生效
 
   /** 武器类型限制（为空则不限武器，徒手或任意武器均可使用） */
-  weaponRestriction?: WeaponTypeId
+  weaponRestriction?: string
 
   /** 伤害类型（普攻时使用武器自身的伤害类型） */
-  damageTypeId?: DamageTypeId
+  damageTypeId?: string
 
   /** 技能数值 */
   stats: BattleSkillStats
@@ -156,9 +136,6 @@ export interface BattleSkill {
   onHitEffects?: EffectResult[]
   /** 暴击时额外施加的效果 */
   onCritEffects?: EffectResult[]
-
-  /** 技能特殊标签 */
-  tags?: BattleSkillTag[]
 
   /** 技能使用时的描述文本（用于战斗日志，支持占位符如 {damage}） */
   useTextTemplate?: string
@@ -216,56 +193,6 @@ export enum BattleSkillTargetType {
   RANDOM_ENEMY = 'randomEnemy',
 }
 
-/**
- * 战斗技能标签
- */
-export enum BattleSkillTag {
-  /** 近战 */
-  MELEE = 'melee',
-  /** 远程 */
-  RANGED = 'ranged',
-  /** 魔法/异能 */
-  MAGIC = 'magic',
-  /** 位移 */
-  MOVEMENT = 'movement',
-  /** 防御 */
-  DEFENSE = 'defense',
-  /** 恢复 */
-  HEALING = 'healing',
-  /** 控制 */
-  CONTROL = 'control',
-  /** 持续伤害 */
-  DOT = 'dot',
-  /** 蓄力（需要准备回合） */
-  CHARGE = 'charge',
-}
-
-// ============================================================
-// 战斗技能ID常量
-// ============================================================
-
-export const BattleSkillId = {
-  // 通用普攻
-  BASIC_ATTACK: 'basic_attack',
-  // 剑系
-  POWER_STRIKE: 'power_strike',
-  WHIRLWIND: 'whirlwind',
-  // 斧系
-  BERSERKER_RAGE: 'berserker_rage',
-  CLEAVE: 'cleave',
-  // 弓系
-  AIMED_SHOT: 'aimed_shot',
-  MULTI_SHOT: 'multi_shot',
-  // 防御系
-  SHIELD_BASH: 'shield_bash',
-  GUARD_STANCE: 'guard_stance',
-  // 通用
-  KICK: 'kick',
-  TAUNT: 'taunt',
-} as const
-
-export type BattleSkillId = (typeof BattleSkillId)[keyof typeof BattleSkillId]
-
 // ============================================================
 // 被动技能
 // ============================================================
@@ -303,22 +230,6 @@ export interface PassiveSkill {
   /** 习得条件（仅用于事件或道具中引用，被动技能本身不主动触发习得） */
   acquireCondition?: Condition
 }
-
-// ============================================================
-// 被动技能ID常量
-// ============================================================
-
-export const PassiveSkillId = {
-  STRONG_BACK: 'strong_back',
-  SURVIVAL_INSTINCT: 'survival_instinct',
-  IRON_WILL: 'iron_will',
-  NIGHT_VISION: 'night_vision',
-  COLD_RESISTANCE: 'cold_resistance',
-  QUICK_HANDS: 'quick_hands',
-  BLOODLUST: 'bloodlust',
-} as const
-
-export type PassiveSkillId = (typeof PassiveSkillId)[keyof typeof PassiveSkillId]
 
 // ============================================================
 // 联合类型

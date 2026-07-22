@@ -1,6 +1,12 @@
 // cook.ts - 烹饪配方数据结构
 
-import type { BaseRecipe, RequiredMaterial, RecipeRequirements, RecipeCost, RecipeProduct, RecipeFailureConfig } from './recipe'
+import type {
+  BaseRecipe,
+  RequiredMaterial,
+  RecipeRequirements,
+  RecipeCost,
+  RecipeProduct,
+} from './recipe'
 import type { RecipeType } from './recipe'
 
 // ============================================================
@@ -16,22 +22,12 @@ export interface CookRecipe extends BaseRecipe {
   recipeType: RecipeType.COOK
 
   /** 烹饪类型细分 */
-  cookCategory: CookCategory
+  cookMode: CookMode
+  /** 所需设备等级 */
+  requiredDeviceLevel: number
 
-  /** 所需设备类型 */
-  requiredDevice: CookDevice
-
-  /** 烹饪所需温度等级（1=小火，2=中火，3=大火，部分高级烹饪需要控温） */
-  requiredTemperatureLevel: number
   /** 烹饪时间（游戏内分钟数，覆写 requirements.timeMinutes 用于烹饪系统特有计算） */
   cookTimeMinutes: number
-  /** 是否需要翻面/搅拌等中间操作（不操作则可能失败或降低品质） */
-  requiresAttention: boolean
-  /** 需要关注的回合数（requiresAttention为true时，每隔多少分钟需要操作一次） */
-  attentionIntervalMinutes?: number
-
-  /** 食材新鲜度影响（新鲜度低于此比例时，烹饪品质下降） */
-  freshnessThreshold?: number
 
   /** 烹饪经验奖励 */
   experienceReward: CookExperienceReward
@@ -43,39 +39,11 @@ export interface CookRecipe extends BaseRecipe {
 /**
  * 烹饪类型
  */
-export enum CookCategory {
-  /** 烤制 */
-  ROAST = 'roast',
-  /** 炖煮 */
-  STEW = 'stew',
-  /** 烘焙 */
-  BAKE = 'bake',
-  /** 风干/腌制（无需加热） */
-  PRESERVE = 'preserve',
+export enum CookMode {
+  /** 即食 */
+  COOK = 'cook',
   /** 酿造 */
   BREW = 'brew',
-  /** 生食处理（切割摆盘等） */
-  RAW_PREPARE = 'rawPrepare',
-  /** 特殊仪式料理 */
-  RITUAL = 'ritual',
-}
-
-/**
- * 烹饪设备
- */
-export enum CookDevice {
-  /** 无设备（可直接生食处理） */
-  NONE = 'none',
-  /** 篝火 */
-  CAMPFIRE = 'campfire',
-  /** 简易炉灶 */
-  SIMPLE_STOVE = 'simpleStove',
-  /** 厨房 */
-  KITCHEN = 'kitchen',
-  /** 熏制架 */
-  SMOKER = 'smoker',
-  /** 酿造桶 */
-  BREWING_BARREL = 'brewingBarrel',
 }
 
 /**
@@ -99,7 +67,7 @@ export interface CookExperienceReward {
 export interface CookQualityLevel {
   /** 品质等级（0=失败，1=普通，2=良好，3=完美） */
   level: number
-  /** 品质名称（显示用，如"焦糊的肉"、"美味的炖汤"） */
+  /** 品质名称，描述品质特征，例如完满的烹饪、普通烹饪等 */
   name: string
   /** 对应产出的物品ID（不同品质可能是不同物品） */
   productItemId?: string
@@ -107,8 +75,6 @@ export interface CookQualityLevel {
   minSkillLevel: number
   /** 此品质的概率权重（与技能等级相关，高技能等级高权重） */
   weight: number
-  /** 品质描述 */
-  description?: string
 }
 
 // ============================================================
@@ -119,12 +85,5 @@ export interface CookQualityLevel {
  * 烹饪配方注册表
  */
 export interface CookRecipeRegistry {
-  /** 所有烹饪配方 */
   recipes: Record<string, CookRecipe>
-  /** 按设备类型分组 */
-  recipesByDevice: Record<CookDevice, string[]>
-  /** 按烹饪类型分组 */
-  recipesByCategory: Record<CookCategory, string[]>
-  /** 技能等级解锁映射 */
-  skillLevelUnlocks: Record<string, Record<number, string[]>>
 }

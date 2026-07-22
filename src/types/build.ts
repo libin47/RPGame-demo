@@ -1,9 +1,16 @@
 // build.ts - 建造配方数据结构
 
-import type { BaseRecipe, RequiredMaterial, RecipeRequirements, RecipeCost, RecipeProduct } from './recipe'
+import type {
+  BaseRecipe,
+  RequiredMaterial,
+  RecipeRequirements,
+  RecipeCost,
+  RecipeProduct,
+} from './recipe'
 import type { RecipeType } from './recipe'
 import type { EffectResult } from './effect'
 import type { Condition } from './effect'
+import type { RepairMaterial } from './item'
 
 // ============================================================
 // 建造配方
@@ -25,28 +32,6 @@ export interface BuildRecipe extends BaseRecipe {
 
   /** 建造前置条件（必须先建造某些建筑才能建造此建筑） */
   prerequisiteBuildings?: string[]
-
-  /** 建造所需空间（占几格，用于基地空间管理，-1表示不限制） */
-  spaceRequired: number
-
-  /** 是否可以拆除 */
-  isDeconstructable: boolean
-  /** 拆除返还材料比例（0-1） */
-  deconstructionReturnRatio: number
-
-  /** 建筑是否可以被敌人攻击/摧毁 */
-  isDestructible: boolean
-  /** 建筑耐久度（被摧毁前可承受的攻击次数或伤害值） */
-  durability?: number
-
-  /** 建造完成后产生的持续效果（如床铺提供休息加成） */
-  passiveEffects?: EffectResult[]
-
-  /** 建筑提供的交互功能（建好后场景中出现的新交互） */
-  providedInteractions?: BuildProvidedInteraction[]
-
-  /** 建筑外观（在地图/场景中显示的图标） */
-  visualConfig?: BuildVisualConfig
 }
 
 /**
@@ -82,20 +67,33 @@ export interface BuildResult {
   /** 建筑名称（显示用） */
   buildingName: string
   /** 建筑描述 */
-  buildingDescription: string
+  descriptionConfig: BuildingDescriptionConfig
+  // 是否纯装饰建筑
+  isDecorativeOnly: boolean
   /** 建筑类型 */
   buildingType: BuildCategory
-  /** 建筑尺寸（占几格宽*几格高，用于场景布局） */
-  size: {
-    width: number
-    height: number
-  }
   /** 建筑是否可升级 */
   isUpgradable: boolean
   /** 升级目标配方ID列表 */
   upgradeRecipeIds?: string[]
   /** 同一类型的建筑是否只能建一个 */
   isUnique: boolean
+  /** 是否可以拆除 */
+  isDeconstructable: boolean
+  /** 拆除返还材料比例（0-1） */
+  deconstructionReturnRatio: number
+  /** 建筑是否可以被敌人攻击/摧毁 */
+  isDestructible: boolean
+  /** 建筑耐久度（被摧毁前可承受的攻击次数或伤害值） */
+  durability?: number
+  /** 修复所需材料及数量 */
+  repairMaterials?: RepairMaterial[]
+  /** 建造完成后产生的持续效果（如床铺提供休息加成） */
+  passiveEffects?: EffectResult[]
+  /** 建筑提供的交互功能（建好后场景中出现的新交互） */
+  providedInteractions?: BuildProvidedInteraction[]
+  /** 建筑外观（在地图/场景中显示的图标） */
+  visualConfig?: BuildVisualConfig
 }
 
 /**
@@ -107,11 +105,27 @@ export interface BuildProvidedInteraction {
   /** 交互名称（按钮显示文本） */
   interactionName: string
   /** 交互类型 */
-  interactionType: 'craft' | 'cook' | 'rest' | 'store' | 'collect' | 'repair' | 'special'
+  interactionType: 'craft' | 'cook' | 'rest' | 'store' | 'collect' | 'repair' | 'special' | 'event'
   /** 交互参数 */
   params?: Record<string, unknown>
   /** 交互显示条件 */
   displayCondition?: Condition
+}
+
+// 建筑描述配置
+export interface BuildingDescriptionConfig {
+  /** 建筑描述 */
+  description: string
+  /** 建筑描述（长） */
+  longDescription?: string
+  /** 建筑损坏描述 */
+  damageDescription?: string
+  /** 建筑损坏描述（长） */
+  damageLongDescription?: string
+  /** 建筑被摧毁描述 */
+  destroyedDescription?: string
+  /** 建筑被摧毁描述（长） */
+  destroyedLongDescription?: string
 }
 
 /**
@@ -124,10 +138,6 @@ export interface BuildVisualConfig {
   damagedImageId?: string
   /** 建筑被摧毁状态图标资源ID */
   destroyedImageId?: string
-  /** 建筑占位图标（建造中） */
-  constructionImageId?: string
-  /** 动画效果ID */
-  animationId?: string
 }
 
 // ============================================================

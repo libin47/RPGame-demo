@@ -26,8 +26,6 @@ export enum ItemCategory {
   DOCUMENT = 'document',
   /** 蓝图/配方（解锁制作、建造、烹饪配方） */
   RECIPE = 'recipe',
-  /** 任务物品 */
-  QUEST = 'quest',
   /** 杂项（不属于以上分类的物品） */
   MISC = 'misc',
 }
@@ -74,8 +72,6 @@ export interface BaseItem {
 
   /** 物品图标资源ID */
   iconId: string
-  /** 物品模型/图片资源ID（详细查看时的大图） */
-  imageId?: string
 
   /** 单个物品重量（kg） */
   weight: number
@@ -133,20 +129,6 @@ export interface DurabilityConfig {
   destroyOnBreak: boolean
   /** 损坏后的替代物品ID（destroyOnBreak为false时生效） */
   brokenItemId?: string
-  /** 耐久度影响效果系数（低耐久度是否影响性能） */
-  performanceDegradation?: DurabilityPerformanceDegradation
-}
-
-/**
- * 耐久度性能衰减配置
- */
-export interface DurabilityPerformanceDegradation {
-  /** 是否启用性能衰减 */
-  enabled: boolean
-  /** 耐久度低于此比例时开始衰减（0-1，如0.3表示低于30%耐久时开始衰减） */
-  threshold: number
-  /** 最大衰减比例（0-1，如0.5表示最多衰减到原效果的50%） */
-  maxDegradation: number
 }
 
 /**
@@ -214,38 +196,12 @@ export interface WeaponStats {
   /** 伤害浮动范围（最终伤害 = baseDamage * (1 ± damageVariance)） */
   damageVariance: number
 
-  /** 攻击距离（0=近战，1+=远程格数） */
-  attackRange: number
-
   /** 基础命中修正（加到命中计算中） */
   accuracyModifier: number
   /** 基础暴击率修正（0.1 = +10%暴击率） */
   criticalChanceModifier: number
   /** 暴击倍率（默认2.0，即暴击时伤害×2） */
   criticalMultiplier: number
-
-  /** 攻击速度（影响战斗中的行动顺序和每回合攻击次数，1.0为标准） */
-  attackSpeed: number
-
-  /** 每次攻击基础消耗体力 */
-  staminaCostPerAttack: number
-
-  /** 武器特殊效果（如"攻击时有10%概率造成流血"） */
-  specialEffects?: WeaponSpecialEffect[]
-}
-
-/**
- * 武器特殊效果
- */
-export interface WeaponSpecialEffect {
-  /** 效果ID（关联状态或效果配置） */
-  effectId: string
-  /** 触发概率（0-1） */
-  triggerChance: number
-  /** 效果描述（显示在物品详情中） */
-  description: string
-  /** 触发条件 */
-  condition?: Condition
 }
 
 // ============================================================
@@ -265,7 +221,7 @@ export interface ArmorItem extends BaseItem {
   equipmentSlot: ArmorSlot
 
   /** 防具提供的防御属性 */
-  defenseStats: DefenseStats
+  defenseStats: Record<string, number>
 
   /** 防具提供的属性修正 */
   attributeModifiers?: AttributeModifier[]
@@ -282,24 +238,6 @@ export interface ArmorItem extends BaseItem {
   }
 }
 
-/**
- * 防具属性
- */
-export interface DefenseStats {
-  /** 刺砍防御（0-100，按百分比降低对应伤害） */
-  slashDefense: number
-  /** 钝击防御（0-100） */
-  bluntDefense: number
-  /** 远程防御（0-100） */
-  rangedDefense: number
-  /** 毒素防御（0-100） */
-  poisonDefense: number
-  /** 火焰防御（0-100） */
-  fireDefense: number
-  /** 理智保护（降低SAN值损失比例，0-1，如0.3表示降低30%的SAN损失） */
-  sanProtection?: number
-}
-
 // ============================================================
 // 工具
 // ============================================================
@@ -313,23 +251,11 @@ export interface ToolItem extends BaseItem {
   /** 耐久度配置（火把等消耗品可选填，无耐久则省略） */
   durability?: DurabilityConfig
 
-  /** 装备槽位（工具通常手持，部分可放在工具腰带） */
-  equipmentSlot: EquipmentSlot.TOOL | EquipmentSlot.WEAPON | EquipmentSlot.LIGHT
-
   /** 工具类型ID（如'axe'、'pickaxe'、'torch'、'fishingRod'等） */
   toolTypeId: string
 
   /** 工具等级（影响采集效率、可采集资源等级等） */
   toolLevel: number
-
-  /** 工具提供的属性修正 */
-  attributeModifiers?: AttributeModifier[]
-
-  /** 工具提供的技能加成（如斧头+2砍伐技能） */
-  skillBonuses?: SkillBonus[]
-
-  /** 工具特殊功能描述 */
-  specialFunctions?: string[]
 }
 
 // ============================================================
@@ -345,8 +271,10 @@ export interface ConsumableItem extends BaseItem {
   /** 消耗品类型 */
   consumableType: ConsumableType
 
-  /** 使用时间（游戏内分钟数，0表示立即使用） */
-  useTimeMinutes: number
+  /** 保质期（游戏内分钟数）0代表永久保质 */
+  perishMinutes: number
+  /** 过期后变质的产物物品ID（如"腐烂的鱼"，不填则超期后直接消失） */
+  spoiledItemId?: string
 
   /** 使用消耗品后触发的效果列表 */
   effects: EffectResult[]
@@ -406,51 +334,7 @@ export interface MaterialItem extends BaseItem {
   category: ItemCategory.MATERIAL
 
   /** 材料类型（用于分类和配方匹配） */
-  materialType: MaterialType
-
-  /** 材料等级（影响制作出的物品品质） */
-  materialTier: number
-
-  /** 可作为燃料时提供的燃烧时间（游戏内分钟数，0表示不可作为燃料） */
-  burnTimeMinutes: number
-
-  /** 是否可在采集时获得经验 */
-  grantsExpOnCollect?: {
-    skillTypeId: string
-    expAmount: number
-  }
-}
-
-/**
- * 材料类型枚举
- */
-export enum MaterialType {
-  /** 木材 */
-  WOOD = 'wood',
-  /** 石材 */
-  STONE = 'stone',
-  /** 金属 */
-  METAL = 'metal',
-  /** 纤维（藤蔓、布、绳索等） */
-  FIBER = 'fiber',
-  /** 骨/角/壳 */
-  BONE = 'bone',
-  /** 皮革 */
-  LEATHER = 'leather',
-  /** 草药 */
-  HERB = 'herb',
-  /** 食物原料（未加工的肉、果实等） */
-  FOOD_RAW = 'foodRaw',
-  /** 液体（水、油等，通常以容器盛装） */
-  LIQUID = 'liquid',
-  /** 火药/爆炸物原料 */
-  EXPLOSIVE = 'explosive',
-  /** 电子零件 */
-  ELECTRONIC = 'electronic',
-  /** 神秘材料（克苏鲁相关） */
-  OCCULT = 'occult',
-  /** 其他 */
-  OTHER = 'other',
+  materialType: string
 }
 
 // ============================================================
@@ -465,8 +349,6 @@ export interface ValuableItem extends BaseItem {
 
   /** 实际售价倍率（最终售价 = basePrice * priceMultiplier） */
   priceMultiplier: number
-  /** 是否可用于特定交易（某些NPC只接受特定贵重物品） */
-  acceptedByNpcIds?: string[]
 }
 
 // ============================================================
@@ -487,8 +369,6 @@ export interface DocumentItem extends BaseItem {
   onReadEffects?: EffectResult[]
   /** 阅读后是否消耗此文档 */
   isConsumedOnRead: boolean
-  /** 阅读文档消耗的游戏内分钟数 */
-  readTimeMinutes: number
   /** 阅读文档是否需要特定条件（如语言能力） */
   readCondition?: Condition
   /** 文档作者/来源（显示用） */
@@ -514,34 +394,10 @@ export interface DocumentContentVariation {
  */
 export interface RecipeItem extends BaseItem {
   category: ItemCategory.RECIPE
-
   /** 配方类型 */
   recipeType: RecipeType
   /** 解锁的配方ID（关联制作表/建造表/烹饪表的配方ID） */
-  unlocksRecipeId: string
-  /** 使用后是否消耗此配方物品 */
-  isConsumedOnUse: boolean
-  /** 阅读时间（分钟） */
-  learnTimeMinutes: number
-}
-
-
-// ============================================================
-// 任务物品
-// ============================================================
-
-/**
- * 任务物品配置
- */
-export interface QuestItem extends BaseItem {
-  category: ItemCategory.QUEST
-
-  /** 关联的任务ID */
-  questId: string
-  /** 是否为任务关键物品（不可丢弃不可出售） */
-  isQuestCritical: boolean
-  /** 任务完成后是否移除 */
-  removeOnQuestComplete: boolean
+  unlocksRecipeId: string[]
 }
 
 // ============================================================
@@ -576,14 +432,13 @@ export type Item =
   | ValuableItem
   | DocumentItem
   | RecipeItem
-  | QuestItem
   | MiscItem
 
 /** 可装备物品类型 */
-export type EquippableItem = WeaponItem | ArmorItem | ToolItem
+export type EquippableItem = WeaponItem | ArmorItem
 
 /** 可堆叠物品类型（排除装备和不可堆叠的消耗品） */
-export type StackableItem = MaterialItem | ConsumableItem | ValuableItem | QuestItem | MiscItem
+export type StackableItem = MaterialItem | ConsumableItem | ValuableItem | MiscItem
 
 // ============================================================
 // 装备槽位
@@ -611,10 +466,6 @@ export enum EquipmentSlot {
   NECK = 'neck',
   /** 手指（戒指） */
   FINGER = 'finger',
-  /** 工具腰带 */
-  TOOL = 'tool',
-  /** 照明 */
-  LIGHT = 'light',
 }
 
 /** 防具槽位（排除武器和工具） */

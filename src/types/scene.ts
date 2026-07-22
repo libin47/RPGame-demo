@@ -2,12 +2,7 @@
 
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
-import type { ItemId } from './item' // 假设 item.ts 中导出了 ItemId 类型
-import type {
-  TimeOfDay,
-  WeatherType,
-  SeasonPhase,
-} from './seasonWeather'
+import type { TimeOfDay, WeatherType, SeasonPhase } from './seasonWeather'
 // ============================================================
 // 基础场景类型（Scene 和 SubScene 的公共字段）
 // ============================================================
@@ -47,8 +42,6 @@ export interface BaseScene {
 
   // BGM资源ID
   bgmId?: string
-  // 环境音效资源ID
-  ambientSoundId?: string
 }
 
 // ============================================================
@@ -332,6 +325,8 @@ export enum InteractionType {
   TALK = 'talk',
   // 交易（进入交易界面）
   TRADE = 'trade',
+  // 移动到场景（跨地图移动）
+  MOVE_TO_SCENE = 'moveToScene',
 }
 
 /**
@@ -344,6 +339,7 @@ export type InteractionBehaviorParams =
   | EnterSubSceneBehaviorParams
   | ExitSubSceneBehaviorParams
   | MoveBehaviorParams
+  | MoveToSceneBehaviorParams
   | RestBehaviorParams
   | TalkBehaviorParams
   | TradeBehaviorParams
@@ -384,6 +380,30 @@ export interface MoveBehaviorParams {
   interactionType: InteractionType.MOVE
   /** 移动方向 */
   direction: Direction
+}
+// 移动到场景行为
+export interface MoveToSceneBehaviorParams {
+  interactionType: InteractionType.MOVE_TO_SCENE
+  /** 目标场景ID */
+  targetSceneId: string
+  /** 目标子场景ID（可选） */
+  targetSubSceneId?: string
+  /** 目标地图ID（跨地图移动时使用，为空则在当前地图内移动） */
+  targetMapId?: string
+  /** 目标地图节点ID（用于地图上定位） */
+  targetNodeId: string
+  /** 移动所需时间（游戏内分钟数） */
+  travelTimeMinutes: number
+  /** 移动消耗体力 */
+  staminaCost: number
+  /** 路径描述（如"沿着海岸线步行"） */
+  pathDescription: string
+  /** 移动途中遭遇事件池（随机触发） */
+  encounterEventPool?: EncounterEventPoolEntry[]
+  /** 移动条件（如需要特定物品、技能等级等） */
+  requirements?: MoveRequirement[]
+  /** 天气对移动时间的影响系数 */
+  weatherImpactCoefficient?: number
 }
 
 /** 休息行为 */
@@ -428,6 +448,24 @@ export enum Direction {
   UP = 'up',
   DOWN = 'down',
 }
+// ============================================================
+// 移动相关
+// ============================================================
+
+export interface EncounterEventPoolEntry {
+  eventId: string
+  weight: number
+  condition?: Condition
+}
+
+export interface MoveRequirement {
+  type: 'item' | 'skill' | 'flag' | 'attribute' | 'carryWeight'
+  id: string
+  value?: number
+  operator?: 'equal' | 'greaterEqual' | 'greater' | 'lessEqual' | 'less'
+  hint: string
+  isConsumed?: boolean
+}
 
 /**
  * 交互消耗
@@ -442,7 +480,7 @@ export interface InteractionCost {
 
   // ========== 物品消耗专用 ==========
   // 消耗的物品ID（仅当 costType 为 ITEM 时使用）
-  itemId?: ItemId
+  itemId?: string
   // 消耗的物品数量（仅当 costType 为 ITEM 时使用，默认1）
   itemQuantity?: number
 }
@@ -462,7 +500,6 @@ export enum InteractionCostType {
   // 物品（需配合 itemId 和 itemQuantity）
   ITEM = 'item',
 }
-
 
 // ============================================================
 // 场景注册表

@@ -14,7 +14,7 @@ import type { FlagValue } from './flag'
  * - 展示叙事文本（含根据条件变化的文本变体）
  * - 提供选项供玩家选择
  * - 通过选项结果驱动：属性变动、物品获得、战斗触发、CG播放、场景切换、标志位设置等
- * 
+ *
  * 事件由多帧（EventFrame）组成，每帧可包含多个选项。
  * 事件总是以某个结束型选项终止（结束事件、进入战斗、切换场景、播放CG等）。
  */
@@ -50,11 +50,6 @@ export interface GameEvent {
   backgroundImage?: string
   /** 事件图片变体（根据条件显示不同图片） */
   backgroundImageVariations?: EventImageVariation[]
-
-  /** 事件BGM资源ID（覆盖场景BGM） */
-  bgmId?: string
-  /** 事件环境音效资源ID */
-  ambientSoundId?: string
 }
 
 /**
@@ -122,7 +117,6 @@ export interface EventFrame {
   onEnterEffects?: EffectResult[]
   /** 离开此帧时自动触发的效果 */
   onExitEffects?: EffectResult[]
-
 }
 
 /**
@@ -169,8 +163,6 @@ export interface EventOption {
   availableCondition?: Condition
   /** 不可用时的提示文本 */
   unavailableTooltip?: string
-  /** 是否在不可用时完全隐藏 */
-  hideWhenUnavailable?: boolean
 
   /** 选项样式 */
   optionStyle?: EventOptionStyle
@@ -295,7 +287,7 @@ export interface EndEventResult {
 export interface TriggerBattleResult {
   type: 'triggerBattle'
   /** 敌人配置ID */
-  enemyId: string
+  enemyId: string[]
   /** 战斗胜利后跳转的帧ID（同一事件内） */
   victoryFrameId?: string
   /** 战斗失败后跳转的帧ID（不填则战斗失败进入结局判定） */

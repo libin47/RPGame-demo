@@ -24,10 +24,10 @@ export enum EffectType {
   CG = 'cg',
   /** 事件触发 */
   EVENT = 'event',
-  /** 解锁配方 */
-  UNLOCK_RECIPE = 'unlockRecipe',
-  /** 解锁技能 */
-  UNLOCK_SKILL = 'unlockSkill',
+  /** 解锁/锁配方 */
+  RECIPE = 'recipe',
+  /** 解锁/丢失技能 */
+  SKILL = 'skill',
   /** 获得经验 */
   GAIN_EXP = 'gainExp',
   /** 条件判断 */
@@ -171,11 +171,10 @@ export interface FlagEffect {
   value?: number | string | boolean
 }
 
-
 /** 战斗效果 */
 export interface BattleEffect {
   type: EffectType.BATTLE
-  enemyId: string
+  enemyId: string[]
   victoryEffects?: Effect[]
   defeatEffects?: Effect[]
   canEscape?: boolean
@@ -197,16 +196,20 @@ export interface EventTriggerEffect {
 }
 
 /** 解锁配方效果 */
-export interface UnlockRecipeEffect {
-  type: EffectType.UNLOCK_RECIPE
+export interface RecipeEffect {
+  type: EffectType.RECIPE
   recipeId: string
   recipeType: RecipeType
+  // 解锁还是删除配方
+  unlock: boolean
 }
 
-/** 解锁技能效果 */
-export interface UnlockSkillEffect {
-  type: EffectType.UNLOCK_SKILL
+/** 解锁/丢失技能效果 */
+export interface SkillEffect {
+  type: EffectType.SKILL
   skillId: string
+  // 解锁还是丢失技能
+  unlock: boolean
 }
 
 /** 获得经验效果 */
@@ -252,8 +255,8 @@ export type Effect =
   | BattleEffect
   | CGEffect
   | EventTriggerEffect
-  | UnlockRecipeEffect
-  | UnlockSkillEffect
+  | RecipeEffect
+  | SkillEffect
   | GainExpEffect
   | CompositeEffect
 

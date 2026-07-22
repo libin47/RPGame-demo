@@ -14,7 +14,7 @@ export interface CGScene {
   // CG帧序列
   frames: CGFrame[]
 
-  // CG触发条件
+  // CG触发条件，事件触发时，依此条件判断是否触发CG
   triggerCondition?: Condition
 
   // CG类型
@@ -61,7 +61,7 @@ export interface CGFrame {
   // 选项列表
   options?: CGOption[]
 
-  // 帧显示条件
+  // 帧显示条件，如果不满足，按照序号自动顺延下一个帧显示
   displayCondition?: Condition
 }
 
@@ -269,6 +269,8 @@ export interface CGTriggerBattleResult {
   victoryFrameId?: string
   // 失败后跳转的帧ID
   defeatFrameId?: string
+  // 逃跑后跳转的帧ID
+  escapeFrameId?: string
   // 触发的效果列表
   effects?: EffectResult[]
   // 设置标志位

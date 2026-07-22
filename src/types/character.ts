@@ -2,9 +2,7 @@
 
 import type { EffectResult } from './effect'
 import type { AttributeType } from './effect'
-import type { ItemId } from './item'
 import type { FlagValue } from './flag'
-import type { PassiveSkillId } from './skill'
 
 // ============================================================
 // 职业定义
@@ -31,9 +29,6 @@ export interface CharacterClass {
   iconId: string
   /** 职业立绘/插画资源ID（选择界面展示） */
   portraitImageId?: string
-
-  /** 职业标签（用于筛选和事件判定，如"医疗"、"战斗"、"技术"） */
-  tags: string[]
 
   /** 职业难度（1-5，在选择界面显示） */
   difficulty: number
@@ -65,7 +60,7 @@ export interface CharacterClass {
   // ============================================================
 
   /** 初始已解锁的被动技能ID列表 */
-  initialPassiveSkillIds: PassiveSkillId[]
+  initialPassiveSkillIds: string[]
 
   /** 初始生存技能等级 */
   initialSurvivalSkillLevels: CharacterInitialSkillLevel[]
@@ -105,18 +100,6 @@ export interface CharacterClass {
 
   /** 初始标志位（开局时设置的标志位，用于引导不同职业的初始剧情） */
   initialFlags: Record<string, FlagValue>
-
-  /** 初始触发的事件ID（可选，职业专属开场事件，如医生可能先发现医疗包） */
-  initialEventId?: string
-
-  // ============================================================
-  // 初始场景
-  // ============================================================
-
-  /** 职业专属初始场景ID（覆写全局初始场景，为空则使用全局默认） */
-  initialSceneId?: string
-  /** 职业专属初始子场景ID */
-  initialSubSceneId?: string
 }
 
 // ============================================================
@@ -160,7 +143,7 @@ export interface CharacterSurvivalAttributes {
  */
 export interface CharacterInitialEquipment {
   /** 物品ID */
-  itemId: ItemId
+  itemId: string
   /** 装备槽位 */
   slot: string
   /** 初始耐久度（为空则使用物品默认耐久） */
@@ -172,7 +155,7 @@ export interface CharacterInitialEquipment {
  */
 export interface CharacterInitialItem {
   /** 物品ID */
-  itemId: ItemId
+  itemId: string
   /** 数量 */
   quantity: number
   /** 物品耐久度（如有耐久度系统，为空则使用默认值） */
@@ -248,39 +231,6 @@ export interface ClassAttributeModifier {
 }
 
 // ============================================================
-// 背景故事（可选扩展）
-// ============================================================
-
-/**
- * 角色背景故事
- * 可选配置，为职业提供更深层的角色扮演元素。
- * 背景故事影响：初始对话文本、特定NPC反应、专属事件选项。
- */
-export interface CharacterBackground {
-  /** 背景ID */
-  id: string
-  /** 背景名称 */
-  name: string
-  /** 背景描述（选择界面展示） */
-  description: string
-
-  /** 所属职业ID（每个职业可有多个背景可选，为空则所有职业通用） */
-  classId?: string
-
-  /** 额外初始标志位 */
-  additionalFlags: Record<string, FlagValue>
-  /** 额外初始物品 */
-  additionalItems?: CharacterInitialItem[]
-  /** 额外属性修正 */
-  additionalAttributeModifiers?: ClassAttributeModifier[]
-
-  /** 背景专属事件ID列表（仅此背景可触发的事件） */
-  exclusiveEventIds?: string[]
-  /** 背景专属对话文本变体（事件中通过标志位判断） */
-  dialogueTags?: string[]
-}
-
-// ============================================================
 // 职业注册表
 // ============================================================
 
@@ -294,6 +244,4 @@ export interface CharacterRegistry {
   selectionOrder: string[]
   /** 默认职业ID（快速开始时使用） */
   defaultClassId: string
-  /** 可选背景故事 */
-  backgrounds?: Record<string, CharacterBackground>
 }

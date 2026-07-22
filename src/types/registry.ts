@@ -11,7 +11,6 @@ import type { EnemyRegistry } from './enemy'
 import type { CraftRecipeRegistry } from './craft'
 import type { CookRecipeRegistry } from './cook'
 import type { BuildRecipeRegistry } from './build'
-import type { RepairRecipeRegistry } from './repair'
 import type { StatusRegistry } from './status'
 import type { TradeRegistry } from './trade'
 import type { FlagRegistry } from './flag'
@@ -68,9 +67,6 @@ export interface GameRegistry {
   /** 建造配方注册表 */
   buildRecipes: BuildRecipeRegistry
 
-  /** 修复配方注册表 */
-  repairRecipes: RepairRecipeRegistry
-
   /** 异常状态注册表 */
   statuses: StatusRegistry
 
@@ -88,5 +84,4 @@ export interface GameRegistry {
 
   /** 职业注册表 */
   characters: CharacterRegistry
-  
 }

@@ -36,20 +36,12 @@ export interface StatusConfig {
   /** 状态类型 */
   statusType: StatusType
 
-  /** 状态标签（用于筛选、判定、互斥等） */
-  tags: StatusTag[]
-
   // ============================================================
   // 时间与叠层
   // ============================================================
 
-  /** 默认持续时间 */
+  /** 默认持续时间，具体以施加的事件时间为准 */
   defaultDuration: StatusDuration
-
-  /** 是否显示剩余时间 */
-  showRemainingTime: boolean
-  /** 是否在状态栏显示层数 */
-  showStackCount: boolean
 
   /** 叠加规则 */
   stackingRule: StatusStackingRule
@@ -73,27 +65,13 @@ export interface StatusConfig {
   /** 视觉效果 */
   visualEffects?: StatusVisualEffect[]
 
-  /** 状态音效资源ID（循环播放） */
-  soundEffectId?: string
-  /** 施加音效资源ID */
-  applySoundId?: string
-  /** 移除音效资源ID */
-  removeSoundId?: string
-
   // ============================================================
   // 移除与互斥
   // ============================================================
 
   /** 可否被驱散（某些状态如诅咒不可被常规手段移除） */
   isDispellable: boolean
-  /** 驱散所需物品ID列表（特定物品才能移除，为空则通用驱散即可） */
-  dispelItemIds?: string[]
 
-  /** 自动移除条件（满足条件时提前移除，如"玩家进入水中则移除燃烧"） */
-  autoRemoveCondition?: Condition
-
-  /** 互斥状态ID列表（施加此状态时自动移除列表中的状态） */
-  exclusiveWith: string[]
   /** 被移除时的提示文本 */
   exclusiveRemovalText?: string
 
@@ -101,8 +79,6 @@ export interface StatusConfig {
   // 死亡相关
   // ============================================================
 
-  /** 此状态是否在角色死亡时移除 */
-  removeOnDeath: boolean
   /** 此状态是否在战斗结束后移除 */
   removeOnBattleEnd: boolean
   /** 此状态是否在休息/睡觉后移除 */
@@ -125,34 +101,6 @@ export enum StatusType {
   NEUTRAL = 'neutral',
   /** 特殊状态（诅咒、感染、腐化等，有独特机制） */
   SPECIAL = 'special',
-}
-
-/**
- * 状态标签
- */
-export enum StatusTag {
-  /** 物理伤害类 */
-  PHYSICAL_DOT = 'physicalDot',
-  /** 精神伤害类 */
-  MENTAL = 'mental',
-  /** 移动限制类 */
-  MOVEMENT_IMPAIR = 'movementImpair',
-  /** 属性削弱类 */
-  STAT_REDUCTION = 'statReduction',
-  /** 属性增强类 */
-  STAT_BOOST = 'statBoost',
-  /** 恢复类 */
-  REGENERATION = 'regeneration',
-  /** 控制类（眩晕、冰冻等） */
-  CONTROL = 'control',
-  /** 感知类（影响视野、SAN值认知） */
-  PERCEPTION = 'perception',
-  /** 生存类（影响饱食度、温暖度等） */
-  SURVIVAL = 'survival',
-  /** 腐化/感染类 */
-  CORRUPTION = 'corruption',
-  /** 战斗类 */
-  COMBAT = 'combat',
 }
 
 // ============================================================
@@ -198,8 +146,8 @@ export enum StatusStackingRule {
  * 定义状态每个周期（回合/分钟/小时）对属性的影响
  */
 export interface StatusEffectConfig {
-  /** 效果的触发周期 */
-  interval: StatusInterval
+  /** 效果的触发周期 ， 单位为分钟和回合*/
+  interval: number
 
   /** 属性变动列表 */
   attributeChanges: StatusAttributeChange[]
@@ -215,16 +163,6 @@ export interface StatusEffectConfig {
 
   /** 触发条件（满足条件才触发此效果） */
   condition?: Condition
-}
-
-/**
- * 状态触发周期
- */
-export interface StatusInterval {
-  /** 周期值 */
-  value: number
-  /** 周期单位 */
-  unit: 'turn' | 'minute' | 'hour'
 }
 
 /**
@@ -335,44 +273,6 @@ export interface StatusDescriptionVariation {
 }
 
 // ============================================================
-// 状态预设ID常量
-// ============================================================
-
-export const StatusId = {
-  // 伤害类
-  BLEED: 'bleed',
-  POISON: 'poison',
-  BURN: 'burn',
-  FROSTBITE: 'frostbite',
-
-  // 精神类
-  FEAR: 'fear',
-  MADNESS: 'madness',
-  HALLUCINATION: 'hallucination',
-
-  // 控制类
-  STUN: 'stun',
-  FROZEN: 'frozen',
-  ROOT: 'root',
-  SLOW: 'slow',
-
-  // 增益类
-  STRENGTH_BOOST: 'strengthBoost',
-  REGENERATION: 'regeneration',
-  FORTIFIED: 'fortified',
-  HASTE: 'haste',
-
-  // 生存类
-  STARVATION: 'starvation',
-  HYPOTHERMIA: 'hypothermia',
-  HEAT_STROKE: 'heatStroke',
-  INFECTION: 'infection',
-  CORRUPTED: 'corrupted',
-} as const
-
-export type StatusId = (typeof StatusId)[keyof typeof StatusId]
-
-// ============================================================
 // 状态注册表
 // ============================================================
 
@@ -380,10 +280,5 @@ export type StatusId = (typeof StatusId)[keyof typeof StatusId]
  * 状态注册表
  */
 export interface StatusRegistry {
-  /** 所有状态配置，按ID索引 */
   statuses: Record<string, StatusConfig>
-  /** 按标签分组 */
-  statusesByTag: Record<StatusTag, string[]>
-  /** 按类型分组 */
-  statusesByType: Record<StatusType, string[]>
 }
