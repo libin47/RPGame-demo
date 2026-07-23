@@ -69,6 +69,13 @@ function isDescriptionEligible(desc: SceneDescription, player: PlayerState): boo
     }
   }
 
+  // 已触发交互且设置了 removeAfterInteraction → 不再显示
+  if (desc.removeAfterInteraction && desc.seenFlag) {
+    if (player.flags[desc.seenFlag]) {
+      return false
+    }
+  }
+
   // 看过次数达到上限
   if (desc.viewLimit !== undefined && desc.viewLimit > 0 && desc.seenFlag) {
     const viewCount = (player.flags[desc.seenFlag] as number) ?? 0

@@ -131,12 +131,6 @@ export interface SceneDescription {
   isAutoTrigger: boolean
   // 自动触发对应的事件入口 key（若不填则取 eventEntries 中的第一个）
   autoTriggerEventKey?: string
-  // 自动触发的概率（0-1，1为必定触发，仅在isAutoTrigger为true时有效）
-  autoTriggerProbability?: number
-  // 自动触发是否需要先展示描述（若为true，则先展示描述再自动进入事件；false则跳过描述直接进入事件）
-  showDescriptionBeforeAutoTrigger?: boolean
-  // 自动触发延迟（毫秒，showDescriptionBeforeAutoTrigger为true时，展示描述后延迟多久自动进入事件）
-  autoTriggerDelayMs?: number
 
   // 是否在任意事件入口触发后清除此描述（通过设置seenFlag实现）
   removeAfterInteraction?: boolean

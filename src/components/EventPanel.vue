@@ -3,7 +3,11 @@
 <template>
   <div class="event-panel">
     <!-- 事件文本 -->
-    <div class="event-text">{{ resolvedText }}</div>
+    <div class="event-text">
+      <!-- 上一帧选项结果文本（带背景框） -->
+      <div v-if="frameTextPrefix" class="result-prefix">{{ frameTextPrefix }}</div>
+      <div class="frame-text">{{ resolvedText }}</div>
+    </div>
 
     <!-- 分割线 -->
     <div class="divider"></div>
@@ -37,6 +41,8 @@ const props = defineProps<{
   frame: EventFrame
   /** 已替换占位符的事件文本 */
   resolvedText: string
+  /** 上一帧选项结果文本（带样式区分） */
+  frameTextPrefix: string
   /** 过滤后的可见选项列表（由 GameView 计算传入） */
   options: EventOption[]
 }>()
@@ -93,8 +99,23 @@ function onOptionClick(optionId: string): void {
   overflow-y: auto;
   line-height: 2.0;
   font-size: 15px;
-  white-space: pre-wrap;
   color: #f0f0f0;
+}
+
+/* 选项结果文本背景框 */
+.result-prefix {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+
+.frame-text {
+  white-space: pre-wrap;
+  line-height: 2.0;
 }
 
 .divider {

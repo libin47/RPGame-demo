@@ -64,6 +64,9 @@ interface GameRuntimeState {
   /** 当前战斗状态（仅在 mode === 'battle' 时有值） */
   currentBattle: BattleState | null
 
+  /** 事件帧文本前缀（上一帧选中的选项结果文本，拼接到当前帧文本前） */
+  frameTextPrefix: string
+
   /** 游戏日志（底部提示信息） */
   logMessage: string
 
@@ -111,6 +114,7 @@ function createGameState(initialPlayer: PlayerState) {
     currentEvent: null,
     currentFrame: null,
     currentBattle: null,
+    frameTextPrefix: '',
     logMessage: '',
     currentEnding: null,
     endingReason: '',
@@ -141,12 +145,20 @@ export function useGame(initialPlayer: PlayerState) {
   /**
    * 进入事件
    * 从场景交互按钮或事件入口触发
+   *
+   * @param eventId - 事件ID
+   * @param fromEventEntry - 是否由场景描述中的事件入口点击触发（用于 removeAfterInteraction 判断）
    */
-  function enterEvent(eventId: string): void {
+  function enterEvent(eventId: string, fromEventEntry = false): void {
     const event = registry.getEvent(eventId)
     if (!event) {
       state.logMessage = `事件 ${eventId} 未找到`
       return
+    }
+
+    // 由场景描述事件入口触发时，检查是否需要标记描述为已使用
+    if (fromEventEntry && state.currentDescriptionConfig?.removeAfterInteraction) {
+      markDescriptionSeen(state.currentDescriptionConfig, state.player)
     }
 
     // 获取第一个帧
@@ -159,6 +171,7 @@ export function useGame(initialPlayer: PlayerState) {
     state.mode = 'event'
     state.currentEvent = event
     state.currentFrame = firstFrame
+    state.frameTextPrefix = ''
   }
 
   /**
@@ -205,6 +218,9 @@ export function useGame(initialPlayer: PlayerState) {
             state.player.flags[flagId] = value
           }
         }
+
+        // 记录选项结果文本，拼接到下一帧文本前
+        state.frameTextPrefix = result.text || ''
 
         // 跳转到目标帧（先从所有帧中查找指定ID，找不到则用条件判断）
         const nextFrame = state.currentEvent?.frames.find((f) => f.id === result.targetFrameId)
@@ -652,7 +668,7 @@ export function useGame(initialPlayer: PlayerState) {
         // 查找事件入口对应的 eventId
         const entry = selectedDesc.eventEntries?.find((e) => e.key === autoTriggerResult.eventKey)
         if (entry) {
-          enterEvent(entry.eventId)
+          enterEvent(entry.eventId, true) // 自动触发也视为事件入口触发
           return // 自动触发事件后不再显示场景
         }
       }

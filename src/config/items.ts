@@ -109,6 +109,21 @@ const chitinShell: MaterialItem = {
   tags: ['material', 'chitin'],
 }
 
+const oneNote: MiscItem = {
+  id: 'one_note',
+  name: '笔记本',
+  description: '一个笔记本，你或许能用它来写点儿东西。',
+  category: ItemCategory.MISC,
+  rarity: ItemRarity.UNCOMMON,
+  iconId: 'icon_note',
+  weight: 0.0,
+  maxStackSize: 1,
+  isSellable: false,
+  basePrice: 0,
+  isKeyItem: true,
+  isCombinable: false,
+}
+
 // ===== 消耗品 =====
 
 const bandage: ConsumableItem = {
@@ -545,8 +560,9 @@ export const itemRegistry: ItemRegistry = {
     cooked_crab: cookedCrab,
     spoiled_food: spoiledFood,
     strength_potion: strengthPotion,
-    wood,
-    stone,
+    wood: wood,
+    stone: stone,
+    one_note: oneNote,
     crab_meat: crabMeat,
     chitin_shell: chitinShell,
     cloth_scrap: clothScrap,

@@ -24,7 +24,7 @@
         :description-config="game.state.currentDescriptionConfig"
         :interactions="game.getCurrentInteractions()"
         :background-color="backgroundColor"
-        @enter-event="game.enterEvent"
+        @enter-event="onEnterEventFromEntry"
         @interaction="game.handleInteraction"
       />
 
@@ -33,6 +33,7 @@
         v-else-if="game.state.mode === 'event' && game.state.currentFrame"
         :frame="game.state.currentFrame"
         :resolved-text="resolvedFrameText"
+        :frame-text-prefix="game.state.frameTextPrefix"
         :options="visibleEventOptions"
         @select-option="game.selectEventOption"
       />
@@ -178,6 +179,11 @@ const visibleEventOptions = computed(() => {
 // ============================================================
 // 操作处理
 // ============================================================
+
+/** 从场景描述事件入口点击进入事件（传递 fromEventEntry=true） */
+function onEnterEventFromEntry(eventId: string): void {
+  game.value.enterEvent(eventId, true)
+}
 
 function onBattleAction(actionType: PlayerActionType): void {
   if (actionType === PlayerActionType.BATTLE_SKILL) {

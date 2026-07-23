@@ -19,6 +19,8 @@ const beach: Scene = {
       id: 'beach_first_arrival',
       priority: 10,
       isOneTime: true,
+      isAutoTrigger: false,
+      seenFlag: 'seen_beach_first_arrival',
       displayCondition: {
         logic: LogicOperator.AND,
         subConditions: [
@@ -29,62 +31,16 @@ const beach: Scene = {
           },
         ],
       },
-      text: '你从昏迷中醒来，发现自己躺在{plane_wreckage}旁的沙滩上。阳光炙热，海浪拍打着海岸。远处是{forest_edge}，隐约可以看到一些{strange_tracks}通向内陆。',
-      eventEntries: [
-        {
-          key: 'plane_wreckage',
-          displayText: '飞机残骸',
-          eventId: 'event_plane_wreckage',
-          displayCondition: {
-            logic: LogicOperator.AND,
-            subConditions: [
-              {
-                target: { type: ConditionTargetType.FLAG, id: 'first_time_on_beach' },
-                operator: ComparisonOperator.EQUAL,
-                value: true,
-              },
-            ],
-          },
-        },
-        {
-          key: 'forest_edge',
-          displayText: '茂密的森林边缘',
-          eventId: 'event_forest_edge_first',
-          displayCondition: {
-            logic: LogicOperator.AND,
-            subConditions: [
-              {
-                target: { type: ConditionTargetType.FLAG, id: 'first_time_on_beach' },
-                operator: ComparisonOperator.EQUAL,
-                value: true,
-              },
-            ],
-          },
-        },
-        {
-          key: 'strange_tracks',
-          displayText: '奇怪的痕迹',
-          eventId: 'event_strange_tracks',
-          displayCondition: {
-            logic: LogicOperator.AND,
-            subConditions: [
-              {
-                target: { type: ConditionTargetType.FLAG, id: 'first_time_on_beach' },
-                operator: ComparisonOperator.EQUAL,
-                value: true,
-              },
-            ],
-          },
-        },
-      ],
-      isAutoTrigger: false,
-      seenFlag: 'seen_beach_first_arrival',
-      viewLimit: 1,
+      text: '你从破碎的座椅残骸中睁开眼睛。\n\n海浪的声音先于疼痛到达——规律的白噪音，一遍遍冲刷着沙滩。然后是气味：航空燃油的刺鼻味道混合着海水的咸腥。你嘴里有血的味道。\n\n右肋在痛。你低头检查，一片瘀伤从肋骨蔓延到腰侧。钝痛，不是骨折。至少不是让你立刻死去的那种。\n\n飞机残骸散落在沙滩上，像被巨人随手折断的玩具。机翼插在浅滩里，尾翼挂在远处的棕榈树上，机身断成几截，其中一截还在冒烟。\n\n你试着站起来。腿还听使唤。\n\n你还活着。',
+
     },
     {
-      id: 'beach_normal',
-      priority: 5,
-      text: '你站在海滩上。{plane_wreckage}的残骸依然散落在不远处，海浪不断拍打着沙滩。{cave_entrance}在海岸线的一侧隐约可见。',
+      id: 'beach_second_arrival',
+      priority: 9,
+      removeAfterInteraction: true,
+      isAutoTrigger: false,
+      isOneTime: false,
+      text: '你努力站起身来。\n\n{plane_wreckage}依然散落在不远处，海浪不断拍打着沙滩。\n\n 几只海鸥从天空飞过。\n\n或许你应该过去看看还有没有其他的幸存者。\n\n 或者，看看有没有能用得到的东西。',
       eventEntries: [
         {
           key: 'plane_wreckage',
@@ -92,28 +48,8 @@ const beach: Scene = {
           eventId: 'event_plane_wreckage',
           removeAfterClick: false,
         },
-        {
-          key: 'cave_entrance',
-          displayText: '洞穴入口',
-          eventId: 'event_cave_entrance',
-          displayCondition: {
-            logic: LogicOperator.AND,
-            subConditions: [
-              {
-                target: {
-                  type: ConditionTargetType.ATTRIBUTE,
-                  attributeType: AttributeType.STRENGTH,
-                },
-                operator: ComparisonOperator.GREATER_EQUAL,
-                value: 2,
-              },
-            ],
-          },
-        },
       ],
-      isAutoTrigger: false,
-      isOneTime: false,
-      viewLimit: -1,
+
     },
     {
       id: 'beach_crabs',
@@ -143,9 +79,6 @@ const beach: Scene = {
       ],
       isAutoTrigger: true,
       autoTriggerEventKey: 'mutated_crab',
-      autoTriggerProbability: 0.6,
-      showDescriptionBeforeAutoTrigger: true,
-      autoTriggerDelayMs: 2000,
       isOneTime: false,
       viewLimit: -1,
     },

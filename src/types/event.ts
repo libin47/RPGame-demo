@@ -29,9 +29,6 @@ export interface GameEvent {
   /** 事件帧序列（至少一帧） */
   frames: EventFrame[]
 
-  /** 事件触发条件（不满足则无法进入此事件） */
-  triggerCondition?: Condition
-
   /** 事件开始时自动触发的效果（进入事件时立即执行） */
   onEnterEffects?: EffectResult[]
 
@@ -39,12 +36,11 @@ export interface GameEvent {
   eventType: EventType
 
   /** 事件是否可重复触发（false表示只能触发一次） */
-  isRepeatable: boolean
+  isRepeatable?: boolean
   /** 触发后设置的标志位（用于追踪是否已触发过） */
   triggeredFlag?: string
-
-  /** 事件是否可被中断（如战斗中逃跑返回事件） */
-  isInterruptible: boolean
+  // 无法触发时候的文本
+  untriggerableText?: string
 
   /** 事件图片（覆盖场景图片） */
   backgroundImage?: string
@@ -266,6 +262,8 @@ export interface NextFrameResult {
   effects?: EffectResult[]
   /** 设置标志位 */
   setFlags?: Record<string, FlagValue>
+  // 描述文本
+  text?: string
 }
 
 /**

@@ -27,6 +27,7 @@ export interface GameInstance {
     readonly currentEvent: import('@/types/event').GameEvent | null
     readonly currentFrame: import('@/types/event').EventFrame | null
     readonly currentBattle: import('@/engine').BattleState | null
+    readonly frameTextPrefix: string
     readonly logMessage: string
     readonly currentEnding: EndingConfig | null
     readonly endingReason: string
@@ -34,7 +35,7 @@ export interface GameInstance {
     readonly currentTraderId: string | null
   }
   /** 进入事件 */
-  enterEvent: (eventId: string) => void
+  enterEvent: (eventId: string, fromEventEntry?: boolean) => void
   /** 选择事件选项 */
   selectEventOption: (optionId: string) => void
   /** 处理场景交互 */

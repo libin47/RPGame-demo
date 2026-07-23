@@ -18,48 +18,36 @@ import { RecipeType } from '@/types/recipe'
 const eventPlaneWreckage: GameEvent = {
   id: 'event_plane_wreckage',
   name: '搜索飞机残骸',
-  notes: '初始事件，玩家在飞机残骸中寻找有用物资',
   eventType: EventType.NORMAL,
-  isRepeatable: false,
-  triggeredFlag: 'triggered_plane_wreckage',
-  isInterruptible: false,
-  triggerCondition: {
-    logic: LogicOperator.AND,
-    subConditions: [
-      {
-        target: { type: ConditionTargetType.FLAG, id: 'first_time_on_beach' },
-        operator: ComparisonOperator.EQUAL,
-        value: true,
-      },
-    ],
-  },
-  onEnterEffects: [
-    {
-      effect: {
-        type: EffectType.FLAG,
-        flagId: 'first_time_on_beach',
-        operation: FlagOperation.SET,
-        value: false,
-      },
-      probability: 1,
-      description: '标记已离开初始状态',
-    },
-  ],
   frames: [
     {
       id: 'wreckage_search',
       order: 1,
-      text: '你从昏迷中醒来，头痛欲裂。{player.weapon}还紧紧攥在手里——万幸。\n\n你挣扎着站起身，拍掉{player.armor}上的沙粒。{env.weatherDesc}，海浪拍打着不远处的礁石。\n\n飞机残骸散落在沙滩上，金属碎片在阳光下反射着刺眼的光。你清点了一下身上携带的物品，开始在扭曲的框架间翻找，发现了以下可能有用的物资：\n\n- 一些布料碎片\n- 一把生锈的铁剑\n- 一份篝火建造图',
+      text: '你穿过敞开的变形舱门，尽管已经做好了心理准备，但是里面的场景仍让你感觉呼吸一窒。\n\n扭曲的金属、碎裂的行李箱。\n\n以及，散落在各处的人体组织。\n\n你恍惚了许久才回过神来。',
+      onEnterEffects:[
+    {
+          effect: {
+            type: EffectType.ATTRIBUTE,
+            attribute: AttributeType.SAN,
+            operation: AttributeOperation.SUBTRACT,
+            value: 10,
+          },
+      probability: 1,
+      description: 'SAN-10',
+    },
+  ],
       options: [
         {
-          id: 'take_cloth',
-          text: '收集布料碎片',
+          id: 'find_in_cloth',
+          text: '翻找残骸',
           displayPriority: 3,
           costs: [],
-          isOneTime: false,
+          isOneTime: true,
+          selectedFlag: 'selected_find_in_cloth',
           result: {
             type: 'nextFrame',
             targetFrameId: 'after_gather',
+            text: '你在扭曲的金属和碎裂的行李箱之间翻找。\n大部分东西都已经毁了——压碎的电子设备、浸透燃油的衣物、不知属于谁的家庭合照，玻璃相框已经碎了，照片上的笑容被海水泡得模糊不清。\n你找到了半瓶没开封的矿泉水。瓶身完好无损。你拧开盖子喝了一口，温热的水带着塑料瓶的味道，但你的喉咙已经不在乎了。\n你从座椅下方的应急箱里翻出了几包压缩饼干、一卷绷带、一小瓶消毒用的酒精。还有一把应急用的多功能刀，刀刃上刻着航空公司的标志。\n 你把它装进了口袋——也许以后用得上。',
             effects: [
               {
                 effect: {
@@ -69,12 +57,32 @@ const eventPlaneWreckage: GameEvent = {
                   quantity: 3,
                 },
                 probability: 1,
-                description: '获得3个布料碎片',
               },
             ],
-            setFlags: {
-              collected_cloth: true,
-            },
+          },
+        },
+        {
+          id: 'find_in_xiangzi',
+          text: '翻找行李箱',
+          displayPriority: 3,
+          costs: [],
+          isOneTime: true,
+          selectedFlag: 'selected_find_in_xiangzi',
+          result: {
+            type: 'nextFrame',
+            targetFrameId: 'after_gather',
+            text: '你打开了一个没有被完全压碎的行李箱。衣物叠得很整齐，是某个人的旅途行装。换洗衬衫、牛仔裤、一本旅行指南、一个洗漱包。\n\n在行李箱的夹层里，你找到了一本皮质封面的笔记本，翻开后是空白页面——主人还没来得及写任何东西。你把笔记本收好。空白的纸总有它的用处。\n\n另一个行李箱里有一包烟，还剩大半包，被仔细地装在一个铁盒里。铁盒打开时，烟草的干燥香气暂时盖过了燃油和海水的味道。你合上盖子，把铁盒放进自己的口袋。',
+            effects: [
+              {
+                effect: {
+                  type: EffectType.ITEM,
+                  itemId: 'one_note',
+                  changeType: ItemChangeType.ADD,
+                  quantity: 1,
+                },
+                probability: 1,
+              },
+            ],
           },
         },
         {
@@ -181,7 +189,6 @@ const eventBeachCrabEncounter: GameEvent = {
   notes: '玩家在海滩遭遇变异蟹',
   eventType: EventType.BATTLE,
   isRepeatable: true,
-  isInterruptible: true,
   onEnterEffects: [],
   frames: [
     {
@@ -318,7 +325,6 @@ const eventGatherBerries: GameEvent = {
   name: '采集浆果',
   eventType: EventType.NORMAL,
   isRepeatable: true,
-  isInterruptible: false,
   frames: [
     {
       id: 'gather_start',
@@ -405,7 +411,6 @@ const eventJournalFragment: GameEvent = {
   eventType: EventType.NORMAL,
   isRepeatable: false,
   triggeredFlag: 'triggered_journal_fragment',
-  isInterruptible: false,
   frames: [
     {
       id: 'find_journal',
