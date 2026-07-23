@@ -18,8 +18,7 @@ import { seasonWeatherRegistry } from './seasonWeather'
 import { characterRegistry } from './characters'
 import { mapRegistry } from './maps'
 import { buildRegistry } from './buildings'
-
-
+import { endingRegistry } from './endings'
 
 export const gameRegistry: GameRegistry = {
   buildings: buildRegistry,
@@ -40,4 +39,5 @@ export const gameRegistry: GameRegistry = {
   seasonWeather: seasonWeatherRegistry,
   maps: mapRegistry,
   characters: characterRegistry,
+  endings: endingRegistry,
 }

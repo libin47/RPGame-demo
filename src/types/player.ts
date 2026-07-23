@@ -458,9 +458,9 @@ export interface NewGameConfig {
   /** 初始时间（分钟） */
   initialTimeMinutes: number
   /** 初始季节 */
-  initialSeason: 'spring' | 'summer' | 'autumn' | 'winter'
+  initialSeason: Season
   /** 初始季节阶段 */
-  initialSeasonPhase: 'early' | 'mid' | 'late'
+  initialSeasonPhase: SeasonPhase
   /** 初始天气ID */
   initialWeatherId: string
   /** 初始腐化度 */

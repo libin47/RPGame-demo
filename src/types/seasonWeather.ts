@@ -179,6 +179,9 @@ export interface TimeOfDayConfig {
   sleepRecoveryMultiplier?: number
   /** 体力消耗系数修正（深夜和凌晨默认为+0.5） */
   staminaConsumptionModifier?: number
+
+  /** 时间段对应的UI背景色 */
+  backgroundColor: string
 }
 
 // ============================================================

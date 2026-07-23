@@ -1,10 +1,11 @@
-// src/engine/effectResolver.ts
+// src/engine/effect.ts
 
 import type { PlayerState } from '@/types/player'
 import type { EffectResult, Effect } from '@/types/effect'
 import { EffectType, AttributeType, AttributeOperation, ItemChangeType } from '@/types/effect'
 import { FlagOperation } from '@/types/flag'
 import { getRegistry } from './registry'
+import { applyStatus, removeStatus } from './status'
 
 /**
  * 效果解析执行器
@@ -84,24 +85,63 @@ export class EffectResolver {
       case EffectType.GAIN_EXP:
         return this.executeGainExpEffect(player, effect)
 
-      // 以下类型尚未实现，返回提示
+      // 复合效果：递归执行子效果
+      case EffectType.COMPOSITE:
+        return this.executeCompositeEffect(player, effect)
+
+      // 状态效果
       case EffectType.STATUS:
-        return '状态效果将在后续版本中实现'
+        return this.executeStatusEffect(player, effect)
+
+      // 以下类型由运行时（useGame）处理，效果器仅返回描述日志
       case EffectType.SCENE:
-        return '场景切换效果将在后续版本中实现'
+        return '场景切换已请求'
       case EffectType.BATTLE:
-        return '战斗效果将在后续版本中实现'
+        return '战斗已触发'
       case EffectType.CG:
-        return 'CG效果将在后续版本中实现'
+        return 'CG已触发'
       case EffectType.EVENT:
-        return '事件触发效果将在后续版本中实现'
-      case EffectType.COMPOSITE:
-        return '复合效果将在后续版本中实现'
-      case EffectType.COMPOSITE:
-        return '条件效果将在后续版本中实现'
+        return '事件已触发'
 
       default:
         return null
+    }
+  }
+
+  /**
+   * 执行复合效果：按顺序递归执行子效果
+   */
+  private executeCompositeEffect(
+    player: PlayerState,
+    effect: Extract<Effect, { type: EffectType.COMPOSITE }>,
+  ): string | null {
+    const logs: string[] = []
+    for (const subEffect of effect.effects) {
+      const log = this.executeEffect(player, subEffect)
+      if (log) {
+        logs.push(log)
+      }
+    }
+    return logs.length > 0 ? logs.join('；') : null
+  }
+
+  /**
+   * 执行状态施加/移除效果
+   */
+  private executeStatusEffect(
+    player: PlayerState,
+    effect: Extract<Effect, { type: EffectType.STATUS }>,
+  ): string | null {
+    const { statusId, apply, duration, sourceId } = effect
+
+    if (apply) {
+      // 施加状态
+      const log = applyStatus(player, statusId, duration, sourceId)
+      return log
+    } else {
+      // 移除状态
+      const log = removeStatus(player, statusId, true)
+      return log
     }
   }
 
@@ -114,7 +154,7 @@ export class EffectResolver {
    */
   private executeAttributeEffect(
     player: PlayerState,
-    effect: Extract<Effect, { type: EffectType.ATTRIBUTE }>
+    effect: Extract<Effect, { type: EffectType.ATTRIBUTE }>,
   ): string | null {
     const { attribute, operation, value, subType } = effect
 
@@ -160,7 +200,7 @@ export class EffectResolver {
   private getAttributeValue(
     player: PlayerState,
     attribute: AttributeType,
-    subType?: string
+    subType?: string,
   ): number | null {
     switch (attribute) {
       // 生存属性
@@ -260,7 +300,7 @@ export class EffectResolver {
     player: PlayerState,
     attribute: AttributeType,
     subType: string | undefined,
-    newValue: number
+    newValue: number,
   ): void {
     switch (attribute) {
       // 生存属性（带边界限制）
@@ -464,7 +504,7 @@ export class EffectResolver {
    */
   private checkAttributeLevelUp(
     player: PlayerState,
-    attribute: 'strength' | 'agility' | 'intelligence' | 'constitution'
+    attribute: 'strength' | 'agility' | 'intelligence' | 'constitution',
   ): void {
     const expKey = `${attribute}Exp` as const
     const currentLevel = player.attributes[attribute]
@@ -532,7 +572,7 @@ export class EffectResolver {
   private checkWeaponSkillUnlock(
     player: PlayerState,
     weaponTypeId: string,
-    newLevel: number
+    newLevel: number,
   ): void {
     const weaponType = this.registry.getWeaponType(weaponTypeId)
     if (!weaponType) return
@@ -556,7 +596,7 @@ export class EffectResolver {
    */
   private executeItemEffect(
     player: PlayerState,
-    effect: Extract<Effect, { type: EffectType.ITEM }>
+    effect: Extract<Effect, { type: EffectType.ITEM }>,
   ): string | null {
     const { itemId, changeType, quantity } = effect
     const itemConfig = this.registry.getItem(itemId)
@@ -572,7 +612,7 @@ export class EffectResolver {
       case ItemChangeType.ADD: {
         // 查找背包中是否已有此物品（可堆叠）
         const existingItem = player.inventory.find(
-          i => i.itemId === itemId && !this.isEquipped(player, i.instanceId)
+          (i) => i.itemId === itemId && !this.isEquipped(player, i.instanceId),
         )
 
         if (existingItem && itemConfig.maxStackSize > 1) {
@@ -597,7 +637,7 @@ export class EffectResolver {
 
       case ItemChangeType.REMOVE: {
         // 从背包中移除
-        const index = player.inventory.findIndex(i => i.itemId === itemId)
+        const index = player.inventory.findIndex((i) => i.itemId === itemId)
         if (index === -1) {
           return `背包中没有 ${itemName}`
         }
@@ -660,7 +700,9 @@ export class EffectResolver {
   /**
    * 根据物品配置获取对应的装备槽位
    */
-  private getEquipmentSlotForItem(itemConfig: ReturnType<typeof this.registry.getItem>): keyof PlayerState['equipment'] | null {
+  private getEquipmentSlotForItem(
+    itemConfig: ReturnType<typeof this.registry.getItem>,
+  ): keyof PlayerState['equipment'] | null {
     if (!itemConfig) return null
 
     // 通过检查物品类别来判断槽位
@@ -696,7 +738,7 @@ export class EffectResolver {
    */
   private executeFlagEffect(
     player: PlayerState,
-    effect: Extract<Effect, { type: EffectType.FLAG }>
+    effect: Extract<Effect, { type: EffectType.FLAG }>,
   ): string | null {
     const { flagId, operation, value } = effect
 
@@ -743,7 +785,7 @@ export class EffectResolver {
    */
   private executeSkillEffect(
     player: PlayerState,
-    effect: Extract<Effect, { type: EffectType.SKILL }>
+    effect: Extract<Effect, { type: EffectType.SKILL }>,
   ): string | null {
     const { skillId, unlock } = effect
 
@@ -778,7 +820,7 @@ export class EffectResolver {
    */
   private executeRecipeEffect(
     player: PlayerState,
-    effect: Extract<Effect, { type: EffectType.RECIPE }>
+    effect: Extract<Effect, { type: EffectType.RECIPE }>,
   ): string | null {
     const { recipeId, recipeType, unlock } = effect
 
@@ -819,11 +861,11 @@ export class EffectResolver {
   // ============================================================
 
   /**
-   * 执行获得经验效果
+   * 执行获得经验效果（公开方法，供 crafting 等模块调用）
    */
-  private executeGainExpEffect(
+  executeGainExpEffect(
     player: PlayerState,
-    effect: Extract<Effect, { type: EffectType.GAIN_EXP }>
+    effect: Extract<Effect, { type: EffectType.GAIN_EXP }>,
   ): string | null {
     const { target, targetId, amount } = effect
 

@@ -10,6 +10,22 @@ const firstTimeOnBeach: Flag = {
   defaultValue: true,
 }
 
+const selectedTakeSword: Flag = {
+  id: 'selected_take_sword',
+  name: '捡起宝剑',
+  notes: '捡起宝剑',
+  type: FlagType.BOOLEAN,
+  defaultValue: true,
+}
+
+const selectedTakeBlueprint: Flag = {
+  id: 'selected_take_blueprint',
+  name: '收好篝火建造图',
+  notes: '是否已收好篝火建造图',
+  type: FlagType.BOOLEAN,
+  defaultValue: false,
+}
+
 const defeatedFirstCrab: Flag = {
   id: 'defeated_first_crab',
   name: '击败第一只变异蟹',
@@ -76,5 +92,7 @@ export const flagRegistry: FlagRegistry = {
     crabs_killed_count: crabsKilledCount,
     explored_cave: exploredCave,
     current_quest_stage: currentQuestStage,
+    selected_take_sword: selectedTakeSword,
+    selected_take_blueprint: selectedTakeBlueprint,
   },
 }

@@ -1,7 +1,16 @@
 // config/events.ts
 import type { GameEvent, EventRegistry } from '../types/event'
 import { EventType, EventOptionStyle, EventOptionCostType } from '../types/event'
-import { EffectType, AttributeType, AttributeOperation, ItemChangeType, GainExpTarget, LogicOperator, ConditionTargetType, ComparisonOperator } from '../types/effect'
+import {
+  EffectType,
+  AttributeType,
+  AttributeOperation,
+  ItemChangeType,
+  GainExpTarget,
+  LogicOperator,
+  ConditionTargetType,
+  ComparisonOperator,
+} from '../types/effect'
 import { FlagOperation } from '@/types/flag'
 import { RecipeType } from '@/types/recipe'
 
@@ -47,6 +56,7 @@ const eventPlaneWreckage: GameEvent = {
           text: '收集布料碎片',
           displayPriority: 3,
           costs: [],
+          isOneTime: false,
           result: {
             type: 'nextFrame',
             targetFrameId: 'after_gather',
@@ -72,9 +82,11 @@ const eventPlaneWreckage: GameEvent = {
           text: '拿起生锈的铁剑',
           displayPriority: 2,
           costs: [],
+          isOneTime: true,
+          selectedFlag: 'selected_take_sword',
           result: {
             type: 'nextFrame',
-            targetFrameId: 'after_gather',
+            targetFrameId: 'wreckage_search',
             effects: [
               {
                 effect: {
@@ -106,6 +118,8 @@ const eventPlaneWreckage: GameEvent = {
           text: '收好篝火建造图',
           displayPriority: 1,
           costs: [],
+          isOneTime: true,
+          selectedFlag: 'selected_take_blueprint',
           result: {
             type: 'nextFrame',
             targetFrameId: 'after_gather',

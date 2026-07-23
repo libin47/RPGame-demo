@@ -1,12 +1,12 @@
 // config/scenes.ts
-import { AttributeType, ComparisonOperator, ConditionTargetType, LogicOperator } from '@/types/effect'
-import type { Scene, SubScene, SceneRegistry } from '../types/scene'
 import {
-  InteractionType,
-  InteractionCostType,
-  FunctionType,
-  Direction,
-} from '../types/scene'
+  AttributeType,
+  ComparisonOperator,
+  ConditionTargetType,
+  LogicOperator,
+} from '@/types/effect'
+import type { Scene, SubScene, SceneRegistry } from '../types/scene'
+import { InteractionType, InteractionCostType, FunctionType, Direction } from '../types/scene'
 
 // ===== 海滩场景 =====
 
@@ -18,6 +18,7 @@ const beach: Scene = {
     {
       id: 'beach_first_arrival',
       priority: 10,
+      isOneTime: true,
       displayCondition: {
         logic: LogicOperator.AND,
         subConditions: [
@@ -77,7 +78,6 @@ const beach: Scene = {
         },
       ],
       isAutoTrigger: false,
-      isOneTime: true,
       seenFlag: 'seen_beach_first_arrival',
       viewLimit: 1,
     },

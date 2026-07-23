@@ -235,6 +235,7 @@ export const seasonWeatherRegistry: SeasonWeatherRegistry = {
       temperatureModifier: -5,
       sleepRecoveryMultiplier: 2.0,
       staminaConsumptionModifier: 0.5,
+      backgroundColor: '#0a0a12',
     },
     [TimeOfDay.EARLY_MORNING]: {
       timeOfDay: TimeOfDay.EARLY_MORNING,
@@ -246,6 +247,7 @@ export const seasonWeatherRegistry: SeasonWeatherRegistry = {
       temperatureModifier: -3,
       sleepRecoveryMultiplier: 2.0,
       staminaConsumptionModifier: 0.5,
+      backgroundColor: '#0e0e1a',
     },
     [TimeOfDay.DAWN]: {
       timeOfDay: TimeOfDay.DAWN,
@@ -255,6 +257,7 @@ export const seasonWeatherRegistry: SeasonWeatherRegistry = {
       endHour: 8,
       ambientLight: 0.5,
       temperatureModifier: 0,
+      backgroundColor: '#1a1a30',
     },
     [TimeOfDay.MORNING]: {
       timeOfDay: TimeOfDay.MORNING,
@@ -264,6 +267,7 @@ export const seasonWeatherRegistry: SeasonWeatherRegistry = {
       endHour: 13,
       ambientLight: 0.9,
       temperatureModifier: 3,
+      backgroundColor: '#2a2a4a',
     },
     [TimeOfDay.AFTERNOON]: {
       timeOfDay: TimeOfDay.AFTERNOON,
@@ -273,6 +277,7 @@ export const seasonWeatherRegistry: SeasonWeatherRegistry = {
       endHour: 18,
       ambientLight: 0.8,
       temperatureModifier: 5,
+      backgroundColor: '#1e1e3a',
     },
     [TimeOfDay.DUSK]: {
       timeOfDay: TimeOfDay.DUSK,
@@ -282,6 +287,7 @@ export const seasonWeatherRegistry: SeasonWeatherRegistry = {
       endHour: 21,
       ambientLight: 0.4,
       temperatureModifier: -1,
+      backgroundColor: '#16162a',
     },
     [TimeOfDay.NIGHT]: {
       timeOfDay: TimeOfDay.NIGHT,
@@ -292,6 +298,7 @@ export const seasonWeatherRegistry: SeasonWeatherRegistry = {
       ambientLight: 0.2,
       temperatureModifier: -3,
       staminaConsumptionModifier: 0.5,
+      backgroundColor: '#0e0e1a',
     },
   },
   corruption: {

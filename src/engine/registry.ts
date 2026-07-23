@@ -276,6 +276,20 @@ class GameRegistryManager {
   getInitialMapId(): string {
     return this.registry.maps.initialMapId
   }
+
+  // ============================================================
+  // 结局
+  // ============================================================
+
+  /** 获取结局配置 */
+  getEnding(id: string): import('@/types/ending').EndingConfig | undefined {
+    return this.registry.endings.endings[id]
+  }
+
+  /** 获取所有结局配置 */
+  getAllEndings(): import('@/types/ending').EndingConfig[] {
+    return Object.values(this.registry.endings.endings)
+  }
 }
 
 /**

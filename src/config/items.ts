@@ -7,14 +7,10 @@ import type {
   ValuableItem,
   DocumentItem,
   RecipeItem,
+  MiscItem,
   ItemRegistry,
 } from '../types/item'
-import {
-  ItemCategory,
-  ItemRarity,
-  EquipmentSlot,
-  ConsumableType,
-} from '../types/item'
+import { ItemCategory, ItemRarity, EquipmentSlot, ConsumableType } from '../types/item'
 import { RecipeType } from '../types/recipe'
 import { EffectType, AttributeType, AttributeOperation } from '../types/effect'
 
@@ -333,6 +329,40 @@ const goldCoin: ValuableItem = {
   tags: ['valuable', 'currency'],
 }
 
+// ===== 杂项（特殊功能物品） =====
+
+const watch: MiscItem = {
+  id: 'watch',
+  name: '老旧的腕表',
+  description: '一块还能正常走时的机械腕表，表盘上显示着当前时间',
+  category: ItemCategory.MISC,
+  rarity: ItemRarity.COMMON,
+  iconId: 'icon_watch',
+  weight: 0.1,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 15,
+  isKeyItem: false,
+  isCombinable: false,
+  tags: ['tool', 'show_time'],
+}
+
+const sanMeter: MiscItem = {
+  id: 'san_meter',
+  name: '精神检测仪',
+  description: '一个能够检测精神状态的简易装置，指针显示着当前的理智水平',
+  category: ItemCategory.MISC,
+  rarity: ItemRarity.UNCOMMON,
+  iconId: 'icon_san_meter',
+  weight: 0.2,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 30,
+  isKeyItem: false,
+  isCombinable: false,
+  tags: ['tool', 'show_san'],
+}
+
 // ===== 文档 =====
 
 const journalFragment: DocumentItem = {
@@ -373,8 +403,6 @@ const campfireBlueprint: RecipeItem = {
   unlocksRecipeId: ['build_campfire'],
   tags: ['recipe', 'blueprint'],
 }
-
-
 
 // config/items.ts 中新增以下物品
 
@@ -507,12 +535,6 @@ const chitinArmor: ArmorItem = {
   tags: ['armor', 'chitin'],
 }
 
-
-
-
-
-
-
 export const itemRegistry: ItemRegistry = {
   items: {
     rusty_sword: rustySword,
@@ -532,6 +554,7 @@ export const itemRegistry: ItemRegistry = {
     gold_coin: goldCoin,
     journal_fragment: journalFragment,
     campfire_blueprint: campfireBlueprint,
+    watch,
+    san_meter: sanMeter,
   },
-
 }

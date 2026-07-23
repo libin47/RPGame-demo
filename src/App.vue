@@ -1,17 +1,6 @@
-<!-- src/App.vue -->
-
 <template>
-  <GameScreen :playerState="playerState" />
+  <router-view />
 </template>
-
-<script setup lang="ts">
-import type { PlayerState } from '@/types/player'
-import GameScreen from '@/components/GameScreen.vue'
-
-defineProps<{
-  playerState: PlayerState
-}>()
-</script>
 
 <style>
 * {

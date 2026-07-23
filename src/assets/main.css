@@ -1,35 +1,86 @@
 @import './base.css';
 
+/* ═══════════════════════════════════════════════════
+   全局 CSS 变量（暗色游戏主题）
+   ═══════════════════════════════════════════════════ */
+:root {
+  /* 基础色 */
+  --bg-primary: #121218;
+  --bg-secondary: #1a1a22;
+  --bg-surface: #22223a;
+
+  /* 文字色 */
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a8;
+  --text-muted: #707080;
+
+  /* 强调色 */
+  --accent: #4ecdc4;
+  --accent-dim: rgba(78, 205, 196, 0.15);
+  --link: #64b5f6;
+  --link-hover: #90caf9;
+
+  /* 状态色 */
+  --hp-color: #c44a4a;
+  --satiety-color: #d8a12c;
+  --stamina-color: #4a9ad4;
+  --san-color: #9a6ab4;
+
+  /* 边框 */
+  --border-weak: rgba(255, 255, 255, 0.06);
+  --border-mid: rgba(255, 255, 255, 0.1);
+
+  /* 字号 */
+  --font-sm: 0.78rem;
+  --font-md: 0.85rem;
+  --font-base: 0.95rem;
+  --font-lg: 1rem;
+
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-bar: 8px;
+
+  /* 过渡 */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+
+  /* 阴影 */
+  --shadow-bar: 0 0 10px;
+  --shadow-panel: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════
+   重置
+   ═══════════════════════════════════════════════════ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+  max-width: 100%;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-a,
-.green {
+/* 取消默认的 Vite 链接样式 */
+a {
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
-}
-
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+  color: inherit;
 }

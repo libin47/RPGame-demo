@@ -18,6 +18,7 @@ import type { SeasonWeatherRegistry } from './seasonWeather'
 import type { MapRegistry } from './map'
 import type { CharacterRegistry } from './character'
 import type { BuildRegistry } from './building'
+import type { EndingRegistry } from './ending'
 
 /**
  * 游戏全局配置注册表
@@ -88,4 +89,7 @@ export interface GameRegistry {
 
   /** 职业注册表 */
   characters: CharacterRegistry
+
+  /** 结局注册表 */
+  endings: EndingRegistry
 }
