@@ -35,10 +35,6 @@ export interface BaseScene {
 
   // 是否为地牢场景
   isDungeon: boolean
-  // 是否为安全区（安全区内不会自动触发战斗类事件）
-  isSafeZone: boolean
-  // 是否可以扎营（临时营地）
-  canCamp: boolean
 
   // BGM资源ID
   bgmId?: string
@@ -58,9 +54,6 @@ export interface BaseScene {
  * 这些逻辑统一通过"进入事件"来实现，由事件系统处理。
  */
 export interface Scene extends BaseScene {
-  // 该场景是否可以作为基地建造地点
-  canBuildBase: boolean
-
   // 该场景包含的子场景ID列表（与 SubScene.parentSceneId 形成双向关联）
   subSceneIds?: string[]
 }
@@ -170,12 +163,8 @@ export interface SceneEventEntry {
   eventId: string
   // 显示条件（满足条件时此入口才显示并可点击）
   displayCondition?: Condition
-  // 可用条件（满足条件时此入口才可点击，不满足时仅显示文本但不可点击）
+  // 可用条件（满足条件时此入口才可点击，不满足时仅显示文本但不渲染蓝色）
   availableCondition?: Condition
-  // 不可用时的提示文本
-  unavailableTooltip?: string
-  // 是否在不满足条件时完全隐藏（不渲染此入口文本）
-  hideWhenUnavailable?: boolean
   // 点击后是否移除此入口（下次展示此描述时不再出现）
   removeAfterClick?: boolean
   // 点击后设置的标志位
@@ -259,18 +248,16 @@ export interface SceneInteraction {
   availableCondition?: Condition
   // 不可用时的提示文本
   unavailableTooltip?: string
-  // 是否在不满足可用条件时完全隐藏按钮
-  hideWhenUnavailable: boolean
 
   // ========== 消耗 ==========
   // 执行此交互消耗的资源
-  costs: InteractionCost[]
+  costs?: InteractionCost[]
 
   // ========== 交互行为参数 ==========
   behaviorParams: InteractionBehaviorParams
 
   // 交互是否需要确认弹窗
-  requiresConfirmation: boolean
+  requiresConfirmation?: boolean
   // 确认弹窗文本
   confirmationText?: string
 

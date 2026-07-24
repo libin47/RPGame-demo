@@ -1,4 +1,4 @@
-// config/events.ts
+﻿// config/events.ts
 import type { GameEvent, EventRegistry } from '../types/event'
 import { EventType, EventOptionStyle, EventOptionCostType } from '../types/event'
 import {
@@ -24,18 +24,18 @@ const eventPlaneWreckage: GameEvent = {
       id: 'wreckage_search',
       order: 1,
       text: '你穿过敞开的变形舱门，尽管已经做好了心理准备，但是里面的场景仍让你感觉呼吸一窒。\n\n扭曲的金属、碎裂的行李箱。\n\n以及，散落在各处的人体组织。\n\n你恍惚了许久才回过神来。',
-      onEnterEffects:[
-    {
+      onEnterEffects: [
+        {
           effect: {
             type: EffectType.ATTRIBUTE,
             attribute: AttributeType.SAN,
             operation: AttributeOperation.SUBTRACT,
             value: 10,
           },
-      probability: 1,
-      description: 'SAN-10',
-    },
-  ],
+          probability: 1,
+          description: 'SAN-10',
+        },
+      ],
       options: [
         {
           id: 'find_in_cloth',
@@ -44,22 +44,23 @@ const eventPlaneWreckage: GameEvent = {
           costs: [],
           isOneTime: true,
           selectedFlag: 'selected_find_in_cloth',
-          result: {
-            type: 'nextFrame',
-            targetFrameId: 'after_gather',
-            text: '你在扭曲的金属和碎裂的行李箱之间翻找。\n大部分东西都已经毁了——压碎的电子设备、浸透燃油的衣物、不知属于谁的家庭合照，玻璃相框已经碎了，照片上的笑容被海水泡得模糊不清。\n你找到了半瓶没开封的矿泉水。瓶身完好无损。你拧开盖子喝了一口，温热的水带着塑料瓶的味道，但你的喉咙已经不在乎了。\n你从座椅下方的应急箱里翻出了几包压缩饼干、一卷绷带、一小瓶消毒用的酒精。还有一把应急用的多功能刀，刀刃上刻着航空公司的标志。\n 你把它装进了口袋——也许以后用得上。',
-            effects: [
-              {
-                effect: {
-                  type: EffectType.ITEM,
-                  itemId: 'cloth_scrap',
-                  changeType: ItemChangeType.ADD,
-                  quantity: 3,
+          results: [
+            {
+              type: 'nextFrame',
+              targetFrameId: 'after_gather',
+              text: '你在扭曲的金属和碎裂的行李箱之间翻找。\n大部分东西都已经毁了——压碎的电子设备、浸透燃油的衣物、不知属于谁的家庭合照，玻璃相框已经碎了，照片上的笑容被海水泡得模糊不清。\n你找到了半瓶没开封的矿泉水。瓶身完好无损。你拧开盖子喝了一口，温热的水带着塑料瓶的味道，但你的喉咙已经不在乎了。\n你从座椅下方的应急箱里翻出了几包压缩饼干、一卷绷带、一小瓶消毒用的酒精。还有一把应急用的多功能刀，刀刃上刻着航空公司的标志。\n 你把它装进了口袋——也许以后用得上。',
+              effects: [
+                {
+                  effect: {
+                    type: EffectType.ITEM,
+                    itemId: 'cloth_scrap',
+                    changeType: ItemChangeType.ADD,
+                    quantity: 3,
+                  },
                 },
-                probability: 1,
-              },
-            ],
-          },
+              ],
+            },
+          ],
         },
         {
           id: 'find_in_xiangzi',
@@ -68,22 +69,24 @@ const eventPlaneWreckage: GameEvent = {
           costs: [],
           isOneTime: true,
           selectedFlag: 'selected_find_in_xiangzi',
-          result: {
-            type: 'nextFrame',
-            targetFrameId: 'after_gather',
-            text: '你打开了一个没有被完全压碎的行李箱。衣物叠得很整齐，是某个人的旅途行装。换洗衬衫、牛仔裤、一本旅行指南、一个洗漱包。\n\n在行李箱的夹层里，你找到了一本皮质封面的笔记本，翻开后是空白页面——主人还没来得及写任何东西。你把笔记本收好。空白的纸总有它的用处。\n\n另一个行李箱里有一包烟，还剩大半包，被仔细地装在一个铁盒里。铁盒打开时，烟草的干燥香气暂时盖过了燃油和海水的味道。你合上盖子，把铁盒放进自己的口袋。',
-            effects: [
-              {
-                effect: {
-                  type: EffectType.ITEM,
-                  itemId: 'one_note',
-                  changeType: ItemChangeType.ADD,
-                  quantity: 1,
+          results: [
+            {
+              type: 'nextFrame',
+              targetFrameId: 'after_gather',
+              text: '你打开了一个没有被完全压碎的行李箱。衣物叠得很整齐，是某个人的旅途行装。换洗衬衫、牛仔裤、一本旅行指南、一个洗漱包。\n\n在行李箱的夹层里，你找到了一本皮质封面的笔记本，翻开后是空白页面——主人还没来得及写任何东西。你把笔记本收好。空白的纸总有它的用处。\n\n另一个行李箱里有一包烟，还剩大半包，被仔细地装在一个铁盒里。铁盒打开时，烟草的干燥香气暂时盖过了燃油和海水的味道。你合上盖子，把铁盒放进自己的口袋。',
+              effects: [
+                {
+                  effect: {
+                    type: EffectType.ITEM,
+                    itemId: 'one_note',
+                    changeType: ItemChangeType.ADD,
+                    quantity: 1,
+                  },
+                  probability: 1,
                 },
-                probability: 1,
-              },
-            ],
-          },
+              ],
+            },
+          ],
         },
         {
           id: 'take_sword',
@@ -92,34 +95,36 @@ const eventPlaneWreckage: GameEvent = {
           costs: [],
           isOneTime: true,
           selectedFlag: 'selected_take_sword',
-          result: {
-            type: 'nextFrame',
-            targetFrameId: 'wreckage_search',
-            effects: [
-              {
-                effect: {
-                  type: EffectType.ITEM,
-                  itemId: 'rusty_sword',
-                  changeType: ItemChangeType.ADD,
-                  quantity: 1,
+          results: [
+            {
+              type: 'nextFrame',
+              targetFrameId: 'wreckage_search',
+              effects: [
+                {
+                  effect: {
+                    type: EffectType.ITEM,
+                    itemId: 'rusty_sword',
+                    changeType: ItemChangeType.ADD,
+                    quantity: 1,
+                  },
+                  probability: 1,
+                  description: '获得生锈的铁剑',
                 },
-                probability: 1,
-                description: '获得生锈的铁剑',
-              },
-              {
-                effect: {
-                  type: EffectType.SKILL,
-                  skillId: 'basic_slash',
-                  unlock: true,
+                {
+                  effect: {
+                    type: EffectType.SKILL,
+                    skillId: 'basic_slash',
+                    unlock: true,
+                  },
+                  probability: 1,
+                  description: '解锁基础挥砍技能',
                 },
-                probability: 1,
-                description: '解锁基础挥砍技能',
+              ],
+              setFlags: {
+                collected_sword: true,
               },
-            ],
-            setFlags: {
-              collected_sword: true,
             },
-          },
+          ],
         },
         {
           id: 'take_blueprint',
@@ -128,35 +133,37 @@ const eventPlaneWreckage: GameEvent = {
           costs: [],
           isOneTime: true,
           selectedFlag: 'selected_take_blueprint',
-          result: {
-            type: 'nextFrame',
-            targetFrameId: 'after_gather',
-            effects: [
-              {
-                effect: {
-                  type: EffectType.ITEM,
-                  itemId: 'campfire_blueprint',
-                  changeType: ItemChangeType.ADD,
-                  quantity: 1,
+          results: [
+            {
+              type: 'nextFrame',
+              targetFrameId: 'after_gather',
+              effects: [
+                {
+                  effect: {
+                    type: EffectType.ITEM,
+                    itemId: 'campfire_blueprint',
+                    changeType: ItemChangeType.ADD,
+                    quantity: 1,
+                  },
+                  probability: 1,
+                  description: '获得篝火建造图',
                 },
-                probability: 1,
-                description: '获得篝火建造图',
-              },
-              {
-                effect: {
-                  type: EffectType.RECIPE,
-                  recipeId: 'build_campfire',
-                  recipeType: RecipeType.BUILD,
-                  unlock: true,
+                {
+                  effect: {
+                    type: EffectType.RECIPE,
+                    recipeId: 'build_campfire',
+                    recipeType: RecipeType.BUILD,
+                    unlock: true,
+                  },
+                  probability: 1,
+                  description: '解锁篝火建造配方',
                 },
-                probability: 1,
-                description: '解锁篝火建造配方',
+              ],
+              setFlags: {
+                collected_blueprint: true,
               },
-            ],
-            setFlags: {
-              collected_blueprint: true,
             },
-          },
+          ],
         },
       ],
     },
@@ -170,11 +177,13 @@ const eventPlaneWreckage: GameEvent = {
           text: '离开残骸',
           displayPriority: 1,
           costs: [],
-          result: {
-            type: 'endEvent',
-            effects: [],
-            exitText: '你离开了飞机残骸，回到了海滩上',
-          },
+          results: [
+            {
+              type: 'endEvent',
+              effects: [],
+              exitText: '你离开了飞机残骸，回到了海滩上',
+            },
+          ],
         },
       ],
     },
@@ -201,15 +210,17 @@ const eventBeachCrabEncounter: GameEvent = {
           text: '战斗',
           displayPriority: 2,
           costs: [],
-          result: {
-            type: 'triggerBattle',
-            enemyId: ['mutated_crab'],
-            victoryFrameId: 'crab_victory',
-            defeatFrameId: 'crab_defeat',
-            escapeFrameId: 'crab_escaped',
-            canEscape: true,
-            firstEncounterBonus: true,
-          },
+          results: [
+            {
+              type: 'triggerBattle',
+              enemyId: ['mutated_crab'],
+              victoryFrameId: 'crab_victory',
+              defeatFrameId: 'crab_defeat',
+              escapeFrameId: 'crab_escaped',
+              canEscape: true,
+              firstEncounterBonus: true,
+            },
+          ],
           optionStyle: EventOptionStyle.DANGER,
         },
         {
@@ -223,11 +234,13 @@ const eventBeachCrabEncounter: GameEvent = {
               value: 10,
             },
           ],
-          result: {
-            type: 'endEvent',
-            effects: [],
-            exitText: '你飞快地逃离了变异蟹的领地',
-          },
+          results: [
+            {
+              type: 'endEvent',
+              effects: [],
+              exitText: '你飞快地逃离了变异蟹的领地',
+            },
+          ],
           optionStyle: EventOptionStyle.DEFAULT,
         },
       ],
@@ -271,11 +284,13 @@ const eventBeachCrabEncounter: GameEvent = {
           text: '分解蟹肉',
           displayPriority: 1,
           costs: [],
-          result: {
-            type: 'endEvent',
-            effects: [],
-            exitText: '你从变异蟹身上获取了一些有用的材料',
-          },
+          results: [
+            {
+              type: 'endEvent',
+              effects: [],
+              exitText: '你从变异蟹身上获取了一些有用的材料',
+            },
+          ],
         },
       ],
     },
@@ -289,11 +304,13 @@ const eventBeachCrabEncounter: GameEvent = {
           text: '返回海滩',
           displayPriority: 1,
           costs: [],
-          result: {
-            type: 'endEvent',
-            effects: [],
-            exitText: '你安全回到了海滩上',
-          },
+          results: [
+            {
+              type: 'endEvent',
+              effects: [],
+              exitText: '你安全回到了海滩上',
+            },
+          ],
         },
       ],
     },
@@ -307,11 +324,13 @@ const eventBeachCrabEncounter: GameEvent = {
           text: '...',
           displayPriority: 1,
           costs: [],
-          result: {
-            type: 'endEvent',
-            effects: [],
-            exitText: '',
-          },
+          results: [
+            {
+              type: 'endEvent',
+              effects: [],
+              exitText: '',
+            },
+          ],
         },
       ],
     },
@@ -341,32 +360,36 @@ const eventGatherBerries: GameEvent = {
               value: 8,
             },
           ],
-          result: {
-            type: 'nextFrame',
-            targetFrameId: 'gather_result',
-            effects: [
-              {
-                effect: {
-                  type: EffectType.GAIN_EXP,
-                  target: GainExpTarget.SURVIVAL_SKILL,
-                  targetId: 'gathering',
-                  amount: 15,
+          results: [
+            {
+              type: 'nextFrame',
+              targetFrameId: 'gather_result',
+              effects: [
+                {
+                  effect: {
+                    type: EffectType.GAIN_EXP,
+                    target: GainExpTarget.SURVIVAL_SKILL,
+                    targetId: 'gathering',
+                    amount: 15,
+                  },
+                  probability: 1,
                 },
-                probability: 1,
-              },
-            ],
-          },
+              ],
+            },
+          ],
         },
         {
           id: 'leave_berries',
           text: '离开',
           displayPriority: 2,
           costs: [],
-          result: {
-            type: 'endEvent',
-            effects: [],
-            exitText: '你决定不采摘这些浆果',
-          },
+          results: [
+            {
+              type: 'endEvent',
+              effects: [],
+              exitText: '你决定不采摘这些浆果',
+            },
+          ],
         },
       ],
     },
@@ -392,11 +415,13 @@ const eventGatherBerries: GameEvent = {
           text: '继续前进',
           displayPriority: 1,
           costs: [],
-          result: {
-            type: 'endEvent',
-            effects: [],
-            exitText: '你继续探索森林',
-          },
+          results: [
+            {
+              type: 'endEvent',
+              effects: [],
+              exitText: '你继续探索森林',
+            },
+          ],
         },
       ],
     },
@@ -422,41 +447,45 @@ const eventJournalFragment: GameEvent = {
           text: '阅读日志',
           displayPriority: 1,
           costs: [],
-          result: {
-            type: 'nextFrame',
-            targetFrameId: 'read_journal',
-            effects: [
-              {
-                effect: {
-                  type: EffectType.ITEM,
-                  itemId: 'journal_fragment',
-                  changeType: ItemChangeType.ADD,
-                  quantity: 1,
+          results: [
+            {
+              type: 'nextFrame',
+              targetFrameId: 'read_journal',
+              effects: [
+                {
+                  effect: {
+                    type: EffectType.ITEM,
+                    itemId: 'journal_fragment',
+                    changeType: ItemChangeType.ADD,
+                    quantity: 1,
+                  },
+                  probability: 1,
                 },
-                probability: 1,
-              },
-              {
-                effect: {
-                  type: EffectType.FLAG,
-                  flagId: 'found_journal_fragment',
-                  operation: FlagOperation.SET,
-                  value: true,
+                {
+                  effect: {
+                    type: EffectType.FLAG,
+                    flagId: 'found_journal_fragment',
+                    operation: FlagOperation.SET,
+                    value: true,
+                  },
+                  probability: 1,
                 },
-                probability: 1,
-              },
-            ],
-          },
+              ],
+            },
+          ],
         },
         {
           id: 'ignore_journal',
           text: '不理会',
           displayPriority: 2,
           costs: [],
-          result: {
-            type: 'endEvent',
-            effects: [],
-            exitText: '你决定不去碰那些可疑的纸张',
-          },
+          results: [
+            {
+              type: 'endEvent',
+              effects: [],
+              exitText: '你决定不去碰那些可疑的纸张',
+            },
+          ],
         },
       ],
     },
@@ -482,11 +511,13 @@ const eventJournalFragment: GameEvent = {
           text: '合上日志',
           displayPriority: 1,
           costs: [],
-          result: {
-            type: 'endEvent',
-            effects: [],
-            exitText: '你合上了日志，但那些文字仍然在你脑海中回荡',
-          },
+          results: [
+            {
+              type: 'endEvent',
+              effects: [],
+              exitText: '你合上了日志，但那些文字仍然在你脑海中回荡',
+            },
+          ],
         },
       ],
     },

@@ -837,9 +837,6 @@ export class EffectResolver {
       case 'build':
         recipeList = player.unlockedRecipes.buildRecipes
         break
-      case 'repair':
-        recipeList = player.unlockedRecipes.repairRecipes
-        break
     }
 
     if (!recipeList) return `未知配方类型: ${recipeType}`

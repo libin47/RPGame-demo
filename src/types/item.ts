@@ -26,7 +26,7 @@ export enum ItemCategory {
   DOCUMENT = 'document',
   /** 蓝图/配方（解锁制作、建造、烹饪配方） */
   RECIPE = 'recipe',
-  /** 杂项（不属于以上分类的物品） */
+  /** 杂项（不可交易丢弃的重要物品） */
   MISC = 'misc',
 }
 
@@ -68,7 +68,7 @@ export interface BaseItem {
   /** 物品类别 */
   category: ItemCategory
   /** 物品稀有度 */
-  rarity: ItemRarity
+  // rarity: ItemRarity
 
   /** 物品图标资源ID */
   iconId: string
@@ -163,12 +163,6 @@ export interface WeaponItem extends BaseItem {
   /** 武器基础属性 */
   weaponStats: WeaponStats
 
-  /** 武器是否可双持（双持时可装备两把同类型武器） */
-  isDualWieldable: boolean
-
-  /** 是否为双手武器（双手武器占用两个武器槽位） */
-  isTwoHanded: boolean
-
   /** 装备此武器时提供的属性修正 */
   attributeModifiers?: AttributeModifier[]
 
@@ -177,12 +171,6 @@ export interface WeaponItem extends BaseItem {
 
   /** 装备此武器时提供的被动技能ID列表 */
   grantedPassiveIds?: string[]
-
-  /** 使用条件（覆盖BaseItem的useCondition，可额外要求武器熟练度等） */
-  proficiencyRequirement?: {
-    weaponTypeId: string
-    minLevel: number
-  }
 }
 
 /**
@@ -332,9 +320,6 @@ export interface ConsumableStatusEffect {
  */
 export interface MaterialItem extends BaseItem {
   category: ItemCategory.MATERIAL
-
-  /** 材料类型（用于分类和配方匹配） */
-  materialType: string
 }
 
 // ============================================================
@@ -409,11 +394,6 @@ export interface RecipeItem extends BaseItem {
  */
 export interface MiscItem extends BaseItem {
   category: ItemCategory.MISC
-
-  /** 是否可以与其他物品组合 */
-  isCombinable: boolean
-  /** 组合配方（组合目标物品ID -> 产物物品ID） */
-  combineRecipes?: Record<string, string>
   /** 使用效果（如果可"使用"的话） */
   useEffects?: EffectResult[]
 }
@@ -450,8 +430,7 @@ export type StackableItem = MaterialItem | ConsumableItem | ValuableItem | MiscI
 export enum EquipmentSlot {
   /** 主手武器 */
   WEAPON = 'weapon',
-  /** 副手武器/盾牌 */
-  OFF_HAND = 'offHand',
+
   /** 头部 */
   HEAD = 'head',
   /** 身体/躯干 */
@@ -516,5 +495,4 @@ export interface SkillBonus {
 export interface ItemRegistry {
   /** 所有物品配置，按ID索引 */
   items: Record<string, Item>
-
 }

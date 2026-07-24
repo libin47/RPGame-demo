@@ -166,8 +166,8 @@ export interface EventOption {
   /** 选择此选项消耗的资源 */
   costs?: EventOptionCost[]
 
-  /** 选项结果（选择后发生的事情） */
-  result: EventOptionResult
+  /** 选项结果列表（按权重概率触发，支持条件过滤） */
+  results: EventOptionResult[]
 
   /** 选项优先级（数字越大显示越靠前） */
   displayPriority?: number
@@ -232,6 +232,25 @@ export enum EventOptionCostType {
 // ============================================================
 
 /**
+ * 事件选项结果的公共基类字段
+ * 所有结果类型共享：概率权重、触发条件、效果、标志位
+ */
+export interface EventResultBase {
+  /**
+   * 触发权重（概率比值）
+   * 当多个结果满足条件时，按权重比例选择
+   * 默认 1。权重越大，被选中的概率越高
+   */
+  weight?: number
+  /** 结果触发条件（满足条件才可能触发此结果，不填则总是可触发） */
+  condition?: Condition
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, FlagValue>
+}
+
+/**
  * 事件选项结果（联合类型）
  * 选项的结果必为以下之一：
  * - 跳转到同一事件的另一个帧
@@ -243,13 +262,13 @@ export enum EventOptionCostType {
  * - 触发另一个事件
  */
 export type EventOptionResult =
-  | NextFrameResult
-  | EndEventResult
-  | TriggerBattleResult
-  | PlayCGResult
-  | OpenTradeResult
-  | SwitchSceneResult
-  | TriggerEventResult
+  | (NextFrameResult & EventResultBase)
+  | (EndEventResult & EventResultBase)
+  | (TriggerBattleResult & EventResultBase)
+  | (PlayCGResult & EventResultBase)
+  | (OpenTradeResult & EventResultBase)
+  | (SwitchSceneResult & EventResultBase)
+  | (TriggerEventResult & EventResultBase)
 
 /**
  * 跳转到同一事件的另一个帧
@@ -258,10 +277,6 @@ export interface NextFrameResult {
   type: 'nextFrame'
   /** 目标帧ID（同一事件内） */
   targetFrameId: string
-  /** 执行的效果列表 */
-  effects?: EffectResult[]
-  /** 设置标志位 */
-  setFlags?: Record<string, FlagValue>
   // 描述文本
   text?: string
 }
@@ -271,10 +286,6 @@ export interface NextFrameResult {
  */
 export interface EndEventResult {
   type: 'endEvent'
-  /** 执行的效果列表 */
-  effects?: EffectResult[]
-  /** 设置标志位 */
-  setFlags?: Record<string, FlagValue>
   /** 返回场景后显示的文字（可选，如"你离开了小屋"） */
   exitText?: string
 }
@@ -294,10 +305,6 @@ export interface TriggerBattleResult {
   escapeFrameId?: string
   /** 是否可逃跑 */
   canEscape?: boolean
-  /** 战前执行的效果列表 */
-  effects?: EffectResult[]
-  /** 设置标志位 */
-  setFlags?: Record<string, FlagValue>
   /** 是否有初见加成（初见时逃跑概率翻倍） */
   firstEncounterBonus?: boolean
 }
@@ -311,10 +318,6 @@ export interface PlayCGResult {
   cgId: string
   /** CG结束后跳转的帧ID（不填则CG结束后返回场景） */
   returnFrameId?: string
-  /** 执行的效果列表 */
-  effects?: EffectResult[]
-  /** 设置标志位 */
-  setFlags?: Record<string, FlagValue>
 }
 
 /**
@@ -326,10 +329,6 @@ export interface OpenTradeResult {
   traderId: string
   /** 交易结束后跳转的帧ID（不填则交易结束后返回场景） */
   returnFrameId?: string
-  /** 执行的效果列表 */
-  effects?: EffectResult[]
-  /** 设置标志位 */
-  setFlags?: Record<string, FlagValue>
 }
 
 /**
@@ -341,12 +340,8 @@ export interface SwitchSceneResult {
   sceneId: string
   /** 目标子场景ID（可选） */
   subSceneId?: string
-  /** 执行的效果列表 */
-  effects?: EffectResult[]
-  /** 设置标志位 */
-  setFlags?: Record<string, FlagValue>
   /** 进入新场景后显示的文字（可选） */
-  enterText?: string
+  text?: string
 }
 
 /**
@@ -358,10 +353,6 @@ export interface TriggerEventResult {
   eventId: string
   /** 目标事件结束后跳转的帧ID（不填则返回场景） */
   returnFrameId?: string
-  /** 执行的效果列表 */
-  effects?: EffectResult[]
-  /** 设置标志位 */
-  setFlags?: Record<string, FlagValue>
 }
 
 // ============================================================
@@ -374,5 +365,4 @@ export interface TriggerEventResult {
 export interface EventRegistry {
   /** 所有事件配置，按ID索引 */
   events: Record<string, GameEvent>
-
 }

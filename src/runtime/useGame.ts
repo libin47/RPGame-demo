@@ -3,9 +3,9 @@
 import { reactive, readonly } from 'vue'
 import type { PlayerState } from '@/types/player'
 import type { Scene, SceneDescription, SubScene } from '@/types/scene'
-import type { GameEvent, EventFrame } from '@/types/event'
+import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
 import type { EndingConfig } from '@/types/ending'
-import { getRegistry, getEffectResolver, advanceTime } from '@/engine'
+import { getRegistry, getEffectResolver, advanceTime, evaluateCondition } from '@/engine'
 import { selectSceneDescription, markDescriptionSeen, checkAutoTrigger } from '@/engine'
 import { getVisibleOptions, findFirstVisibleFrame } from '@/engine'
 import { createBattle, startBattle, executePlayerAction, settleBattle } from '@/engine'
@@ -174,6 +174,53 @@ export function useGame(initialPlayer: PlayerState) {
     state.frameTextPrefix = ''
   }
 
+  // ============================================================
+  // 事件选项加权选择
+  // ============================================================
+
+  /**
+   * 从选项的结果列表中按条件过滤 + 权重概率选取一个结果
+   * 规则：
+   *  1. 根据 condition 过滤出可用结果
+   *  2. 如果仅一个满足条件，直接返回（无视权重）
+   *  3. 如果多个满足条件，按 weight 比例随机选取
+   *
+   * @param option - 被选中的选项
+   * @param player - 玩家状态
+   * @returns 选中的结果
+   */
+  function pickWeightedResult(
+    option: NonNullable<(typeof state)['currentFrame']>['options'][number],
+    player: PlayerState,
+  ): EventOptionResult {
+    const results = option.results
+
+    // 1. 按条件过滤
+    const candidates = results.filter((r): r is EventOptionResult =>
+      evaluateCondition(r.condition, player),
+    )
+
+    // 至少选一个——即使候选列表为空，也直接从原列表中取第一个（兜底）
+    if (candidates.length === 0) {
+      console.warn(`选项 ${option.id} 的结果全部不符合条件，取第一个`)
+      return results[0]!
+    }
+
+    // 2. 仅一个候选 → 直接返回
+    if (candidates.length === 1) return candidates[0]!
+
+    // 3. 多个候选 → 加权随机
+    const totalWeight = candidates.reduce((sum, r) => sum + (r.weight ?? 1), 0)
+    let roll = Math.random() * totalWeight
+    for (const candidate of candidates) {
+      roll -= candidate.weight ?? 1
+      if (roll <= 0) return candidate
+    }
+
+    // 兜底（浮点精度原因）
+    return candidates[candidates.length - 1]!
+  }
+
   /**
    * 处理事件选项选择
    * 根据选项结果执行对应操作
@@ -187,7 +234,7 @@ export function useGame(initialPlayer: PlayerState) {
     // 选择选项消耗5分钟游戏时间
     advanceGameTime(5)
 
-    const result = option.result
+    const result = pickWeightedResult(option, state.player)
     const resolver = getEffectResolver()
 
     // 标记选项已选（用于 isOneTime 追踪）

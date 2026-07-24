@@ -334,8 +334,6 @@ export interface PlayerUnlockedRecipes {
   cookRecipes: string[]
   /** 已解锁的建造配方ID列表 */
   buildRecipes: string[]
-  /** 已解锁的修复配方ID列表 */
-  repairRecipes: string[]
 }
 
 // ============================================================

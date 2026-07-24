@@ -213,7 +213,6 @@ function resolveConditionTarget(
         ...player.unlockedRecipes.craftRecipes,
         ...player.unlockedRecipes.cookRecipes,
         ...player.unlockedRecipes.buildRecipes,
-        ...player.unlockedRecipes.repairRecipes,
       ]
       return allRecipes.includes(recipeId)
     }
@@ -391,11 +390,6 @@ export function isOptionAvailable(option: EventOption, player: PlayerState): boo
  * @returns 是否可以触发
  */
 export function canTriggerEvent(event: GameEvent, player: PlayerState): boolean {
-  // 检查触发条件
-  if (!evaluateCondition(event.triggerCondition, player)) {
-    return false
-  }
-
   // 检查是否已经触发过（非重复事件）
   if (!event.isRepeatable && event.triggeredFlag) {
     if (player.flags[event.triggeredFlag]) {

@@ -124,8 +124,6 @@ export interface StatusEffect {
   apply: boolean
   /** 持续时间值（-1=使用状态模板默认值） */
   duration?: number
-  /** 持续时间单位（不填则使用状态模板默认单位） */
-  durationUnit?: 'turn' | 'minute' | 'hour' | 'permanent'
   /** 施加层数（apply=true时生效，受状态模板叠加规则约束） */
   stackCount?: number
   /** 来源描述（用于战斗日志等，如"来自毒蛇之咬"） */
