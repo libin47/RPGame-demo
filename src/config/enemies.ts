@@ -7,9 +7,9 @@ import {
 } from '../types/enemy'
 import { FlagOperation } from '@/types/flag'
 
-const mutatedCrab: Enemy = {
-  id: 'mutated_crab',
-  name: '变异蟹',
+const 大螃蟹: Enemy = {
+  id: '大螃蟹',
+  name: '大螃蟹',
   description: '一只体型巨大的螃蟹，甲壳上长满了不规则的尖刺，螯钳异常发达',
   imageId: 'enemy_mutated_crab',
   enemyType: EnemyType.MUTATED,
@@ -44,7 +44,7 @@ const mutatedCrab: Enemy = {
       cooldown: 0,
       targetType: EnemySkillTargetType.SINGLE_PLAYER,
       chargeTime: 0,
-      useTextTemplate: '变异蟹挥动巨螯，向你猛击过来',
+      useTextTemplate: '大螃蟹挥动巨螯，向你猛击过来',
     },
     {
       id: 'crab_foam_spray',
@@ -76,13 +76,12 @@ const mutatedCrab: Enemy = {
             statusId: 'poisoned',
             apply: true,
             duration: 15,
-            durationUnit: 'minute',
           },
           probability: 0.4,
           description: '有概率使玩家中毒',
         },
       ],
-      useTextTemplate: '变异蟹向你喷射出一股绿色毒沫',
+      useTextTemplate: '大螃蟹向你喷射出一股绿色毒沫',
     },
   ],
   behavior: {
@@ -92,8 +91,8 @@ const mutatedCrab: Enemy = {
       type: 'enrage',
       params: {
         damageMultiplier: 1.5,
-      },
-      triggerText: '变异蟹受到重创，变得更加狂暴',
+        },
+      triggerText: '大螃蟹受到重创，变得更加狂暴',
     },
   },
   corruptionScaling: {
@@ -258,7 +257,7 @@ const dreamStalker: Enemy = {
 
 export const enemyRegistry: EnemyRegistry = {
   enemies: {
-    mutated_crab: mutatedCrab,
+    大螃蟹: 大螃蟹,
     dream_stalker: dreamStalker,
   },
 }

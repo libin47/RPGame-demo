@@ -1,4 +1,8 @@
-// config/scenes.ts
+// ============================================================
+// 此文件由 XLSX 转换器自动生成，请勿手动修改
+// 生成时间: 2026-07-24 22:49:51
+// ============================================================
+
 import {
   AttributeType,
   ComparisonOperator,
@@ -6,450 +10,611 @@ import {
   LogicOperator,
 } from '@/types/effect'
 import type { Scene, SubScene, SceneRegistry } from '../types/scene'
-import { InteractionType, InteractionCostType, FunctionType, Direction } from '../types/scene'
+import {
+  InteractionType, InteractionCostType, Direction,
+} from '../types/scene'
 
-// ===== 海滩场景 =====
+// ============================================================
+// 条件定义
+// ============================================================
+
+const cond_first_time_on_beach = {
+    target: {
+      type: ConditionTargetType.FLAG,
+      id: 'first_time_on_beach',
+    },
+    operator: ComparisonOperator.EQUAL,
+    value: true,
+  }
+const cond_corruption_25 = {
+    target: {
+      type: ConditionTargetType.CORRUPTION,
+    },
+    operator: ComparisonOperator.GREATER_EQUAL,
+    value: 25,
+  }
+const cond_explored_cave_false = {
+    target: {
+      type: ConditionTargetType.FLAG,
+      id: 'explored_cave',
+    },
+    operator: ComparisonOperator.EQUAL,
+    value: false,
+  }
+const cond_explored_cave_true = {
+    target: {
+      type: ConditionTargetType.FLAG,
+      id: 'explored_cave',
+    },
+    operator: ComparisonOperator.NOT_EQUAL,
+    value: false,
+  }
+const cond_strange_markings = {
+    target: {
+      type: ConditionTargetType.ATTRIBUTE,
+      attributeType: AttributeType.SAN,
+    },
+    operator: ComparisonOperator.LESS_EQUAL,
+    value: 60,
+  }
+const cond_beach_crabs = {
+    logic: LogicOperator.AND,
+    subConditions: [
+      cond_first_time_on_beach,
+      cond_corruption_25,
+    ],
+  }
+const cond_cave_first_enter = {
+    logic: LogicOperator.AND,
+    subConditions: [
+      cond_explored_cave_false,
+    ],
+  }
+const cond_enter_cave = {
+    logic: LogicOperator.AND,
+    subConditions: [
+      cond_explored_cave_true,
+    ],
+  }
+
+// ============================================================
+// 海滩
+// ============================================================
 
 const beach: Scene = {
-  id: 'beach',
-  name: '海滩',
-  notes: '游戏起始场景，玩家从飞机残骸中醒来',
-  descriptions: [
-    {
-      id: 'beach_first_arrival',
-      priority: 10,
-      isOneTime: true,
-      isAutoTrigger: false,
-      seenFlag: 'seen_beach_first_arrival',
-      displayCondition: {
-        logic: LogicOperator.AND,
-        subConditions: [
+    id: 'beach',
+    name: '坠机海滩',
+    descriptions: [
+      {
+        id: 'beach_1',
+        priority: 10,
+        text: '你在一阵剧痛中醒来。\n\n嘴里有沙子的味道，粗粝的，带着盐。你侧过头吐了一口，沙粒黏在嘴唇上。\n天空是一片过曝的灰白色。你眯起眼，过了几秒才适应光线。\n\n耳边的声音很乱——海浪拍打沙滩的低沉轰鸣、远处什么东西在燃烧的噼啪声、还有风穿过某种金属裂隙时发出的尖细啸音。\n你试着动了一下手指。它们蜷在湿沙里，麻木的，但还能动。然后是胳膊、肩膀、脊椎——你逐节确认了一遍。左肋有一块钝痛，可能是撞击留下的。没有骨折。你撑起身体。\n手掌陷入沙中，海水漫上来，没过你的手腕。冰凉的。\n\n你跪在沙滩上，抬起头。',
+        isAutoTrigger: false,
+        isOneTime: true,
+        seenFlag: 'beach_1',
+      },
+      {
+        id: 'beach_2',
+        priority: 9,
+        text: '{beach_2_event_1}散落在整条海岸线上。扭曲的银白色金属碎片、烧焦的座椅垫、一只不知属于谁的鞋，孤零零地躺在潮水够不到的地方。远处的机翼断成两截，其中半截斜插在沙滩上，像一块被遗忘的墓碑。\\nn海是平静的。蓝色深到近乎黑色。\n\n地平线空无一物。没有船，没有灯塔，没有任何人造建筑的轮廓。\n\n你跪在那里，看着面前这座陌生的岛屿。\n\n然后你站起来。',
+        isAutoTrigger: false,
+        isOneTime: false,
+        removeAfterInteraction: true,
+        eventFlag: 'beach_2',
+        eventEntries: [
           {
-            target: { type: ConditionTargetType.FLAG, id: 'first_time_on_beach' },
-            operator: ComparisonOperator.EQUAL,
-            value: true,
+            key: 'beach_2_event_1',
+            displayText: '飞机残骸',
+            eventId: 'event_beach_飞机残骸',
           },
         ],
       },
-      text: '你从破碎的座椅残骸中睁开眼睛。\n\n海浪的声音先于疼痛到达——规律的白噪音，一遍遍冲刷着沙滩。然后是气味：航空燃油的刺鼻味道混合着海水的咸腥。你嘴里有血的味道。\n\n右肋在痛。你低头检查，一片瘀伤从肋骨蔓延到腰侧。钝痛，不是骨折。至少不是让你立刻死去的那种。\n\n飞机残骸散落在沙滩上，像被巨人随手折断的玩具。机翼插在浅滩里，尾翼挂在远处的棕榈树上，机身断成几截，其中一截还在冒烟。\n\n你试着站起来。腿还听使唤。\n\n你还活着。',
 
-    },
-    {
-      id: 'beach_second_arrival',
-      priority: 9,
-      removeAfterInteraction: true,
-      isAutoTrigger: false,
-      isOneTime: false,
-      text: '你努力站起身来。\n\n{plane_wreckage}依然散落在不远处，海浪不断拍打着沙滩。\n\n 几只海鸥从天空飞过。\n\n或许你应该过去看看还有没有其他的幸存者。\n\n 或者，看看有没有能用得到的东西。',
-      eventEntries: [
-        {
-          key: 'plane_wreckage',
-          displayText: '飞机残骸',
-          eventId: 'event_plane_wreckage',
-          removeAfterClick: false,
-        },
-      ],
-
-    },
-    {
-      id: 'beach_crabs',
-      priority: 3,
-      displayCondition: {
-        logic: LogicOperator.AND,
-        subConditions: [
+      {
+        id: 'beach_螃蟹',
+        priority: 3,
+        text: '你在沙滩上发现了一些{beach_event}在徘徊，真的超大只！',
+        eventEntries: [
           {
-            target: { type: ConditionTargetType.FLAG, id: 'defeated_first_crab' },
-            operator: ComparisonOperator.EQUAL,
-            value: false,
-          },
-          {
-            target: { type: ConditionTargetType.CORRUPTION },
-            operator: ComparisonOperator.GREATER_EQUAL,
-            value: 25,
+            key: 'beach_event',
+            displayText: '大螃蟹',
+            eventId: 'event_beach_大螃蟹',
           },
         ],
+        isAutoTrigger: false,
+        isOneTime: false,
       },
-      text: '你在沙滩上发现了一些{mutated_crab}在徘徊，它们的甲壳在阳光下泛着诡异的光泽。',
-      eventEntries: [
-        {
-          key: 'mutated_crab',
-          displayText: '变异蟹',
-          eventId: 'event_beach_crab_encounter',
-        },
-      ],
-      isAutoTrigger: true,
-      autoTriggerEventKey: 'mutated_crab',
-      isOneTime: false,
-      viewLimit: -1,
-    },
-  ],
-  backgroundImage: 'bg_beach',
-  temperatureModifier: 5,
-  interactions: [
-    {
-      id: 'explore_beach',
-      name: '探索海滩',
-      interactionType: InteractionType.EXPLORE,
-      hideWhenUnavailable: false,
-      costs: [
-        {
-          costType: InteractionCostType.STAMINA,
-          value: 10,
-          affectedByCoefficient: true,
-        },
-      ],
-      behaviorParams: {
+      {
+        id: 'beach_1',
+        priority: 3,
+        text: '{plane_wreckage}散落在海岸线上，扭曲的金属在阳光下反射出刺眼的光斑。机翼断成两截，一截插在浅滩里，一截躺在沙滩上，表面还残留着烧灼后的焦黑。\\n\\n残骸周围散落着行李箱和货物的碎片。几只海鸟在远处的礁石上起落。{棕榈树}的阴影投在沙滩边缘，树下堆积着被风浪吹上岸的落叶和枯枝。',
+        isAutoTrigger: false,
+        isOneTime: false,
+      },
+      {
+        id: 'beach_2',
+        priority: 3,
+        text: '潮水把各种东西冲上岸边。椰子的空壳、被海水泡烂的木头碎片、一团纠缠在一起的渔网、不知从什么地方漂来的塑料瓶。这些东西在沙滩上零零散散地分布着，每一次退潮都会留下新的，每一次涨潮又会带走一些旧的。你蹲下来翻检这些来自{大海的馈赠}。',
+        isAutoTrigger: false,
+        isOneTime: false,
+      },
+    ],
+    temperatureModifier: 5,
+    interactions: [
+      {
+        id: '探索海滩',
+        name: '探索海滩',
         interactionType: InteractionType.EXPLORE,
-      },
-      requiresConfirmation: false,
-      displayPriority: 10,
-      isOneTime: false,
-      cooldownMinutes: 0,
-    },
-    {
-      id: 'enter_cave',
-      name: '进入洞穴',
-      interactionType: InteractionType.ENTER_SUB_SCENE,
-      hideWhenUnavailable: true,
-      displayCondition: {
-        logic: LogicOperator.AND,
-        subConditions: [
+        costs: [
           {
-            target: { type: ConditionTargetType.FLAG, id: 'explored_cave' },
-            operator: ComparisonOperator.NOT_EQUAL,
-            value: false,
+            costType: InteractionCostType.STAMINA,
+            value: 10,
+            affectedByCoefficient: true,
           },
         ],
-      },
-      costs: [
-        {
-          costType: InteractionCostType.STAMINA,
-          value: 15,
-          affectedByCoefficient: true,
+        behaviorParams: {
+          interactionType: InteractionType.EXPLORE,
         },
-      ],
-      behaviorParams: {
+        displayPriority: 10,
+        isOneTime: false,
+      },
+      {
+        id: '飞机残骸',
+        name: '飞机残骸',
+        displayFlag: ['beach_飞机残骸_搜索幸存者'],
         interactionType: InteractionType.ENTER_SUB_SCENE,
-        subSceneId: 'beach_cave',
-      },
-      requiresConfirmation: false,
-      displayPriority: 5,
-      isOneTime: false,
-      cooldownMinutes: 0,
-    },
-    {
-      id: 'move_to_forest',
-      name: '前往森林',
-      interactionType: InteractionType.MOVE_TO_SCENE,
-      hideWhenUnavailable: false,
-      costs: [
-        {
-          costType: InteractionCostType.STAMINA,
-          value: 25,
-          affectedByCoefficient: true,
-        },
-      ],
-      behaviorParams: {
-        interactionType: InteractionType.MOVE_TO_SCENE,
-        targetSceneId: 'forest',
-        targetNodeId: 'node_forest',
-        travelTimeMinutes: 30,
-        staminaCost: 25,
-        pathDescription: '沿着沙滩向北走，进入森林',
-        encounterEventPool: [
+        costs: [
           {
-            eventId: 'event_forest_path_encounter',
-            weight: 30,
-          },
-          {
-            eventId: 'event_merchant_encounter',
-            weight: 10,
-            condition: {
-              logic: LogicOperator.AND,
-              subConditions: [
-                {
-                  target: {
-                    type: ConditionTargetType.FLAG,
-                    id: 'met_wandering_merchant',
-                  },
-                  operator: ComparisonOperator.EQUAL,
-                  value: false,
-                },
-              ],
-            },
+            costType: InteractionCostType.STAMINA,
+            value: 10,
+            affectedByCoefficient: true,
           },
         ],
-      },
-      requiresConfirmation: false,
-      displayPriority: 3,
-      isOneTime: false,
-      cooldownMinutes: 0,
-    },
-    {
-      id: 'rest_beach',
-      name: '休息',
-      description: '在海滩上稍作休息',
-      interactionType: InteractionType.REST,
-      hideWhenUnavailable: false,
-      costs: [
-        {
-          costType: InteractionCostType.STAMINA,
-          value: 0,
-          affectedByCoefficient: false,
+        behaviorParams: {
+          interactionType: InteractionType.ENTER_SUB_SCENE,
+          subSceneId: 'beach_飞机残骸',
         },
-      ],
-      behaviorParams: {
-        interactionType: InteractionType.REST,
+        displayPriority: 5,
+        isOneTime: false,
       },
-      requiresConfirmation: true,
-      confirmationText: '确定要在海滩上休息1小时吗？',
-      displayPriority: 1,
-      isOneTime: false,
-      cooldownMinutes: 0,
-    },
-  ],
-  isDungeon: false,
-  isSafeZone: false,
-  canCamp: true,
-  canBuildBase: true,
-  bgmId: 'bgm_beach',
-}
-
-// ===== 海滩-洞穴子场景 =====
-
-const beachCave: SubScene = {
-  id: 'beach_cave',
-  name: '海滩洞穴',
-  notes: '海滩旁的一个小洞穴，内部昏暗潮湿',
-  parentSceneId: 'beach',
-  descriptions: [
-    {
-      id: 'cave_first_enter',
-      priority: 10,
-      displayCondition: {
-        logic: LogicOperator.AND,
-        subConditions: [
+      {
+        id: '机翼营地',
+        name: '机翼营地',
+        displayFlag: ['beach_飞机残骸_搜索幸存者'],
+        interactionType: InteractionType.ENTER_SUB_SCENE,
+        costs: [
           {
-            target: { type: ConditionTargetType.FLAG, id: 'explored_cave' },
-            operator: ComparisonOperator.EQUAL,
-            value: false,
+            costType: InteractionCostType.STAMINA,
+            value: 10,
+            affectedByCoefficient: true,
           },
         ],
+        behaviorParams: {
+          interactionType: InteractionType.ENTER_SUB_SCENE,
+          subSceneId: 'beach_机翼营地',
+        },
+        displayPriority: 4,
+        isOneTime: false,
       },
-      text: '洞穴内部昏暗潮湿，空气中弥漫着霉味。你的眼睛逐渐适应了黑暗，看到洞穴深处似乎有{glowing_moss}在发光。地上散落着一些{journal_fragment_cave}。',
-      eventEntries: [
-        {
-          key: 'glowing_moss',
-          displayText: '发光的苔藓',
-          eventId: 'event_glowing_moss',
+    ],
+    isDungeon: false,
+    subSceneIds: ['beach_飞机残骸', 'beach_机翼营地'],
+  }
+
+
+
+const beach_飞机残骸: SubScene  = {
+    id: 'beach_飞机残骸',
+    name: '飞机残骸',
+    parentSceneId: 'beach',
+    descriptions: [
+      {
+        id: 'beach_飞机残骸_1',
+        priority: 9,
+        text: '机舱里面的光线很暗。舷窗被烟熏黑了，只有几束光从机身断裂处的缝隙挤进来，在倾斜的地板上切出细长的光带。空气里有烧焦塑料的味道，还有一股更淡但更刺鼻的气味——航空燃油。好在只是残余。\n\n舱内的一切都是倾斜的。座椅歪向一边，行李架的门有的震开了，有的卡死。过道被杂物堵住大半，你得侧身才能通过。\n\n你从前舱开始搜索。',
+        isAutoTrigger: false,
+        isOneTime: false,
+      },
+      
+      {
+        id: 'beach_飞机残骸_结束新手',
+        priority: 10,
+        text: '你翻遍了机舱。\n\n虽然有残留的血迹，但是没有看到任何幸存者、或者尸体。你是唯一的幸存者吗？\n\n你透过舷窗望向窗外。\n\n半截机翼斜插在沙中，形成了一个天然的遮蔽。\n\n你可以在那里建造一个简单的避难所。你需要休息。',
+        displayFlag: ['beach_飞机残骸_搜索座椅', 'beach_飞机残骸_搜索行李架', 'beach_飞机残骸_搜索头等舱', 'beach_飞机残骸_搜索夹缝'],
+        isAutoTrigger: false,
+        isOneTime: false,
+      }
+    ],
+    temperatureModifier: 0,
+    interactions: [
+      {
+        id: '搜索座椅',
+        name: '搜索座椅',
+        description: '搜索座椅',
+        interactionType: InteractionType.EVENT,
+        behaviorParams: {
+          interactionType: InteractionType.EVENT,
+          eventId: 'event_飞机残骸_搜索座椅',
         },
-        {
-          key: 'journal_fragment_cave',
-          displayText: '发黄的纸页',
-          eventId: 'event_journal_fragment',
-        },
-      ],
-      isAutoTrigger: false,
-      isOneTime: true,
-      seenFlag: 'seen_cave_first_enter',
-      viewLimit: 1,
-    },
-    {
-      id: 'cave_normal',
-      priority: 5,
-      text: '洞穴内依然昏暗，{glowing_moss}提供着微弱的照明。墙壁上有些{strange_markings}。',
-      eventEntries: [
-        {
-          key: 'glowing_moss',
-          displayText: '发光的苔藓',
-          eventId: 'event_glowing_moss',
-          removeAfterClick: true,
-        },
-        {
-          key: 'strange_markings',
-          displayText: '奇怪的刻痕',
-          eventId: 'event_cave_markings',
-          displayCondition: {
-            logic: LogicOperator.AND,
-            subConditions: [
-              {
-                target: {
-                  type: ConditionTargetType.ATTRIBUTE,
-                  attributeType: AttributeType.SAN,
-                },
-                operator: ComparisonOperator.LESS_EQUAL,
-                value: 60,
-              },
-            ],
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 5,
+            affectedByCoefficient: false,
           },
+        ],
+        displayPriority: 10,
+        isOneTime: true,
+        usedFlag: 'beach_飞机残骸_搜索座椅',
+      },
+      {
+        id: '搜索行李架',
+        name: '搜索行李架',
+        description: '搜索行李架',
+        interactionType: InteractionType.EVENT,
+        behaviorParams: {
+          interactionType: InteractionType.EVENT,
+          eventId: 'event_飞机残骸_搜索行李架',
         },
-      ],
-      isAutoTrigger: false,
-      isOneTime: false,
-      viewLimit: -1,
-    },
-  ],
-  temperatureModifier: -10,
-  interactions: [
-    {
-      id: 'explore_cave',
-      name: '探索洞穴',
-      interactionType: InteractionType.EXPLORE,
-      hideWhenUnavailable: false,
-      costs: [
-        {
-          costType: InteractionCostType.STAMINA,
-          value: 15,
-          affectedByCoefficient: true,
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 5,
+            affectedByCoefficient: false,
+          },
+        ],
+        displayPriority: 9,
+        isOneTime: true,
+        usedFlag: 'beach_飞机残骸_搜索行李架',
+      },
+      {
+        id: '搜索夹缝',
+        name: '搜索夹缝',
+        description: '搜索夹缝',
+        interactionType: InteractionType.EVENT,
+        behaviorParams: {
+          interactionType: InteractionType.EVENT,
+          eventId: 'event_飞机残骸_搜索夹缝',
         },
-      ],
-      behaviorParams: {
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 5,
+            affectedByCoefficient: false,
+          },
+        ],
+        displayPriority: 9,
+        isOneTime: true,
+        usedFlag: 'beach_飞机残骸_搜索夹缝',
+      },
+      {
+        id: '搜索头等舱',
+        name: '搜索头等舱',
+        description: '搜索头等舱',
+        interactionType: InteractionType.EVENT,
+        behaviorParams: {
+          interactionType: InteractionType.EVENT,
+          eventId: 'event_飞机残骸_搜索头等舱',
+        },
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 5,
+            affectedByCoefficient: false,
+          },
+        ],
+        displayPriority: 9,
+        isOneTime: true,
+        usedFlag: 'beach_飞机残骸_搜索头等舱',
+      },
+      {
+        id: '驾驶舱',
+        name: '驾驶舱',
+        description: '驾驶舱',
+        interactionType: InteractionType.EVENT,
+        behaviorParams: {
+          interactionType: InteractionType.EVENT,
+          eventId: 'event_飞机残骸_驾驶舱',
+        },
+        displayFlag: ['beach_飞机残骸_搜索幸存者'],
+        displayPriority: 9,
+        isOneTime: false,
+      },
+
+      {
+        id: '搜索幸存者',
+        name: '搜索幸存者',
         interactionType: InteractionType.EXPLORE,
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 10,
+            affectedByCoefficient: true,
+          },
+        ],
+        displayFlag: ['beach_飞机残骸_搜索座椅', 'beach_飞机残骸_搜索行李架', 'beach_飞机残骸_搜索头等舱', 'beach_飞机残骸_搜索夹缝'],
+        displayPriority: 10,
+        isOneTime:  true,
+        usedFlag: 'beach_飞机残骸_搜索幸存者',
       },
-      requiresConfirmation: false,
-      displayPriority: 10,
-      isOneTime: false,
-      cooldownMinutes: 0,
-    },
-    {
-      id: 'exit_cave',
-      name: '离开洞穴',
-      interactionType: InteractionType.EXIT_SUB_SCENE,
-      hideWhenUnavailable: false,
-      costs: [
-        {
-          costType: InteractionCostType.STAMINA,
-          value: 5,
-          affectedByCoefficient: false,
-        },
-      ],
-      behaviorParams: {
+      {
+        id: '返回沙滩',
+        name: '返回沙滩',
+        description: '返回沙滩',
         interactionType: InteractionType.EXIT_SUB_SCENE,
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 5,
+            affectedByCoefficient: false,
+          },
+        ],
+        displayPriority: 1,
+        isOneTime: false,
+        displayFlag: ['beach_飞机残骸_搜索幸存者'],
       },
-      requiresConfirmation: false,
-      displayPriority: 1,
-      isOneTime: false,
-      cooldownMinutes: 0,
-    },
-  ],
-  isDungeon: false,
-  isSafeZone: false,
-  canCamp: true,
-}
-
-// ===== 森林场景 =====
+    ],
+    isDungeon: false,
+  }
+const beach_机翼营地: SubScene  = {
+    id: 'beach_机翼营地',
+    name: '机翼营地',
+    parentSceneId: 'beach',
+    descriptions: [
+      {
+        id: 'beach_机翼营地_1',
+        priority: 1,
+        text: '只有半截机翼和沙子，你需要完善它才可以作为营地。',
+        isAutoTrigger: false,
+        isOneTime: false,
+      },
+    ],
+    temperatureModifier: 0,
+    interactions: [
+      {
+        id: '搭建营地',
+        name: '搭建营地',
+        description: '搭建营地',
+        interactionType: InteractionType.EVENT,
+        behaviorParams: {
+          interactionType: InteractionType.EVENT,
+          eventId: 'event_机翼营地_搭建营地',
+        },
+        displayPriority: 10,
+        isOneTime: false,
+      },
+      {
+        id: '前往沙滩',
+        name: '前往沙滩',
+        description: '前往沙滩',
+        interactionType: InteractionType.EXIT_SUB_SCENE,
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 5,
+            affectedByCoefficient: false,
+          },
+        ],
+        displayPriority: 1,
+        isOneTime: false,
+      },
+    ],
+    isDungeon: false,
+  }
+// ============================================================
+// 森林
+// ============================================================
 
 const forest: Scene = {
-  id: 'forest',
-  name: '森林',
-  notes: '海滩北方的森林，植被茂密',
-  descriptions: [
-    {
-      id: 'forest_first',
-      priority: 10,
-      text: '你踏入了茂密的森林。高大的树木遮蔽了大部分阳光，地面上铺满了落叶。空气中弥漫着泥土和植物的气息。{strange_trees}的树干上似乎有异常的突起。',
-      eventEntries: [
-        {
-          key: 'strange_trees',
-          displayText: '变异的树木',
-          eventId: 'event_strange_trees',
-        },
-      ],
-      isAutoTrigger: false,
-      isOneTime: true,
-      seenFlag: 'seen_forest_first',
-      viewLimit: 1,
-    },
-    {
-      id: 'forest_normal',
-      priority: 5,
-      text: '森林中一片静谧，偶尔能听到不知名生物的叫声。你可以看到一些{berry_bushes}在灌木丛中，以及一些{fallen_branches}。',
-      eventEntries: [
-        {
-          key: 'berry_bushes',
-          displayText: '浆果灌木',
-          eventId: 'event_gather_berries',
-        },
-        {
-          key: 'fallen_branches',
-          displayText: '落枝',
-          eventId: 'event_gather_wood',
-        },
-      ],
-      isAutoTrigger: false,
-      isOneTime: false,
-      viewLimit: -1,
-    },
-  ],
-  backgroundImage: 'bg_forest',
-  temperatureModifier: -3,
-  interactions: [
-    {
-      id: 'explore_forest',
-      name: '探索森林',
-      interactionType: InteractionType.EXPLORE,
-      hideWhenUnavailable: false,
-      costs: [
-        {
-          costType: InteractionCostType.STAMINA,
-          value: 12,
-          affectedByCoefficient: true,
-        },
-      ],
-      behaviorParams: {
+    id: 'forest',
+    name: '森林',
+    descriptions: [
+      {
+        id: 'forest_first',
+        priority: 10,
+        text: '你踏入了茂密的森林。高大的树木遮蔽了大部分阳光，地面上铺满了落叶。空气中弥漫着泥土和植物的气息。{strange_trees}的树干上似乎有异常的突起。',
+        eventEntries: [
+          {
+            key: 'strange_trees',
+            displayText: '变异的树木',
+            eventId: 'event_strange_trees',
+          },
+        ],
+        isAutoTrigger: false,
+        isOneTime: true,
+        seenFlag: 'seen_forest_first',
+        viewLimit: 1,
+      },
+      {
+        id: 'forest_normal',
+        priority: 5,
+        text: '森林中一片静谧，偶尔能听到不知名生物的叫声。你可以看到一些{berry_bushes}在灌木丛中，以及一些{fallen_branches}。',
+        eventEntries: [
+          {
+            key: 'berry_bushes',
+            displayText: '浆果灌木',
+            eventId: 'event_gather_berries',
+          },
+          {
+            key: 'fallen_branches',
+            displayText: '落枝',
+            eventId: 'event_gather_wood',
+          },
+        ],
+        isAutoTrigger: false,
+        isOneTime: false,
+        viewLimit: -1,
+      },
+    ],
+    temperatureModifier: -3,
+    interactions: [
+      {
+        id: '探索森林',
+        name: '探索森林',
         interactionType: InteractionType.EXPLORE,
-      },
-      requiresConfirmation: false,
-      displayPriority: 10,
-      isOneTime: false,
-      cooldownMinutes: 0,
-    },
-    {
-      id: 'move_to_beach',
-      name: '返回海滩',
-      interactionType: InteractionType.MOVE_TO_SCENE,
-      hideWhenUnavailable: false,
-      costs: [
-        {
-          costType: InteractionCostType.STAMINA,
-          value: 25,
-          affectedByCoefficient: true,
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 12,
+            affectedByCoefficient: true,
+          },
+        ],
+        behaviorParams: {
+          interactionType: InteractionType.EXPLORE,
         },
-      ],
-      behaviorParams: {
+        displayPriority: 10,
+        isOneTime: false,
+        cooldownMinutes: 0,
+      },
+      {
+        id: '返回海滩',
+        name: '返回海滩',
         interactionType: InteractionType.MOVE_TO_SCENE,
-        targetSceneId: 'beach',
-        targetNodeId: 'node_beach',
-        travelTimeMinutes: 30,
-        staminaCost: 25,
-        pathDescription: '穿过林间小径返回海滩',
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 25,
+            affectedByCoefficient: true,
+          },
+        ],
+        behaviorParams: {
+          interactionType: InteractionType.MOVE_TO_SCENE,
+          targetSceneId: 'beach',
+          targetNodeId: 'node_beach',
+          travelTimeMinutes: 30,
+          staminaCost: 25,
+          pathDescription: '穿过林间小径返回海滩',
+        },
+        displayPriority: 3,
+        isOneTime: false,
+        cooldownMinutes: 0,
       },
-      requiresConfirmation: false,
-      displayPriority: 3,
-      isOneTime: false,
-      cooldownMinutes: 0,
-    },
-    {
-      id: 'rest_forest',
-      name: '休息',
-      interactionType: InteractionType.REST,
-      hideWhenUnavailable: false,
-      costs: [],
-      behaviorParams: {
+      {
+        id: '休息',
+        name: '休息',
+        description: '在森林中稍作休息',
         interactionType: InteractionType.REST,
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 0,
+            affectedByCoefficient: false,
+          },
+        ],
+        behaviorParams: {
+          interactionType: InteractionType.REST,
+        },
+        requiresConfirmation: true,
+        confirmationText: '确定要在森林中休息1小时吗？',
+        displayPriority: 1,
+        isOneTime: false,
+        cooldownMinutes: 0,
       },
-      requiresConfirmation: true,
-      confirmationText: '确定要在森林中休息1小时吗？',
-      displayPriority: 1,
-      isOneTime: false,
-      cooldownMinutes: 0,
-    },
-  ],
-  isDungeon: false,
-  isSafeZone: false,
-  canCamp: true,
-  canBuildBase: false,
-}
+    ],
+    isDungeon: false,
+  }
+
+// ============================================================
+// 海滩洞穴 (子场景)
+// ============================================================
+
+const beach_cave: SubScene = {
+    id: 'beach_cave',
+    name: '海滩洞穴',
+    descriptions: [
+      {
+        id: 'cave_first_enter',
+        priority: 10,
+        displayCondition: cond_cave_first_enter,
+        text: '洞穴内部昏暗潮湿，空气中弥漫着霉味。你的眼睛逐渐适应了黑暗，看到洞穴深处似乎有{glowing_moss}在发光。地上散落着一些{journal_fragment_cave}。',
+        eventEntries: [
+          {
+            key: 'glowing_moss',
+            displayText: '发光的苔藓',
+            eventId: 'event_glowing_moss',
+          },
+          {
+            key: 'journal_fragment_cave',
+            displayText: '发黄的纸页',
+            eventId: 'event_journal_fragment',
+          },
+        ],
+        isAutoTrigger: false,
+        isOneTime: true,
+        seenFlag: 'seen_cave_first_enter',
+        viewLimit: 1,
+      },
+      {
+        id: 'cave_normal',
+        priority: 5,
+        text: '洞穴内依然昏暗，{glowing_moss2}提供着微弱的照明。墙壁上有些{strange_markings}。',
+        eventEntries: [
+          {
+            key: 'glowing_moss2',
+            displayText: '发光的苔藓',
+            eventId: 'event_glowing_moss',
+            removeAfterClick: true,
+            clickFlag: 'clicked_glowing_moss',
+            textAfterClick: '被采过的苔藓',
+          },
+          {
+            key: 'strange_markings',
+            displayText: '奇怪的刻痕',
+            eventId: 'event_cave_markings',
+            displayCondition: cond_strange_markings,
+          },
+        ],
+        isAutoTrigger: false,
+        isOneTime: false,
+        viewLimit: -1,
+      },
+    ],
+    temperatureModifier: -10,
+    interactions: [
+      {
+        id: '探索洞穴',
+        name: '探索洞穴',
+        interactionType: InteractionType.EXPLORE,
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 15,
+            affectedByCoefficient: true,
+          },
+        ],
+        behaviorParams: {
+          interactionType: InteractionType.EXPLORE,
+        },
+        displayPriority: 10,
+        isOneTime: false,
+        cooldownMinutes: 0,
+      },
+      {
+        id: '离开洞穴',
+        name: '离开洞穴',
+        interactionType: InteractionType.EXIT_SUB_SCENE,
+        costs: [
+          {
+            costType: InteractionCostType.STAMINA,
+            value: 5,
+            affectedByCoefficient: false,
+          },
+        ],
+        behaviorParams: {
+          interactionType: InteractionType.EXIT_SUB_SCENE,
+        },
+        displayPriority: 1,
+        isOneTime: false,
+        cooldownMinutes: 0,
+      },
+    ],
+    isDungeon: false,
+    parentSceneId: 'beach',
+  }
+
+// ============================================================
+// 场景注册表
+// ============================================================
 
 export const sceneRegistry: SceneRegistry = {
   scenes: {
@@ -457,7 +622,9 @@ export const sceneRegistry: SceneRegistry = {
     forest,
   },
   subScenes: {
-    beach_cave: beachCave,
+    beach_cave,
+    beach_飞机残骸,
+    beach_机翼营地
   },
   initialSceneId: 'beach',
 }

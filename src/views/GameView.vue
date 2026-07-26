@@ -23,6 +23,8 @@
         :resolved-description="resolvedDescription"
         :description-config="game.state.currentDescriptionConfig"
         :interactions="game.getCurrentInteractions()"
+        :scene-text-prefix="game.state.sceneTextPrefix"
+        :scene-text-after="game.state.sceneTextAfter"
         :background-color="backgroundColor"
         @enter-event="onEnterEventFromEntry"
         @interaction="game.handleInteraction"
@@ -35,6 +37,8 @@
         :resolved-text="resolvedFrameText"
         :frame-text-prefix="game.state.frameTextPrefix"
         :options="visibleEventOptions"
+        :variations="visibleEventVariations"
+        :option-availability="optionAvailability"
         @select-option="game.selectEventOption"
       />
 
@@ -89,7 +93,7 @@ import InventoryPanel from '@/components/InventoryPanel.vue'
 import SystemMenu from '@/components/SystemMenu.vue'
 import AttributesPanel from '@/components/AttributesPanel.vue'
 import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
-import { getVisibleOptions } from '@/engine'
+import { getVisibleOptions, getVisibleVariations, isOptionAvailable } from '@/engine'
 import { getGameInstance } from '@/runtime/gameInstance'
 import type { GameInstance } from '@/runtime/gameInstance'
 import { useUI } from '@/runtime/useUI'
@@ -174,6 +178,24 @@ const visibleEventOptions = computed(() => {
   const frame = game.value.state.currentFrame
   if (!frame) return []
   return getVisibleOptions(frame, game.value.state.player)
+})
+
+const visibleEventVariations = computed(() => {
+  const frame = game.value.state.currentFrame
+  if (!frame) return []
+  return getVisibleVariations(frame, game.value.state.player)
+})
+
+/** 选项可用性映射（optionId -> 是否满足 availableCondition） */
+const optionAvailability = computed<Record<string, boolean>>(() => {
+  const frame = game.value.state.currentFrame
+  if (!frame) return {}
+  const player = game.value.state.player
+  const result: Record<string, boolean> = {}
+  for (const option of frame.options) {
+    result[option.id] = isOptionAvailable(option, player)
+  }
+  return result
 })
 
 // ============================================================

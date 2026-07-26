@@ -3,6 +3,7 @@
 
 import type { PlayerState } from '@/types/player'
 import type { Scene, SubScene } from '@/types/scene'
+import type { Flag, TimeVaryingRule } from '@/types/flag'
 import { Season, SeasonPhase } from '@/types/seasonWeather'
 import { getRegistry } from './registry'
 
@@ -364,6 +365,9 @@ export function advanceTime(
   const passiveLogs = applyPassiveEffects(player, elapsedMinutes)
   result.logs = passiveLogs
 
+  // 7. 执行时间变化标志位修正
+  applyTimeVaryingFlags(player, elapsedMinutes)
+
   return result
 }
 
@@ -681,4 +685,122 @@ function flushPendingChanges(player: PlayerState): void {
  */
 export function flushAllPending(player: PlayerState): void {
   flushPendingChanges(player)
+}
+
+// ============================================================
+// 时间变化标志位
+// ============================================================
+
+/**
+ * 执行时间变化标志位修正
+ *
+ * 遍历所有配置了 timeVarying 的标志位，按规则自动修正 player.flags 中的值。
+ * 事件效果仍然可以手动覆盖这些值，引擎下次推进时再基于覆盖后的值继续修正。
+ *
+ * 支持的规则模式：
+ * - accumulate: 每经过 deltaPerMinute 分钟值变化 deltaPerMinute，被钳制在 [min, max]
+ * - reset_daily: 跨天时重置为 resetValue
+ * - periodic: 根据当前游戏时间分钟查 schedule 确定值
+ *
+ * @param player - 玩家状态（会被直接修改）
+ * @param elapsedMinutes - 经过的游戏分钟数
+ */
+function applyTimeVaryingFlags(player: PlayerState, elapsedMinutes: number): void {
+  const registry = getRegistry()
+  const allFlags = registry.getAllFlags()
+  const currentTimeMinutes = player.progress.timeMinutes
+
+  for (const flag of allFlags) {
+    if (!flag.timeVarying) continue
+
+    const rule = flag.timeVarying
+    const flagId = flag.id
+
+    // 确保标志位已初始化
+    if (player.flags[flagId] === undefined) {
+      player.flags[flagId] = flag.defaultValue
+    }
+
+    switch (rule.mode) {
+      case 'accumulate': {
+        applyAccumulateFlag(player, flagId, rule, elapsedMinutes)
+        break
+      }
+      case 'reset_daily': {
+        // 检测是否跨天：如果经过分钟数大于当前时间分钟数，说明发生了回绕（跨天）
+        // 例如：旧时间 1400 + 经过100 = 新时间 60（跨天），elapsed(100) > timeMinutes(60)
+        // 例如：旧时间 100 + 经过50 = 新时间 150（同天），elapsed(50) <= timeMinutes(150)
+        if (elapsedMinutes > player.progress.timeMinutes) {
+          player.flags[flagId] = rule.resetValue ?? flag.defaultValue
+        }
+        break
+      }
+      case 'periodic': {
+        applyPeriodicFlag(player, flagId, rule, currentTimeMinutes)
+        break
+      }
+    }
+  }
+}
+
+/**
+ * 处理 accumulate 模式的标志位
+ * 每 elapsedMinutes 分钟变化 deltaPerMinute * elapsedMinutes，被钳制在 [min, max]
+ */
+function applyAccumulateFlag(
+  player: PlayerState,
+  flagId: string,
+  rule: TimeVaryingRule,
+  elapsedMinutes: number,
+): void {
+  const delta = (rule.deltaPerMinute ?? 0) * elapsedMinutes
+  if (delta === 0) return
+
+  const currentValue = player.flags[flagId]
+  let newValue: number
+
+  if (typeof currentValue === 'number') {
+    newValue = currentValue + delta
+  } else {
+    newValue = (typeof currentValue === 'boolean' ? (currentValue ? 1 : 0) : 0) + delta
+  }
+
+  // 钳制范围
+  if (rule.min !== undefined) {
+    newValue = Math.max(rule.min, newValue)
+  }
+  if (rule.max !== undefined) {
+    newValue = Math.min(rule.max, newValue)
+  }
+
+  player.flags[flagId] = newValue
+}
+
+/**
+ * 处理 periodic 模式的标志位
+ * 根据当前游戏分钟查 schedule 确定值
+ */
+function applyPeriodicFlag(
+  player: PlayerState,
+  flagId: string,
+  rule: TimeVaryingRule,
+  currentTimeMinutes: number,
+): void {
+  if (!rule.schedule || rule.schedule.length === 0) return
+
+  for (const entry of rule.schedule) {
+    if (entry.startMinute <= entry.endMinute) {
+      // 正常区间（如 360-720）
+      if (currentTimeMinutes >= entry.startMinute && currentTimeMinutes < entry.endMinute) {
+        player.flags[flagId] = entry.value
+        return
+      }
+    } else {
+      // 跨天区间（如 1320-360，表示 22:00 到次日 06:00）
+      if (currentTimeMinutes >= entry.startMinute || currentTimeMinutes < entry.endMinute) {
+        player.flags[flagId] = entry.value
+        return
+      }
+    }
+  }
 }

@@ -4,9 +4,10 @@ import { reactive, readonly } from 'vue'
 import type { PlayerState } from '@/types/player'
 import type { Scene, SceneDescription, SubScene } from '@/types/scene'
 import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
+import type { EffectResult } from '@/types/effect'
 import type { EndingConfig } from '@/types/ending'
 import { getRegistry, getEffectResolver, advanceTime, evaluateCondition } from '@/engine'
-import { selectSceneDescription, markDescriptionSeen, checkAutoTrigger } from '@/engine'
+import { selectSceneDescription, markDescriptionSeen, checkAutoTrigger, markDescriptionEventSeen } from '@/engine'
 import { getVisibleOptions, findFirstVisibleFrame } from '@/engine'
 import { createBattle, startBattle, executePlayerAction, settleBattle } from '@/engine'
 import { BattlePhase, BattleResult, PlayerActionType } from '@/engine'
@@ -67,6 +68,11 @@ interface GameRuntimeState {
   /** 事件帧文本前缀（上一帧选中的选项结果文本，拼接到当前帧文本前） */
   frameTextPrefix: string
 
+  /** 场景文本前缀（从事件跳转到场景时，显示 exitText/enterText 在场景描述前） */
+  sceneTextPrefix: string
+  /** 场景文本后缀（从事件返回场景时，显示 exitText/enterText 在场景描述后） */
+  sceneTextAfter: string
+
   /** 游戏日志（底部提示信息） */
   logMessage: string
 
@@ -81,6 +87,13 @@ interface GameRuntimeState {
 
   /** 当前交易商人ID（仅在 mode === 'trade' 时有值） */
   currentTraderId: string | null
+
+  /** 战斗中待跳转的帧ID（从 TriggerBattleResult 中存储） */
+  pendingBattleFrameIds: {
+    victoryFrameId?: string
+    defeatFrameId?: string
+    escapeFrameId?: string
+  } | null
 }
 
 /**
@@ -115,11 +128,14 @@ function createGameState(initialPlayer: PlayerState) {
     currentFrame: null,
     currentBattle: null,
     frameTextPrefix: '',
+    sceneTextPrefix: '',
+    sceneTextAfter: '',
     logMessage: '',
     currentEnding: null,
     endingReason: '',
     currentCG: null,
     currentTraderId: null,
+    pendingBattleFrameIds: null,
   })
 
   // 标记初始描述为已看过
@@ -143,6 +159,18 @@ export function useGame(initialPlayer: PlayerState) {
   const registry = getRegistry()
 
   /**
+   * 执行一组效果，并将日志输出到底部消息栏
+   */
+  function executeEffects(effects: EffectResult[] | undefined): void {
+    if (!effects || effects.length === 0) return
+    const resolver = getEffectResolver()
+    const logs = resolver.executeEffectResults(state.player, effects)
+    if (logs.length > 0) {
+      state.logMessage = logs.filter(Boolean).join('；')
+    }
+  }
+
+  /**
    * 进入事件
    * 从场景交互按钮或事件入口触发
    *
@@ -158,13 +186,13 @@ export function useGame(initialPlayer: PlayerState) {
 
     // 由场景描述事件入口触发时，检查是否需要标记描述为已使用
     if (fromEventEntry && state.currentDescriptionConfig?.removeAfterInteraction) {
-      markDescriptionSeen(state.currentDescriptionConfig, state.player)
+      markDescriptionEventSeen(state.currentDescriptionConfig, state.player)
     }
 
-    // 获取第一个帧
-    const firstFrame = event.frames[0]
+    // 获取第一个可见帧（按 order 顺序，满足 displayFlag 和 displayCondition 的帧）
+    const firstFrame = findFirstVisibleFrame(event.frames, state.player)
     if (!firstFrame) {
-      state.logMessage = `事件 ${eventId} 没有帧`
+      state.logMessage = `事件 ${eventId} 没有可见的帧`
       return
     }
 
@@ -172,6 +200,13 @@ export function useGame(initialPlayer: PlayerState) {
     state.currentEvent = event
     state.currentFrame = firstFrame
     state.frameTextPrefix = ''
+    state.sceneTextPrefix = ''
+    state.sceneTextAfter = ''
+
+    // 执行事件级 onEnterEffects
+    executeEffects(event.onEnterEffects)
+    // 执行首帧 onEnterEffects
+    executeEffects(firstFrame.onEnterEffects)
   }
 
   // ============================================================
@@ -273,11 +308,15 @@ export function useGame(initialPlayer: PlayerState) {
         const nextFrame = state.currentEvent?.frames.find((f) => f.id === result.targetFrameId)
         if (nextFrame) {
           state.currentFrame = nextFrame
+          // 执行新帧的 onEnterEffects
+          executeEffects(nextFrame.onEnterEffects)
         } else if (state.currentEvent) {
           // 用条件选择第一个可见帧
           const visibleFrame = findFirstVisibleFrame(state.currentEvent.frames, state.player)
           if (visibleFrame) {
             state.currentFrame = visibleFrame
+            // 执行新帧的 onEnterEffects
+            executeEffects(visibleFrame.onEnterEffects)
           } else {
             state.logMessage = `目标帧 ${result.targetFrameId} 未找到`
           }
@@ -306,7 +345,7 @@ export function useGame(initialPlayer: PlayerState) {
         state.currentEvent = null
         state.currentFrame = null
         if (result.exitText) {
-          state.logMessage = (state.logMessage ? state.logMessage + '。' : '') + result.exitText
+          state.sceneTextAfter = result.exitText
         }
         break
       }
@@ -352,7 +391,7 @@ export function useGame(initialPlayer: PlayerState) {
         state.currentFrame = null
 
         if (result.enterText) {
-          state.logMessage = (state.logMessage ? state.logMessage + '。' : '') + result.enterText
+          state.sceneTextPrefix = result.enterText
         }
         break
       }
@@ -378,6 +417,13 @@ export function useGame(initialPlayer: PlayerState) {
       }
 
       case 'triggerBattle': {
+        // 存储战斗结果待跳转的帧ID
+        state.pendingBattleFrameIds = {
+          victoryFrameId: result.victoryFrameId,
+          defeatFrameId: result.defeatFrameId,
+          escapeFrameId: result.escapeFrameId,
+        }
+
         // 创建并开始战斗
         const battle = createBattle(state.player, result.enemyId)
         state.currentBattle = battle
@@ -446,10 +492,12 @@ export function useGame(initialPlayer: PlayerState) {
     if (!interaction) return
 
     // 根据交互类型执行不同操作
+    const interactionType = interaction.interactionType
     const params = interaction.behaviorParams
 
-    switch (params.interactionType) {
+    switch (interactionType) {
       case 'explore': {
+        state.sceneTextAfter = ''
         // 探索：推进10分钟，刷新场景描述
         advanceGameTime(10)
         refreshSceneDescription()
@@ -458,30 +506,36 @@ export function useGame(initialPlayer: PlayerState) {
       }
 
       case 'event': {
-        // 触发事件（消耗少量时间）
-        advanceGameTime(5)
-        enterEvent(params.eventId)
-        break
+        if(params?.interactionType === 'event'){
+          // 触发事件（消耗少量时间）
+          advanceGameTime(5)
+          enterEvent(params.eventId)
+          break
+        }
       }
 
       case 'enterSubScene': {
-        // 进入子场景（消耗5分钟）
-        const subScene = registry.getSubScene(params.subSceneId)
-        if (subScene) {
-          advanceGameTime(5)
-          state.currentSubScene = subScene
-          state.player.currentLocation.subSceneId = params.subSceneId
-          const selectedDesc = selectSceneDescription(subScene, state.player)
-          state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-          state.currentDescriptionConfig = selectedDesc || null
-          if (selectedDesc) {
-            markDescriptionSeen(selectedDesc, state.player)
+        state.sceneTextAfter = ''
+        if(params?.interactionType === 'enterSubScene'){
+          // 进入子场景（消耗5分钟）
+          const subScene = registry.getSubScene(params.subSceneId)
+          if (subScene) {
+            advanceGameTime(5)
+            state.currentSubScene = subScene
+            state.player.currentLocation.subSceneId = params.subSceneId
+            const selectedDesc = selectSceneDescription(subScene, state.player)
+            state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
+            state.currentDescriptionConfig = selectedDesc || null
+            if (selectedDesc) {
+              markDescriptionSeen(selectedDesc, state.player)
+            }
           }
+          break
         }
-        break
       }
 
       case 'exitSubScene': {
+        state.sceneTextAfter = ''
         // 离开子场景返回母场景（消耗5分钟）
         advanceGameTime(5)
         state.currentSubScene = null
@@ -503,27 +557,36 @@ export function useGame(initialPlayer: PlayerState) {
       }
 
       case 'talk': {
+        if(params?.interactionType === 'talk'){
         // 对话：消耗10分钟
         advanceGameTime(10)
         enterEvent(params.eventId)
         break
+        }
       }
 
       case 'trade': {
+        if(params?.interactionType === 'trade'){
         // 打开交易面板
         state.currentTraderId = params.traderId
         state.mode = 'trade'
         break
+        }
       }
 
       case 'move': {
+        state.sceneTextAfter = ''
+        if(params?.interactionType === 'move'){
         // 方向移动：消耗10分钟
         advanceGameTime(10)
         state.logMessage = `你向 ${params.direction} 方向移动`
         break
+        }
       }
 
       case 'moveToScene': {
+        state.sceneTextAfter = ''
+        if(params?.interactionType === 'moveToScene'){
         // 场景间移动：消耗指定的旅行时间
         advanceGameTime(params.travelTimeMinutes || 15)
         const targetScene = registry.getScene(params.targetSceneId)
@@ -542,14 +605,22 @@ export function useGame(initialPlayer: PlayerState) {
         }
         break
       }
+      }
 
       case 'function': {
+        if(params?.interactionType === 'function'){
         state.logMessage = `功能 "${params.functionType}" 尚未实现`
         break
+        }
       }
 
       default:
         state.logMessage = '未知交互类型'
+    }
+
+    // isOneTime 交互：点击后标记为已使用
+    if (interaction.isOneTime && interaction.usedFlag) {
+      state.player.flags[interaction.usedFlag] = true
     }
   }
 
@@ -559,7 +630,22 @@ export function useGame(initialPlayer: PlayerState) {
    */
   function getCurrentInteractions() {
     const target = state.currentSubScene || state.currentScene
-    return target.interactions
+    return target.interactions.filter((i) => {
+      // isOneTime 且已使用 → 隐藏
+      if (i.isOneTime && i.usedFlag && state.player.flags[i.usedFlag]) {
+        return false
+      }
+      // displayFlag 检查
+      if (i.displayFlag){
+        console.log(i.displayFlag)
+        if (i.displayFlag.every((flag) => state.player.flags[flag]===true)) {
+          return true
+        }else{
+          return false
+        }
+    }
+      return true
+    })
   }
 
   /**
@@ -644,6 +730,22 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 在当前事件中按帧ID跳转
+   * 查找帧并设置 currentFrame，同时执行帧的 onEnterEffects
+   */
+  function jumpToEventFrame(frameId: string): void {
+    const frame = state.currentEvent?.frames.find((f) => f.id === frameId)
+    if (frame) {
+      state.currentFrame = frame
+      state.frameTextPrefix = ''
+      state.mode = 'event'
+      executeEffects(frame.onEnterEffects)
+    } else {
+      state.logMessage = `事件帧 ${frameId} 未找到`
+    }
+  }
+
+  /**
    * 执行玩家战斗操作
    *
    * @param actionType - 操作类型
@@ -667,28 +769,46 @@ export function useGame(initialPlayer: PlayerState) {
     if (battle.result === BattleResult.VICTORY) {
       const settleLogs = settleBattle(state.player, battle)
 
-      // 处理从战斗返回事件帧
-      if (state.currentEvent && state.currentFrame) {
-        const frame = state.currentEvent.frames.find((f) => f.id === state.currentFrame?.id)
-        if (frame && frame.options.length > 0) {
-          // 检查是否有"胜利后"逻辑（通过选项结果处理）
-        }
+      // 尝试跳转到胜利帧
+      const victoryFrameId = state.pendingBattleFrameIds?.victoryFrameId
+      if (victoryFrameId && state.currentEvent) {
+        jumpToEventFrame(victoryFrameId)
+      } else {
+        state.mode = state.currentEvent ? 'event' : 'normal'
       }
 
       state.currentBattle = null
-      state.mode = state.currentEvent ? 'event' : 'normal'
+      state.pendingBattleFrameIds = null
       state.logMessage = [...battle.logs, ...settleLogs].filter(Boolean).join('；')
     } else if (battle.result === BattleResult.DEFEAT) {
-      // 战败：检查是否触发结局
-      state.currentBattle = null
-      checkAndTriggerEnding()
-      if (state.mode !== 'ending') {
-        state.mode = 'normal'
+      // 尝试跳转到战败帧
+      const defeatFrameId = state.pendingBattleFrameIds?.defeatFrameId
+      if (defeatFrameId && state.currentEvent) {
+        jumpToEventFrame(defeatFrameId)
+        state.currentBattle = null
+        state.pendingBattleFrameIds = null
+        state.logMessage = battle.logs.filter(Boolean).join('；')
+      } else {
+        // 没有战败帧则进入结局判定
+        state.currentBattle = null
+        state.pendingBattleFrameIds = null
+        checkAndTriggerEnding()
+        if (state.mode !== 'ending') {
+          state.mode = 'normal'
+        }
+        state.logMessage = battle.logs.filter(Boolean).join('；')
       }
-      state.logMessage = battle.logs.filter(Boolean).join('；')
     } else if (battle.result === BattleResult.ESCAPED) {
+      // 尝试跳转到逃跑帧
+      const escapeFrameId = state.pendingBattleFrameIds?.escapeFrameId
+      if (escapeFrameId && state.currentEvent) {
+        jumpToEventFrame(escapeFrameId)
+      } else {
+        state.mode = state.currentEvent ? 'event' : 'normal'
+      }
+
       state.currentBattle = null
-      state.mode = state.currentEvent ? 'event' : 'normal'
+      state.pendingBattleFrameIds = null
       state.logMessage = battle.logs.filter(Boolean).join('；')
     } else {
       // 战斗还在继续，显示日志
@@ -705,7 +825,7 @@ export function useGame(initialPlayer: PlayerState) {
     const target = state.currentSubScene || state.currentScene
     const selectedDesc = selectSceneDescription(target, state.player)
     if (selectedDesc) {
-      state.sceneDescription = selectedDesc.text
+      state.sceneDescription = selectedDesc.text      
       state.currentDescriptionConfig = selectedDesc
       markDescriptionSeen(selectedDesc, state.player)
 

@@ -28,6 +28,8 @@ export interface GameInstance {
     readonly currentFrame: import('@/types/event').EventFrame | null
     readonly currentBattle: import('@/engine').BattleState | null
     readonly frameTextPrefix: string
+    readonly sceneTextPrefix: string
+    readonly sceneTextAfter: string
     readonly logMessage: string
     readonly currentEnding: EndingConfig | null
     readonly endingReason: string

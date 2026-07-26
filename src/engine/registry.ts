@@ -193,6 +193,11 @@ class GameRegistryManager {
     return this.registry.flags.flags[id]
   }
 
+  /** 获取所有标志位配置 */
+  getAllFlags(): Flag[] {
+    return Object.values(this.registry.flags.flags)
+  }
+
   /** 获取标志位的默认值 */
   getFlagDefaultValue(id: string): boolean | number | string {
     const flag = this.getFlag(id)

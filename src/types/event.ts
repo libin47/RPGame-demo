@@ -108,6 +108,8 @@ export interface EventFrame {
 
   /** 帧显示条件（满足条件时才显示此帧，否则跳过） */
   displayCondition?: Condition
+  // 帧显示条件-标志位，用于判断是否显示此帧
+  displayFlag?: string[]
 
   /** 进入此帧时自动触发的效果 */
   onEnterEffects?: EffectResult[]
@@ -122,7 +124,8 @@ export interface EventTextVariation {
   /** 变体文本 */
   content: string
   /** 显示条件 */
-  condition: Condition
+  condition?: Condition
+  displayFlag?: string[]
 }
 
 // ============================================================
@@ -155,6 +158,8 @@ export interface EventOption {
 
   /** 选项显示条件（满足条件时才显示此选项） */
   displayCondition?: Condition
+  // 选项显示条件-标志位，用于判断是否显示此选项
+  displayFlag?: string[]
   /** 选项可用条件（满足条件时才可点击，不满足时灰显） */
   availableCondition?: Condition
   /** 不可用时的提示文本 */
@@ -341,7 +346,7 @@ export interface SwitchSceneResult {
   /** 目标子场景ID（可选） */
   subSceneId?: string
   /** 进入新场景后显示的文字（可选） */
-  text?: string
+  enterText?: string
 }
 
 /**

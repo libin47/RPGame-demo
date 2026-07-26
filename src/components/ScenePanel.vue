@@ -14,6 +14,8 @@
     >
       <div class="vignette-overlay"></div>
       <div class="content">
+        <!-- 场景文本前缀（从事件返回时显示的 exitText/enterText） -->
+        <p v-if="props.sceneTextPrefix" class="scene-prefix">{{ props.sceneTextPrefix }}</p>
         <p class="scene-line">
           <template v-for="segment in parsedSegments" :key="segment.segmentKey">
             <!-- 普通文本段 -->
@@ -30,6 +32,8 @@
             </button>
           </template>
         </p>
+        <!-- 场景文本后缀（从事件返回时显示的 exitText/enterText） -->
+        <p v-if="props.sceneTextAfter" class="scene-suffix">{{ props.sceneTextAfter }}</p>
       </div>
     </div>
 
@@ -81,6 +85,10 @@ const props = defineProps<{
   descriptionConfig: SceneDescription | null
   /** 当前可用的交互按钮列表 */
   interactions: SceneInteraction[]
+  /** 场景文本前缀（从事件返回时显示在场景描述前） */
+  sceneTextPrefix: string
+  /** 场景文本后缀（从事件返回时显示在场景描述后） */
+  sceneTextAfter: string
   /** 随时段变化的背景色 */
   backgroundColor?: string
 }>()
@@ -237,6 +245,34 @@ function interactionButtonClass(interaction: SceneInteraction): string {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   white-space: pre-wrap;
   color: var(--text-primary);
+}
+
+/* 场景文本前缀（exitText/enterText）：斜体 + 20%透明度黑色背景 */
+.scene-prefix {
+  margin: 0 0 0.8em 0;
+  font-style: italic;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 0.4em 0.6em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  white-space: pre-wrap;
+  color: var(--text-primary);
+  line-height: 1.75;
+  font-size: var(--font-lg);
+}
+/* 场景文本后缀（exitText/enterText）：斜体 + 20%透明度黑色背景 */
+.scene-suffix {
+  margin: 0 0 0.8em 0;
+  font-style: italic;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  margin-top: 1em;
+  padding: 0.4em 0.6em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  white-space: pre-wrap;
+  color: var(--text-primary);
+  line-height: 1.75;
+  font-size: var(--font-lg);
 }
 
 /* ═══════════════════════════════════════════

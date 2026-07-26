@@ -2,7 +2,7 @@
 // 事件引擎：条件判定、选项过滤、帧选择
 
 import type { PlayerState } from '@/types/player'
-import type { GameEvent, EventFrame, EventOption } from '@/types/event'
+import type { GameEvent, EventFrame, EventOption, EventTextVariation } from '@/types/event'
 import type { Condition, ConditionTarget } from '@/types/effect'
 import { ConditionTargetType, ComparisonOperator, LogicOperator } from '@/types/effect'
 import { Season, SeasonPhase } from '@/types/seasonWeather'
@@ -55,7 +55,9 @@ function evaluateLeafCondition(condition: Condition, player: PlayerState): boole
 
   // 获取目标当前值
   const currentValue = resolveConditionTarget(target, player)
-
+  // console.log('currentValue', currentValue)
+  // console.log('attrType', target.attributeType)
+  // console.log('player', player.attributes)
   const operator = condition.operator ?? ComparisonOperator.EQUAL
   const value = condition.value
   const value2 = condition.value2
@@ -323,11 +325,20 @@ function compareValues(
 // 事件帧选择
 // ============================================================
 
+// 比较函数
+// 通过displayFlag判断是否可见
+export function evaluateDisplayFlag(frame: EventFrame, player: PlayerState): boolean {
+  // 检查 displayFlag
+  if (frame.displayFlag) {
+    return frame.displayFlag.every((flag) => player.flags[flag] === true)
+  } else {
+    return true
+  }
+}
+
 /**
  * 从事件帧列表中获取应显示的帧
- * 根据 displayCondition 过滤，返回第一个满足条件的帧
- *
- * @param frames - 事件帧列表（按 order 排序）
+ * �param frames - 事件帧列表（按 order 排序）
  * @param player - 当前玩家状态
  * @returns 找到的帧，或 undefined（无满足条件的帧）
  */
@@ -336,7 +347,8 @@ export function findFirstVisibleFrame(
   player: PlayerState,
 ): EventFrame | undefined {
   const sorted = [...frames].sort((a, b) => a.order - b.order)
-  return sorted.find((frame) => evaluateCondition(frame.displayCondition, player))
+
+  return sorted.find((frame) => evaluateDisplayFlag(frame, player) && evaluateCondition(frame.displayCondition, player))
 }
 
 /**
@@ -350,6 +362,10 @@ export function findFirstVisibleFrame(
 export function getVisibleOptions(frame: EventFrame, player: PlayerState): EventOption[] {
   return frame.options
     .filter((option) => {
+      // 检查 displayFlag
+      if (option.displayFlag && !option.displayFlag.every((flag) => player.flags[flag])) {
+        return false
+      }
       // 检查 displayCondition
       if (!evaluateCondition(option.displayCondition, player)) {
         return false
@@ -363,6 +379,33 @@ export function getVisibleOptions(frame: EventFrame, player: PlayerState): Event
       return true
     })
     .sort((a, b) => (b.displayPriority ?? 0) - (a.displayPriority ?? 0))
+}
+
+/**
+ * 获取帧中所有可见的文本变体
+ * 根据变体的 condition 和 displayFlag 过滤
+ *
+ * @param frame - 当前事件帧
+ * @param player - 当前玩家状态
+ * @returns 可见变体列表（按原顺序）
+ */
+export function getVisibleVariations(
+  frame: EventFrame,
+  player: PlayerState,
+): EventTextVariation[] {
+  if (!frame.textVariations || frame.textVariations.length === 0) return []
+
+  return frame.textVariations.filter((v) => {
+    // 检查 displayFlag
+    if (v.displayFlag && !v.displayFlag.every((flag) => player.flags[flag] === true)) {
+      return false
+    }
+    // 检查 condition
+    if (!evaluateCondition(v.condition, player)) {
+      return false
+    }
+    return true
+  })
 }
 
 /**

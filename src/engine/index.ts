@@ -25,6 +25,7 @@ export {
   evaluateCondition,
   findFirstVisibleFrame,
   getVisibleOptions,
+  getVisibleVariations,
   isOptionAvailable,
   canTriggerEvent,
   resolveTextVariation,
@@ -36,6 +37,7 @@ export {
   getVisibleEventEntries,
   getResolvedDescriptionText,
   markDescriptionSeen,
+  markDescriptionEventSeen,
   checkAutoTrigger,
   getTimeOfDay,
 } from './exploration'

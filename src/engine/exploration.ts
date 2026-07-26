@@ -52,8 +52,8 @@ export function selectSceneDescription(
   // 同优先级随机选取
   if (topGroup.length === 1) return topGroup[0]
 
-  // 加权随机（等权重）
-  const weights = topGroup.map(() => 1)
+  // 加权随机（按weight字段，未填则按1算）
+  const weights = topGroup.map((desc) => desc.weight ?? 1)
   return weightedSelect(topGroup, weights)
 }
 
@@ -68,10 +68,13 @@ function isDescriptionEligible(desc: SceneDescription, player: PlayerState): boo
       return false
     }
   }
-
-  // 已触发交互且设置了 removeAfterInteraction → 不再显示
-  if (desc.removeAfterInteraction && desc.seenFlag) {
-    if (player.flags[desc.seenFlag]) {
+  // displayFlag快捷flag判断
+  if (desc.displayFlag && !desc.displayFlag.every((flag) => player.flags[flag] === true)) { 
+    return false
+  }
+  // 已触发事件且设置了 removeAfterInteraction → 不再显示
+  if (desc.removeAfterInteraction && desc.eventFlag) {
+    if (player.flags[desc.eventFlag]) {
       return false
     }
   }
@@ -173,6 +176,21 @@ export function markDescriptionSeen(desc: SceneDescription, player: PlayerState)
 }
 
 /**
+ * 标记描述为"已触发事件"
+ * 更新 eventFlag 等追踪信息
+ *
+ * @param desc - 场景描述
+ * @param player - 当前玩家状态（会被直接修改）
+ */
+export function markDescriptionEventSeen(desc: SceneDescription, player: PlayerState): void {
+  if (desc.eventFlag) {
+    player.flags[desc.eventFlag] = true
+  }
+}
+
+
+
+/**
  * 判断场景描述是否需要自动触发事件
  *
  * @param desc - 场景描述
@@ -184,12 +202,6 @@ export function checkAutoTrigger(
   player: PlayerState,
 ): { shouldTrigger: boolean; eventKey?: string } {
   if (!desc.isAutoTrigger) {
-    return { shouldTrigger: false }
-  }
-
-  // 概率判定
-  const probability = desc.autoTriggerProbability ?? 1
-  if (Math.random() >= probability) {
     return { shouldTrigger: false }
   }
 

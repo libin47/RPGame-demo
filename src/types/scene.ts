@@ -100,8 +100,12 @@ export interface SceneDescription {
   id: string
   // 优先级（数字越大优先级越高，同优先级时随机选取一条展示）
   priority: number
+  // 权重（同优先级时按权重比例选择）
+  weight?: number
   // 显示条件（满足条件时此描述才可能被选中展示）
   displayCondition?: Condition
+  // 显示条件-简化版
+  displayFlag?: string[]
 
   // 文本内容（展示给玩家的主文本）
   // 使用 {eventKey} 占位符标记事件入口位置，例如：
@@ -127,6 +131,7 @@ export interface SceneDescription {
 
   // 是否在任意事件入口触发后清除此描述（通过设置seenFlag实现）
   removeAfterInteraction?: boolean
+  eventFlag?: string
 
   // ========== 展示频率控制 ==========
   // 此描述是否只能被看到一次
@@ -244,6 +249,9 @@ export interface SceneInteraction {
   // ========== 显示控制 ==========
   // 显示条件（满足条件时此交互按钮才显示）
   displayCondition?: Condition
+  // 显示标志位（满足条件时此按钮才显示）
+  displayFlag?: string[]
+
   // 可用条件（满足条件时此按钮才可点击，不满足时灰显）
   availableCondition?: Condition
   // 不可用时的提示文本
@@ -254,7 +262,7 @@ export interface SceneInteraction {
   costs?: InteractionCost[]
 
   // ========== 交互行为参数 ==========
-  behaviorParams: InteractionBehaviorParams
+  behaviorParams?: InteractionBehaviorParams
 
   // 交互是否需要确认弹窗
   requiresConfirmation?: boolean
@@ -271,7 +279,7 @@ export interface SceneInteraction {
   usedFlag?: string
 
   // 交互冷却时间（游戏内分钟数，-1表示无冷却）
-  cooldownMinutes: number
+  cooldownMinutes?: number
   // 冷却标志位前缀（实际冷却标志位为 前缀+交互ID）
   cooldownFlagPrefix?: string
 
@@ -335,6 +343,8 @@ export interface EventBehaviorParams {
   interactionType: InteractionType.EVENT
   /** 事件ID */
   eventId: string
+  // explore 事件参数-有必要吗？
+  // exploreWhenBack?: boolean
 }
 
 /** 功能面板行为 */

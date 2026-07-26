@@ -7,6 +7,8 @@
       <!-- 上一帧选项结果文本（带背景框） -->
       <div v-if="frameTextPrefix" class="result-prefix">{{ frameTextPrefix }}</div>
       <div class="frame-text">{{ resolvedText }}</div>
+      <!-- 文本变体（斜体、条件满足时显示） -->
+      <div v-for="v in props.variations" :key="v.content" class="text-variation">{{ v.content }}</div>
     </div>
 
     <!-- 分割线 -->
@@ -18,7 +20,8 @@
         v-for="option in options"
         :key="option.id"
         class="option-btn"
-        :class="optionButtonClass(option)"
+        :class="[optionButtonClass(option), { 'opt-unavailable': !isAvailable(option.id) }]"
+        :disabled="!isAvailable(option.id)"
         @click="onOptionClick(option.id)"
       >
         {{ option.text }}
@@ -29,7 +32,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { EventFrame, EventOption } from '@/types/event'
+import type { EventFrame, EventOption, EventTextVariation } from '@/types/event'
 import { EventOptionStyle } from '@/types/event'
 
 // ============================================================
@@ -45,6 +48,10 @@ const props = defineProps<{
   frameTextPrefix: string
   /** 过滤后的可见选项列表（由 GameView 计算传入） */
   options: EventOption[]
+  /** 可见的文本变体列表（由 GameView 计算传入） */
+  variations: EventTextVariation[]
+  /** 选项可用性映射（optionId -> 是否满足 availableCondition） */
+  optionAvailability: Record<string, boolean>
 }>()
 
 // ============================================================
@@ -81,7 +88,13 @@ function optionButtonClass(option: EventOption): string {
 
 /** 选择选项 */
 function onOptionClick(optionId: string): void {
+  if (!isAvailable(optionId)) return
   emit('selectOption', optionId)
+}
+
+/** 判断选项是否可用（满足 availableCondition） */
+function isAvailable(optionId: string): boolean {
+  return props.optionAvailability[optionId] !== false
 }
 </script>
 
@@ -116,6 +129,14 @@ function onOptionClick(optionId: string): void {
 .frame-text {
   white-space: pre-wrap;
   line-height: 2.0;
+}
+
+/* 文本变体：斜体，其余与主文本相同 */
+.text-variation {
+  font-style: italic;
+  white-space: pre-wrap;
+  line-height: 2.0;
+  margin-top: 8px;
 }
 
 .divider {
@@ -201,5 +222,21 @@ function onOptionClick(optionId: string): void {
 .opt-madness:hover {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(123, 31, 162, 0.08));
   border-color: #7b1fa2;
+}
+
+/* 不可用选项（条件不满足，灰色不可点击） */
+.opt-unavailable {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #888;
+}
+
+.opt-unavailable:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #888;
+  box-shadow: none;
+  transform: none;
 }
 </style>
