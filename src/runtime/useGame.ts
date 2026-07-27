@@ -192,7 +192,7 @@ export function useGame(initialPlayer: PlayerState) {
     }
 
     // 由场景描述事件入口触发时，检查是否需要标记描述为已使用
-    if (fromEventEntry && state.currentDescriptionConfig?.removeAfterInteraction) {
+    if (fromEventEntry && state.currentDescriptionConfig?.eventFlag) {
       markDescriptionEventSeen(state.currentDescriptionConfig, state.player)
     }
 
@@ -631,9 +631,18 @@ export function useGame(initialPlayer: PlayerState) {
         state.logMessage = '未知交互类型'
     }
 
-    // isOneTime 交互：点击后标记为已使用
-    if (interaction.isOneTime && interaction.usedFlag) {
+    // usedFlag点击后标记为已使用
+    if (interaction.usedFlag) {
       state.player.flags[interaction.usedFlag] = true
+    }
+    // usedCountFlag点击后标记+1
+    if (interaction.usedCountFlag) {
+      const currentVal = state.player.flags[interaction.usedCountFlag]
+      if (typeof currentVal === 'number') {
+        state.player.flags[interaction.usedCountFlag] = (currentVal + 1) % 1000000000
+      } else if (currentVal === undefined) {
+        state.player.flags[interaction.usedCountFlag] = 1
+      }
     }
   }
 
@@ -718,21 +727,16 @@ export function useGame(initialPlayer: PlayerState) {
       if (i.isOneTime && i.usedFlag && state.player.flags[i.usedFlag]) {
         return false
       }
-      // displayFlag 检查
-      if (i.displayFlag) {
-        console.log(i.displayFlag)
-        i.displayFlag.every((flag) => console.log(state.player.flags[flag]))
-
-        if (
-          i.displayFlag.every(
-            (flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1,
-          )
-        ) {
-          return true
-        } else {
-          return false
-        }
+      // hideFlag 检查
+      if (i.hideFlag && i.hideFlag.some((flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1)) {
+        return false
       }
+      
+      // displayFlag 检查
+      if (i.displayFlag && !i.displayFlag.every((flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1)) {
+        return false
+      }
+
       return true
     })
   }

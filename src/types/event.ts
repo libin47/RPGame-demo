@@ -126,6 +126,7 @@ export interface EventTextVariation {
   /** 显示条件 */
   condition?: Condition
   displayFlag?: string[]
+  hideFlag?: string[]
 }
 
 // ============================================================

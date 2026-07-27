@@ -90,7 +90,7 @@ const beach: Scene = {
       text: '{beach_2_event_1}散落在整条海岸线上。扭曲的银白色金属碎片、烧焦的座椅垫、一只不知属于谁的鞋，孤零零地躺在潮水够不到的地方。远处的机翼断成两截，其中半截斜插在沙滩上，像一块被遗忘的墓碑。\\nn海是平静的。蓝色深到近乎黑色。\n\n地平线空无一物。没有船，没有灯塔，没有任何人造建筑的轮廓。\n\n你跪在那里，看着面前这座陌生的岛屿。\n\n然后你站起来。',
       isAutoTrigger: false,
       isOneTime: false,
-      removeAfterInteraction: true,
+      hideFlag: ['beach_2'],
       eventFlag: 'beach_2',
       eventEntries: [
         {
@@ -107,7 +107,7 @@ const beach: Scene = {
 
       isAutoTrigger: false,
       isOneTime: false,
-      removeAfterInteraction: true,
+      hideFlag: ['beach_抵达机翼营地',],
       eventFlag: 'beach_抵达机翼营地',
     },
 
@@ -452,6 +452,12 @@ const beach_机翼营地: SubScene = {
       id: 'beach_机翼营地_2',
       priority: 1,
       text: '半截机翼插在地上，是一个“天然”的庇护所。',
+      textVariations: [
+        {
+          content: '地上铺着一层防水布，算是勉强有一个栖身之所了。',
+          displayFlag: ['beach_抵达机翼营地'],
+        },
+      ],
       isAutoTrigger: false,
       isOneTime: false,
     },
@@ -469,6 +475,7 @@ const beach_机翼营地: SubScene = {
       },
       displayPriority: 10,
       isOneTime: false,
+      hideFlag: ['event_机翼营地_铺地'],
     },
     {
       id: '休息',

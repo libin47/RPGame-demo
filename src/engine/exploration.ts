@@ -4,8 +4,9 @@
 import type { PlayerState } from '@/types/player'
 import type { Scene, SubScene, SceneDescription, SceneEventEntry } from '@/types/scene'
 import { TimeOfDay, WeatherType } from '@/types/seasonWeather'
-import { evaluateCondition, resolveTextVariation } from './event'
+import { evaluateCondition } from './event'
 import { weightedSelect } from './dice'
+import type { SceneTextVariation } from '@/types/scene'
 
 /**
  * 从场景或子场景的描述列表中选取符合条件的描述
@@ -75,11 +76,9 @@ function isDescriptionEligible(desc: SceneDescription, player: PlayerState): boo
   ) {
     return false
   }
-  // 已触发事件且设置了 removeAfterInteraction → 不再显示
-  if (desc.removeAfterInteraction && desc.eventFlag) {
-    if (player.flags[desc.eventFlag]) {
-      return false
-    }
+  // hideFlag快捷flag判断
+  if (desc.hideFlag && desc.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)) {
+    return false
   }
 
   // 看过次数达到上限
@@ -176,6 +175,16 @@ export function markDescriptionSeen(desc: SceneDescription, player: PlayerState)
       player.flags[desc.seenFlag] = true
     }
   }
+  if(desc.seenCountFlag){
+    const currentVal = player.flags[desc.seenCountFlag]
+    if (typeof currentVal === 'number') {
+      player.flags[desc.seenCountFlag] = currentVal + 1
+    } else if (currentVal === undefined) {
+      player.flags[desc.seenCountFlag] = 1
+    } else {
+      player.flags[desc.seenCountFlag] = 1
+    }
+  }
 }
 
 /**
@@ -242,4 +251,45 @@ function getWeatherTypeFromId(weatherId: string): WeatherType | null {
   if (weatherId === 'acid_rain') return WeatherType.ACID_RAIN
   if (weatherId === 'blood_rain') return WeatherType.BLOOD_RAIN
   return null
+}
+
+
+/**
+ * 获取场景描述文本变体
+ * 搜索符合条件的第一条变体，如果都不满足则返回原始文本
+ *
+ * @param variations - 文本变体列表
+ * @param defaultText - 默认文本
+ * @param player - 当前玩家状态
+ * @returns 应显示的文本
+ */
+export function resolveTextVariation(
+  variations: SceneTextVariation[] | undefined,
+  defaultText: string,
+  player: PlayerState,
+): string {
+  if (!variations || variations.length === 0) return defaultText
+
+  const matched = variations.find((v) => evaluateCondition(v.condition, player)&&evaluateTextVariationFlag(v, player))
+  console.log(matched ? matched.content : defaultText)
+  return matched ? matched.content : defaultText
+}
+
+// 场景描述文本变体-快捷条件判断
+export function evaluateTextVariationFlag(
+  textVariations: SceneTextVariation,
+  player: PlayerState,
+): boolean {
+  // displayFlag快捷flag判断
+  if (
+    textVariations.displayFlag &&
+    !textVariations.displayFlag.every((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+  ) {
+    return false
+  }
+  // hideFlag快捷flag判断
+  if (textVariations.hideFlag && textVariations.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)) {
+    return false
+  }
+  return true
 }

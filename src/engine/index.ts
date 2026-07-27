@@ -28,7 +28,6 @@ export {
   getVisibleVariations,
   isOptionAvailable,
   canTriggerEvent,
-  resolveTextVariation,
 } from './event'
 
 // 探索逻辑
@@ -40,6 +39,8 @@ export {
   markDescriptionEventSeen,
   checkAutoTrigger,
   getTimeOfDay,
+  resolveTextVariation,
+  evaluateTextVariationFlag,
 } from './exploration'
 
 // 背包系统

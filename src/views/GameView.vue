@@ -105,8 +105,8 @@ import InventoryPanel from '@/components/InventoryPanel.vue'
 import SystemMenu from '@/components/SystemMenu.vue'
 import AttributesPanel from '@/components/AttributesPanel.vue'
 import BuildPanel from '@/components/BuildPanel.vue'
-import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
-import { getVisibleOptions, getVisibleVariations, isOptionAvailable } from '@/engine'
+import { PlayerActionType, getTimeOfDay, getRegistry, getResolvedDescriptionText } from '@/engine'
+import { getVisibleOptions, getVisibleVariations, isOptionAvailable, resolveTextVariation } from '@/engine'
 import { getGameInstance } from '@/runtime/gameInstance'
 import type { GameInstance } from '@/runtime/gameInstance'
 import { useUI } from '@/runtime/useUI'
@@ -179,7 +179,10 @@ const hasSanItem = computed<boolean>(() => {
 // ============================================================
 
 const resolvedDescription = computed<string>(() => {
-  return game.value.resolveText(game.value.state.sceneDescription)
+  // return game.value.resolveText(game.value.state.sceneDescription)
+  const currentDescriptionConfig = game.value.state.currentDescriptionConfig
+  if (!currentDescriptionConfig) return ''
+  return getResolvedDescriptionText(currentDescriptionConfig, game.value.state.player)
 })
 
 const resolvedFrameText = computed<string>(() => {

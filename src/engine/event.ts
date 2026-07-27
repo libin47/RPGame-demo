@@ -8,7 +8,6 @@ import { ConditionTargetType, ComparisonOperator, LogicOperator } from '@/types/
 import { Season, SeasonPhase } from '@/types/seasonWeather'
 import { getRegistry } from './registry'
 import { calcCarryWeightRate } from './formula'
-
 // ============================================================
 // 条件评估器
 // ============================================================
@@ -397,7 +396,11 @@ export function getVisibleVariations(
 
   return frame.textVariations.filter((v) => {
     // 检查 displayFlag
-    if (v.displayFlag && !v.displayFlag.every((flag) => player.flags[flag] === true)) {
+    if (v.displayFlag && !v.displayFlag.every((flag) => player.flags[flag] === true || player.flags[flag] === 1)) {
+      return false
+    }
+    // 检查 hideFlag
+    if (v.hideFlag && v.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)) {
       return false
     }
     // 检查 condition
@@ -443,22 +446,5 @@ export function canTriggerEvent(event: GameEvent, player: PlayerState): boolean 
   return true
 }
 
-/**
- * 获取场景描述文本变体
- * 搜索符合条件的第一条变体，如果都不满足则返回原始文本
- *
- * @param variations - 文本变体列表
- * @param defaultText - 默认文本
- * @param player - 当前玩家状态
- * @returns 应显示的文本
- */
-export function resolveTextVariation(
-  variations: { content: string; condition: Condition }[] | undefined,
-  defaultText: string,
-  player: PlayerState,
-): string {
-  if (!variations || variations.length === 0) return defaultText
 
-  const matched = variations.find((v) => evaluateCondition(v.condition, player))
-  return matched ? matched.content : defaultText
-}
+

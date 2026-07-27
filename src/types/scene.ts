@@ -112,6 +112,8 @@ export interface SceneDescription {
   displayCondition?: Condition
   // 显示条件-简化版
   displayFlag?: string[]
+  // 不显示标志位
+  hideFlag?: string[]
 
   // 文本内容（展示给玩家的主文本）
   // 使用 {eventKey} 占位符标记事件入口位置，例如：
@@ -136,14 +138,16 @@ export interface SceneDescription {
   autoTriggerEventKey?: string
 
   // 是否在任意事件入口触发后清除此描述（通过设置seenFlag实现）
-  removeAfterInteraction?: boolean
-  eventFlag?: string
+  // removeAfterInteraction?: boolean
+  // eventFlag?: string
 
   // ========== 展示频率控制 ==========
   // 此描述是否只能被看到一次
   isOneTime: boolean
   // 看过此描述后设置的标志位（用于后续判定是否已看过）
   seenFlag?: string
+  seenCountFlag?: string
+  eventFlag?: string
   // 此描述可被看到的次数上限（-1表示无限次，配合seenFlag使用）
   viewLimit?: number
 
@@ -192,7 +196,10 @@ export interface SceneTextVariation {
   // 变体文本内容（同样支持 {eventKey} 占位符）
   content: string
   // 显示条件
-  condition: Condition
+  condition?: Condition
+  // 快捷条件
+  displayFlag?: string[]
+  hideFlag?: string[]
   // 变体样式（覆盖默认样式）
   style?: SceneTextStyle
   // 变体对应的事件入口列表（覆盖 SceneDescription 的 eventEntries）
@@ -257,6 +264,8 @@ export interface SceneInteraction {
   displayCondition?: Condition
   // 显示标志位（满足条件时此按钮才显示）
   displayFlag?: string[]
+  // 不显示标志位
+  hideFlag?: string[]
 
   // 可用条件（满足条件时此按钮才可点击，不满足时灰显）
   availableCondition?: Condition
@@ -283,6 +292,7 @@ export interface SceneInteraction {
   isOneTime: boolean
   // 使用后设置的标志位
   usedFlag?: string
+  usedCountFlag?: string
 
   // 交互冷却时间（游戏内分钟数，-1表示无冷却）
   cooldownMinutes?: number

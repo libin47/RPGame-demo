@@ -710,23 +710,6 @@ const event_机翼营地_搭建营地: GameEvent = {
       id: '搭建营地',
       order: 1,
       text: '除了半截机翼什么都没有。',
-      textVariations: [
-        {
-          content: '防水布铺在沙子上，最起码有地方可以躺下来了。',
-          /** 显示条件 */
-          displayFlag: ['event_机翼营地_铺地'],
-        },
-        {
-          content: '篝火燃烧着，有了点儿基地的感觉了。',
-          /** 显示条件 */
-          displayFlag: ['event_机翼营地_搭建篝火'],
-        },
-        {
-          content: '这里勉强可以算是营地了。\n\n你应该先休息休息。',
-          /** 显示条件 */
-          displayFlag: ['event_机翼营地_搭建篝火', 'event_机翼营地_铺地'],
-        },
-      ],
       options: [
         {
           id: '铺地',
@@ -755,34 +738,6 @@ const event_机翼营地_搭建营地: GameEvent = {
           displayPriority: 10,
           isOneTime: true,
           selectedFlag: 'event_机翼营地_铺地',
-        },
-        {
-          id: '搭建篝火',
-          text: '搭建篝火(需要木头5)',
-          availableCondition: {
-            target: {
-              type: ConditionTargetType.ITEM,
-              id: '木头',
-            },
-            operator: ComparisonOperator.GREATER_EQUAL,
-            value: 5,
-          },
-          costs: [
-            {
-              costType: EventOptionCostType.ITEM,
-              itemId: '木头',
-              value: 5,
-            },
-          ],
-          results: [
-            {
-              type: 'nextFrame',
-              targetFrameId: '搭建营地',
-            },
-          ],
-          displayPriority: 10,
-          isOneTime: true,
-          selectedFlag: 'event_机翼营地_搭建篝火',
         },
         {
           id: '离开',
