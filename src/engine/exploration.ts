@@ -69,7 +69,10 @@ function isDescriptionEligible(desc: SceneDescription, player: PlayerState): boo
     }
   }
   // displayFlag快捷flag判断
-  if (desc.displayFlag && !desc.displayFlag.every((flag) => player.flags[flag] === true)) { 
+  if (
+    desc.displayFlag &&
+    !desc.displayFlag.every((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+  ) {
     return false
   }
   // 已触发事件且设置了 removeAfterInteraction → 不再显示
@@ -187,8 +190,6 @@ export function markDescriptionEventSeen(desc: SceneDescription, player: PlayerS
     player.flags[desc.eventFlag] = true
   }
 }
-
-
 
 /**
  * 判断场景描述是否需要自动触发事件

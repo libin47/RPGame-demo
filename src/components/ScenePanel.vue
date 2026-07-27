@@ -49,6 +49,22 @@
         {{ interaction.name }}
       </button>
     </div>
+
+    <!-- 营地建筑交互按钮（区别于固定交互，显示在更下方） -->
+    <div
+      v-if="props.isCampsite && (props.buildingInteractions?.length ?? 0) > 0"
+      class="building-interactions"
+    >
+      <div class="building-section-label">营地设施</div>
+      <button
+        v-for="interaction in props.buildingInteractions"
+        :key="interaction.id"
+        class="interaction-btn btn-building"
+        @click="onInteractionClick(interaction.id)"
+      >
+        {{ interaction.name }}
+      </button>
+    </div>
   </div>
 </template>
 
@@ -85,6 +101,10 @@ const props = defineProps<{
   descriptionConfig: SceneDescription | null
   /** 当前可用的交互按钮列表 */
   interactions: SceneInteraction[]
+  /** 营地建筑提供的交互按钮列表 */
+  buildingInteractions?: SceneInteraction[]
+  /** 是否为营地场景 */
+  isCampsite?: boolean
   /** 场景文本前缀（从事件返回时显示在场景描述前） */
   sceneTextPrefix: string
   /** 场景文本后缀（从事件返回时显示在场景描述后） */
@@ -377,5 +397,33 @@ function interactionButtonClass(interaction: SceneInteraction): string {
 .btn-special:hover {
   background: rgba(255, 213, 79, 0.1);
   border-color: #ffd54f;
+}
+
+/* ---- 营地建筑交互 ---- */
+.building-interactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 1.2rem 0.7rem;
+  border-top: 1px solid var(--border-weak);
+  background: rgba(78, 205, 196, 0.04);
+}
+
+.building-section-label {
+  width: 100%;
+  font-size: var(--font-xs);
+  color: var(--accent);
+  opacity: 0.7;
+  margin-bottom: -0.2rem;
+}
+
+.btn-building {
+  border-color: rgba(78, 205, 196, 0.4);
+  color: var(--accent);
+}
+
+.btn-building:hover {
+  background: rgba(78, 205, 196, 0.12);
+  border-color: var(--accent);
 }
 </style>

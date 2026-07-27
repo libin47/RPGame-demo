@@ -46,5 +46,49 @@ const 尼龙绳: MaterialItem = {
   isKeyItem: false,
   tags: ['material', 'rope', 'nylon'],
 }
+/** 木头 */
+const 木头: MaterialItem = {
+  id: '木头',
+  name: '木头',
+  description: '一截木头。',
+  category: ItemCategory.MATERIAL,
+  iconId: 'icon_log',
+  weight: 0.5,
+  maxStackSize: -1,
+  isSellable: true,
+  basePrice: 6,
+  isKeyItem: false,
+  tags: ['material', 'wood'],
+}
 
-export { 镜子, 防水布, 尼龙绳 }
+/** 金属碎片 */
+const 金属碎片: MaterialItem = {
+  id: '金属碎片',
+  name: '金属碎片',
+  description: '一块金属碎片，可以用来修复或制作工具。',
+  category: ItemCategory.MATERIAL,
+  iconId: 'icon_metal_fragment',
+  weight: 0.1,
+  maxStackSize: -1,
+  isSellable: true,
+  basePrice: 2,
+  isKeyItem: false,
+  tags: ['material', 'metal', 'fragment'],
+}
+
+/** 布料 */
+const 布料: MaterialItem = {
+  id: '布料',
+  name: '布料',
+  description: '一块布料，可以用来制作。',
+  category: ItemCategory.MATERIAL,
+  iconId: 'icon_cloth',
+  weight: 0.2,
+  maxStackSize: -1,
+  isSellable: true,
+  basePrice: 4,
+  isKeyItem: false,
+  tags: ['material', 'cloth'],
+}
+
+export { 镜子, 防水布, 尼龙绳, 木头, 金属碎片, 布料 }

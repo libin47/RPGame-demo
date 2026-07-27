@@ -23,6 +23,8 @@
         :resolved-description="resolvedDescription"
         :description-config="game.state.currentDescriptionConfig"
         :interactions="game.getCurrentInteractions()"
+        :building-interactions="game.getBuildingInteractions()"
+        :is-campsite="!!game.state.currentSubScene?.isCampsite"
         :scene-text-prefix="game.state.sceneTextPrefix"
         :scene-text-after="game.state.sceneTextAfter"
         :background-color="backgroundColor"
@@ -48,6 +50,16 @@
         :enemies="game.state.currentBattle.enemies"
         :logs="game.state.currentBattle.logs"
         @action="onBattleAction"
+      />
+
+      <!-- 建造模式 -->
+      <BuildPanel
+        v-else-if="game.state.mode === 'build'"
+        :sub-scene="game.state.currentSubScene"
+        :player-state="game.state.player"
+        :log-message="game.state.logMessage"
+        @close="game.exitBuildMode()"
+        @build="onBuildRecipe"
       />
 
       <!-- 其他模式（占位提示） -->
@@ -92,6 +104,7 @@ import BattlePanel from '@/components/BattlePanel.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
 import SystemMenu from '@/components/SystemMenu.vue'
 import AttributesPanel from '@/components/AttributesPanel.vue'
+import BuildPanel from '@/components/BuildPanel.vue'
 import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
 import { getVisibleOptions, getVisibleVariations, isOptionAvailable } from '@/engine'
 import { getGameInstance } from '@/runtime/gameInstance'
@@ -243,6 +256,11 @@ function onOpenInventory(): void {
 /** 打开属性面板 */
 function onOpenAttributes(): void {
   toggleAttributes()
+}
+
+/** 执行建造配方 */
+function onBuildRecipe(recipeId: string): void {
+  game.value.executeBuildRecipe(recipeId)
 }
 
 /** 监听结局/CG模式，自动跳转 */

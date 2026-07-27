@@ -50,10 +50,10 @@ export enum AttributeType {
   CARRY_WEIGHT = 'carryWeight',
 
   // 基础属性
-  STRENGTH = 'strength',
-  AGILITY = 'agility',
-  INTELLIGENCE = 'intelligence',
-  CONSTITUTION = 'constitution',
+  STRENGTH = 'strength', // 力量
+  AGILITY = 'agility', // 敏捷
+  INTELLIGENCE = 'intelligence', //智力
+  CONSTITUTION = 'constitution', // 体质
 
   // 经验值
   STRENGTH_EXP = 'strengthExp',

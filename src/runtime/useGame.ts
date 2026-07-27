@@ -2,12 +2,17 @@
 
 import { reactive, readonly } from 'vue'
 import type { PlayerState } from '@/types/player'
-import type { Scene, SceneDescription, SubScene } from '@/types/scene'
+import type { Scene, SceneDescription, SubScene, SceneInteraction } from '@/types/scene'
 import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
 import type { EffectResult } from '@/types/effect'
 import type { EndingConfig } from '@/types/ending'
 import { getRegistry, getEffectResolver, advanceTime, evaluateCondition } from '@/engine'
-import { selectSceneDescription, markDescriptionSeen, checkAutoTrigger, markDescriptionEventSeen } from '@/engine'
+import {
+  selectSceneDescription,
+  markDescriptionSeen,
+  checkAutoTrigger,
+  markDescriptionEventSeen,
+} from '@/engine'
 import { getVisibleOptions, findFirstVisibleFrame } from '@/engine'
 import { createBattle, startBattle, executePlayerAction, settleBattle } from '@/engine'
 import { BattlePhase, BattleResult, PlayerActionType } from '@/engine'
@@ -18,6 +23,8 @@ import { startCG } from '@/engine'
 import type { CGPlayState } from '@/engine'
 import { ItemCategory } from '@/types/item'
 import { equipItem as engineEquipItem, unequipSlot, useConsumable } from '@/engine'
+import { executeBuild } from '@/engine'
+import type { CraftResult } from '@/engine'
 
 /**
  * 游戏界面模式
@@ -506,7 +513,7 @@ export function useGame(initialPlayer: PlayerState) {
       }
 
       case 'event': {
-        if(params?.interactionType === 'event'){
+        if (params?.interactionType === 'event') {
           // 触发事件（消耗少量时间）
           advanceGameTime(5)
           enterEvent(params.eventId)
@@ -516,7 +523,7 @@ export function useGame(initialPlayer: PlayerState) {
 
       case 'enterSubScene': {
         state.sceneTextAfter = ''
-        if(params?.interactionType === 'enterSubScene'){
+        if (params?.interactionType === 'enterSubScene') {
           // 进入子场景（消耗5分钟）
           const subScene = registry.getSubScene(params.subSceneId)
           if (subScene) {
@@ -557,60 +564,66 @@ export function useGame(initialPlayer: PlayerState) {
       }
 
       case 'talk': {
-        if(params?.interactionType === 'talk'){
-        // 对话：消耗10分钟
-        advanceGameTime(10)
-        enterEvent(params.eventId)
-        break
+        if (params?.interactionType === 'talk') {
+          // 对话：消耗10分钟
+          advanceGameTime(10)
+          enterEvent(params.eventId)
+          break
         }
       }
 
       case 'trade': {
-        if(params?.interactionType === 'trade'){
-        // 打开交易面板
-        state.currentTraderId = params.traderId
-        state.mode = 'trade'
-        break
+        if (params?.interactionType === 'trade') {
+          // 打开交易面板
+          state.currentTraderId = params.traderId
+          state.mode = 'trade'
+          break
         }
       }
 
       case 'move': {
         state.sceneTextAfter = ''
-        if(params?.interactionType === 'move'){
-        // 方向移动：消耗10分钟
-        advanceGameTime(10)
-        state.logMessage = `你向 ${params.direction} 方向移动`
-        break
+        if (params?.interactionType === 'move') {
+          // 方向移动：消耗10分钟
+          advanceGameTime(10)
+          state.logMessage = `你向 ${params.direction} 方向移动`
+          break
         }
       }
 
       case 'moveToScene': {
         state.sceneTextAfter = ''
-        if(params?.interactionType === 'moveToScene'){
-        // 场景间移动：消耗指定的旅行时间
-        advanceGameTime(params.travelTimeMinutes || 15)
-        const targetScene = registry.getScene(params.targetSceneId)
-        if (targetScene) {
-          state.currentScene = targetScene
-          state.currentSubScene = null
-          const selectedDesc = selectSceneDescription(targetScene, state.player)
-          state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-          state.currentDescriptionConfig = selectedDesc || null
-          if (selectedDesc) {
-            markDescriptionSeen(selectedDesc, state.player)
+        if (params?.interactionType === 'moveToScene') {
+          // 场景间移动：消耗指定的旅行时间
+          advanceGameTime(params.travelTimeMinutes || 15)
+          const targetScene = registry.getScene(params.targetSceneId)
+          if (targetScene) {
+            state.currentScene = targetScene
+            state.currentSubScene = null
+            const selectedDesc = selectSceneDescription(targetScene, state.player)
+            state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
+            state.currentDescriptionConfig = selectedDesc || null
+            if (selectedDesc) {
+              markDescriptionSeen(selectedDesc, state.player)
+            }
+            state.player.currentLocation.sceneId = params.targetSceneId
+            state.player.currentLocation.subSceneId = null
+            state.logMessage = params.pathDescription
           }
-          state.player.currentLocation.sceneId = params.targetSceneId
-          state.player.currentLocation.subSceneId = null
-          state.logMessage = params.pathDescription
+          break
         }
-        break
-      }
       }
 
       case 'function': {
-        if(params?.interactionType === 'function'){
-        state.logMessage = `功能 "${params.functionType}" 尚未实现`
-        break
+        if (params?.interactionType === 'function') {
+          if (params.functionType === 'build') {
+            // 进入建造模式
+            state.mode = 'build'
+            state.logMessage = '进入建造模式'
+          } else {
+            state.logMessage = `功能 "${params.functionType}" 尚未实现`
+          }
+          break
         }
       }
 
@@ -625,6 +638,76 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 执行建造配方
+   */
+  function executeBuildRecipe(recipeId: string): CraftResult {
+    const subSceneId = state.currentSubScene?.id
+    const result = executeBuild(state.player, recipeId, subSceneId)
+
+    if (result.success) {
+      // 推进游戏时间
+      if (result.timeUsed > 0) {
+        advanceGameTime(result.timeUsed)
+      }
+      state.logMessage = result.message
+    } else {
+      state.logMessage = result.message
+    }
+
+    return result
+  }
+
+  /**
+   * 退出建造模式返回场景
+   */
+  function exitBuildMode(): void {
+    state.mode = 'normal'
+    state.logMessage = '退出了建造模式'
+  }
+
+  /**
+   * 获取当前场景中已有建筑提供的交互按钮列表
+   * 用于在营地子场景中显示除固定交互外的建筑交互按钮
+   */
+  function getBuildingInteractions(): SceneInteraction[] {
+    const subScene = state.currentSubScene
+    if (!subScene || !subScene.isCampsite) return []
+
+    // 获取当前营地的所有建筑
+    const initIds: string[] = subScene.buildingInit ?? []
+    const builtIds: string[] = state.player.progress.campBuildings[subScene.id] ?? []
+    const allIds = new Set([...initIds, ...builtIds])
+
+    const interactions: SceneInteraction[] = []
+
+    for (const bldId of allIds) {
+      const building = registry.getBuilding(bldId)
+      if (!building || !building.providedInteractions) continue
+
+      for (const pi of building.providedInteractions) {
+        // 将 BuildProvidedInteraction 转换为 SceneInteraction
+        interactions.push({
+          id: pi.interactionId,
+          name: pi.interactionName,
+          interactionType: pi.interactionType as any,
+          displayPriority: 3,
+          isOneTime: false,
+          behaviorParams: pi.params
+            ? ({
+                interactionType: pi.interactionType,
+                ...pi.params,
+              } as any)
+            : undefined,
+          // 从 building 的 providedInteractions 中读取显示条件
+          displayCondition: pi.displayCondition,
+        })
+      }
+    }
+
+    return interactions
+  }
+
+  /**
    * 获取当前有效的交互按钮列表
    * 子场景优先，没有则使用母场景的交互按钮
    */
@@ -636,14 +719,20 @@ export function useGame(initialPlayer: PlayerState) {
         return false
       }
       // displayFlag 检查
-      if (i.displayFlag){
+      if (i.displayFlag) {
         console.log(i.displayFlag)
-        if (i.displayFlag.every((flag) => state.player.flags[flag]===true)) {
+        i.displayFlag.every((flag) => console.log(state.player.flags[flag]))
+
+        if (
+          i.displayFlag.every(
+            (flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1,
+          )
+        ) {
           return true
-        }else{
+        } else {
           return false
         }
-    }
+      }
       return true
     })
   }
@@ -825,7 +914,7 @@ export function useGame(initialPlayer: PlayerState) {
     const target = state.currentSubScene || state.currentScene
     const selectedDesc = selectSceneDescription(target, state.player)
     if (selectedDesc) {
-      state.sceneDescription = selectedDesc.text      
+      state.sceneDescription = selectedDesc.text
       state.currentDescriptionConfig = selectedDesc
       markDescriptionSeen(selectedDesc, state.player)
 
@@ -940,6 +1029,9 @@ export function useGame(initialPlayer: PlayerState) {
     selectEventOption,
     handleInteraction,
     getCurrentInteractions,
+    getBuildingInteractions,
+    executeBuildRecipe,
+    exitBuildMode,
     resolveText,
     advanceGameTime,
     executeBattleAction,

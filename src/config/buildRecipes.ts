@@ -13,13 +13,8 @@ const buildCampfire: BuildRecipe = {
   buildCategory: BuildCategory.LIGHTING,
   materials: [
     {
-      itemId: 'wood',
+      itemId: '木头',
       quantity: 5,
-      isConsumed: true,
-    },
-    {
-      itemId: 'stone',
-      quantity: 3,
       isConsumed: true,
     },
   ],
@@ -59,9 +54,7 @@ const buildCampfire: BuildRecipe = {
     deconstructionReturnRatio: 0.5,
     isDestructible: true,
     durability: 30,
-    repairMaterials: [
-      { itemId: 'wood', quantity: 2 },
-    ],
+    repairMaterials: [{ itemId: 'wood', quantity: 2 }],
     passiveEffects: [
       {
         effect: {
@@ -139,9 +132,7 @@ const buildWoodenWall: BuildRecipe = {
     deconstructionReturnRatio: 0.6,
     isDestructible: true,
     durability: 100,
-    repairMaterials: [
-      { itemId: 'wood', quantity: 5 },
-    ],
+    repairMaterials: [{ itemId: 'wood', quantity: 5 }],
   },
 }
 
@@ -149,5 +140,5 @@ export const buildRecipeRegistry: BuildRecipeRegistry = {
   recipes: {
     build_campfire: buildCampfire,
     build_wooden_wall: buildWoodenWall,
-  }
+  },
 }

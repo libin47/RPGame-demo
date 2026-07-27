@@ -84,6 +84,12 @@ export interface SubScene extends BaseScene {
     up?: string
     down?: string
   }
+  // 营地特有
+  isCampsite?: boolean
+  // 营地允许的建筑
+  buildingList?: string[]
+  // 营地允许的初始化建筑
+  buildingInit?: string[]
 }
 
 // ============================================================

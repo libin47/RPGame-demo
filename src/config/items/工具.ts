@@ -28,4 +28,20 @@ const 多功能战术刀: ToolItem = {
   tags: ['tool', 'knife', 'multitool', 'survival'],
 }
 
-export { 多功能战术刀 }
+/** 木竿 */
+const 木竿: ToolItem = {
+  id: '木竿',
+  name: '木竿',
+  description: '木头做的长竿。',
+  category: ItemCategory.TOOL,
+  iconId: 'icon_log',
+  weight: 0.4,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 30,
+  isKeyItem: false,
+  toolTypeId: 'multitool',
+  toolLevel: 2,
+  tags: ['tool', 'wood', 'multitool', 'survival'],
+}
+export { 多功能战术刀, 木竿 }

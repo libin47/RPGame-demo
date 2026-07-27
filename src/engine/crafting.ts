@@ -443,9 +443,14 @@ export function executeCook(player: PlayerState, recipeId: string): CraftResult 
  *
  * @param player - 当前玩家（会被直接修改）
  * @param recipeId - 建造配方ID
+ * @param subSceneId - 当前子场景ID（用于追踪营地建筑，可选）
  * @returns 执行结果
  */
-export function executeBuild(player: PlayerState, recipeId: string): CraftResult {
+export function executeBuild(
+  player: PlayerState,
+  recipeId: string,
+  subSceneId?: string,
+): CraftResult {
   const registry = getRegistry()
   const recipe = registry.getBuildRecipe(recipeId)
 
@@ -458,13 +463,21 @@ export function executeBuild(player: PlayerState, recipeId: string): CraftResult
     return { success: false, message: `配方 ${recipe.name} 尚未解锁`, timeUsed: 0 }
   }
 
-  // 检查前置建筑（若有则检查是否已建造）
+  // 检查前置建筑
   if (recipe.prerequisiteBuildings && recipe.prerequisiteBuildings.length > 0) {
-    // 前置建筑检查逻辑依赖于场景中已建造的建筑列表
-    // 当前尚未实现场景建筑追踪，跳过此检查
+    // 若在营地场景中，检查前置建筑是否已建造
+    if (subSceneId && player.progress.campBuildings[subSceneId]) {
+      const existing = player.progress.campBuildings[subSceneId]
+      for (const prereq of recipe.prerequisiteBuildings) {
+        if (!existing.includes(prereq)) {
+          const prereqName = registry.getBuilding(prereq)?.buildingName ?? prereq
+          return { success: false, message: `需要先建造 ${prereqName}`, timeUsed: 0 }
+        }
+      }
+    }
   }
 
-  // 检查条件
+  // 检查资源条件
   const canDo = canCraftRecipe(player, recipe as BaseRecipe)
   if (canDo) {
     return { success: false, message: canDo, timeUsed: 0 }
@@ -479,14 +492,18 @@ export function executeBuild(player: PlayerState, recipeId: string): CraftResult
     produceItems(player, recipe.products)
   }
 
-  // 记录已建造的建筑ID到玩家进度中
-  // 当前使用 builtStructures 字段记录，若不存在则惰性初始化
-  const builtStructures = (player.progress as { builtStructures?: string[] }).builtStructures
-  if (builtStructures) {
-    if (!builtStructures.includes(recipe.buildResult.buildingId)) {
-      builtStructures.push(recipe.buildResult.buildingId)
+  // 记录已建造的建筑ID到营地建筑记录中
+  if (subSceneId) {
+    if (!player.progress.campBuildings[subSceneId]) {
+      player.progress.campBuildings[subSceneId] = []
+    }
+    if (!player.progress.campBuildings[subSceneId].includes(recipe.buildResult.buildingId)) {
+      player.progress.campBuildings[subSceneId].push(recipe.buildResult.buildingId)
     }
   }
+
+  // 统计建造数
+  player.statistics.buildingsConstructed++
 
   return {
     success: true,

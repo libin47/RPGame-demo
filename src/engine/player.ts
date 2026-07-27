@@ -1,6 +1,17 @@
 // src/engine/player.ts
 
-import type { PlayerState, NewGameConfig, PlayerSurvival, PlayerAttributes, PlayerDefenses, PlayerCoefficients, PlayerSkills, PlayerLocation, PlayerProgress, PlayerStatistics } from '@/types/player'
+import type {
+  PlayerState,
+  NewGameConfig,
+  PlayerSurvival,
+  PlayerAttributes,
+  PlayerDefenses,
+  PlayerCoefficients,
+  PlayerSkills,
+  PlayerLocation,
+  PlayerProgress,
+  PlayerStatistics,
+} from '@/types/player'
 import type { CharacterClass } from '@/types/character'
 import { AttributeType } from '@/types/effect'
 import { Season, SeasonPhase } from '@/types/seasonWeather'
@@ -56,7 +67,6 @@ function calculateCoefficients(classConfig: CharacterClass): PlayerCoefficients 
   let temperatureLowModifier = 0
   let temperatureHighModifier = 0
   let carryWeightModifier = 0
-  let sanProtection = 0
 
   // 遍历职业加成，提取属性修正
   for (const bonus of classConfig.classBonuses) {
@@ -65,19 +75,24 @@ function calculateCoefficients(classConfig: CharacterClass): PlayerCoefficients 
         const value = modifier.value
         switch (modifier.attribute) {
           case AttributeType.RECOVERY_RATE_COEFFICIENT:
-            recoveryRateCoefficient += modifier.modifierType === 'add' ? value : recoveryRateCoefficient * value
+            recoveryRateCoefficient +=
+              modifier.modifierType === 'add' ? value : recoveryRateCoefficient * value
             break
           case AttributeType.SATIETY_UPPER_LIMIT_COEFFICIENT:
-            satietyUpperLimitCoefficient += modifier.modifierType === 'add' ? value : satietyUpperLimitCoefficient * value
+            satietyUpperLimitCoefficient +=
+              modifier.modifierType === 'add' ? value : satietyUpperLimitCoefficient * value
             break
           case AttributeType.SATIETY_LOSS_COEFFICIENT:
-            satietyLossCoefficient += modifier.modifierType === 'add' ? value : satietyLossCoefficient * value
+            satietyLossCoefficient +=
+              modifier.modifierType === 'add' ? value : satietyLossCoefficient * value
             break
           case AttributeType.STAMINA_CONSUMPTION_COEFFICIENT:
-            staminaConsumptionCoefficient += modifier.modifierType === 'add' ? value : staminaConsumptionCoefficient * value
+            staminaConsumptionCoefficient +=
+              modifier.modifierType === 'add' ? value : staminaConsumptionCoefficient * value
             break
           case AttributeType.STAMINA_RECOVERY_COEFFICIENT:
-            staminaRecoveryCoefficient += modifier.modifierType === 'add' ? value : staminaRecoveryCoefficient * value
+            staminaRecoveryCoefficient +=
+              modifier.modifierType === 'add' ? value : staminaRecoveryCoefficient * value
             break
           case AttributeType.STAMINA_RECOVERY_FIX:
             staminaRecoveryFix += value
@@ -113,7 +128,7 @@ function calculateCoefficients(classConfig: CharacterClass): PlayerCoefficients 
     temperatureLowModifier,
     temperatureHighModifier,
     carryWeightModifier,
-    sanProtection,
+    sanProtection: 0,
   }
 }
 
@@ -124,7 +139,10 @@ function calculateCoefficients(classConfig: CharacterClass): PlayerCoefficients 
  * @param config - 新游戏配置（场景、时间、季节等）
  * @returns 完整的初始 PlayerState
  */
-export function createNewPlayerState(classConfig: CharacterClass, config: NewGameConfig): PlayerState {
+export function createNewPlayerState(
+  classConfig: CharacterClass,
+  config: NewGameConfig,
+): PlayerState {
   // 基础属性（从职业配置获取初始值）
   const baseStrength = classConfig.initialAttributes.strength
   const baseAgility = classConfig.initialAttributes.agility
@@ -224,6 +242,7 @@ export function createNewPlayerState(classConfig: CharacterClass, config: NewGam
     isGameCompleted: false,
     unlockedEndingIds: [],
     baseLocation: null,
+    campBuildings: {},
   }
 
   // 统计
@@ -311,7 +330,6 @@ export function createNewPlayerState(classConfig: CharacterClass, config: NewGam
       craftRecipes: classConfig.initialCraftRecipeIds,
       cookRecipes: classConfig.initialCookRecipeIds,
       buildRecipes: classConfig.initialBuildRecipeIds,
-      repairRecipes: [],
     },
     currentLocation,
     progress,

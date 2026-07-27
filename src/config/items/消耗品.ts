@@ -93,7 +93,35 @@ const 矿泉水: ConsumableItem = {
   useText: '你拧开瓶盖，一口气喝掉了半瓶矿泉水。',
   tags: ['consumable', 'drink', 'water'],
 }
-
+/** 椰子 */
+const 椰子: ConsumableItem = {
+  id: '椰子',
+  name: '椰子',
+  description: '椰子，颜色为黄色。',
+  category: ItemCategory.CONSUMABLE,
+  iconId: 'icon_coconut',
+  weight: 0.5,
+  maxStackSize: 5,
+  isSellable: true,
+  basePrice: 4,
+  isKeyItem: false,
+  consumableType: ConsumableType.DRINK,
+  perishMinutes: 0,
+  effects: [
+    {
+      effect: {
+        type: EffectType.ATTRIBUTE,
+        attribute: AttributeType.SATIETY,
+        operation: AttributeOperation.ADD,
+        value: 40,
+      },
+      probability: 1,
+      description: '恢复40点饱食度',
+    },
+  ],
+  useText: '椰汁可口',
+  tags: ['consumable', 'drink', 'coconut'],
+}
 /** 止痛药 */
 const 止痛药: ConsumableItem = {
   id: '止痛药',
@@ -233,4 +261,4 @@ const 信号弹: ConsumableItem = {
   tags: ['consumable', 'tool', 'flare'],
 }
 
-export { 压缩饼干, 矿泉水, 止痛药, 消毒酒精, 绷带, 信号弹, 蟹肉 }
+export { 压缩饼干, 矿泉水, 止痛药, 消毒酒精, 绷带, 信号弹, 蟹肉, 椰子 }

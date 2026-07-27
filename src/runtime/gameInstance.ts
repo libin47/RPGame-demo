@@ -13,6 +13,7 @@ import type { PlayerState, NewGameConfig } from '@/types/player'
 import type { GameMode } from './useGame'
 import type { SceneInteraction } from '@/types/scene'
 import type { EndingConfig } from '@/types/ending'
+import type { CraftResult } from '@/engine'
 
 /** 游戏运行时实例的接口定义 */
 export interface GameInstance {
@@ -44,6 +45,12 @@ export interface GameInstance {
   handleInteraction: (interactionId: string) => void
   /** 获取当前场景的交互按钮列表 */
   getCurrentInteractions: () => SceneInteraction[]
+  /** 获取当前场景中建筑提供的交互按钮（营地设施按钮） */
+  getBuildingInteractions: () => SceneInteraction[]
+  /** 执行建造配方 */
+  executeBuildRecipe: (recipeId: string) => CraftResult
+  /** 退出建造模式 */
+  exitBuildMode: () => void
   /** 替换文本中的占位符 */
   resolveText: (text: string) => string
   /** 推进游戏时间（分钟），自动处理跨天、天气、被动效果等 */
@@ -109,6 +116,9 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     selectEventOption: game.selectEventOption,
     handleInteraction: game.handleInteraction,
     getCurrentInteractions: game.getCurrentInteractions,
+    getBuildingInteractions: game.getBuildingInteractions,
+    executeBuildRecipe: game.executeBuildRecipe,
+    exitBuildMode: game.exitBuildMode,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
     executeBattleAction: game.executeBattleAction,
@@ -145,6 +155,9 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     selectEventOption: game.selectEventOption,
     handleInteraction: game.handleInteraction,
     getCurrentInteractions: game.getCurrentInteractions,
+    getBuildingInteractions: game.getBuildingInteractions,
+    executeBuildRecipe: game.executeBuildRecipe,
+    exitBuildMode: game.exitBuildMode,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
     executeBattleAction: game.executeBattleAction,
