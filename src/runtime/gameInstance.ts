@@ -4,6 +4,7 @@
 // 使用方法：MainMenuView 中 startNewGame → 路由跳转；GameView 中 getGameInstance → 获取状态
 
 import { useGame } from './useGame'
+import type { CampsiteBuildingInfo } from './useGame'
 import { createNewPlayerState } from '@/engine'
 import { getRegistry } from '@/engine'
 import { addItem } from '@/engine'
@@ -36,6 +37,7 @@ export interface GameInstance {
     readonly endingReason: string
     readonly currentCG: import('@/engine').CGPlayState | null
     readonly currentTraderId: string | null
+    readonly currentBuildingId: string | null
   }
   /** 进入事件 */
   enterEvent: (eventId: string, fromEventEntry?: boolean) => void
@@ -45,10 +47,24 @@ export interface GameInstance {
   handleInteraction: (interactionId: string) => void
   /** 获取当前场景的交互按钮列表 */
   getCurrentInteractions: () => SceneInteraction[]
-  /** 获取当前场景中建筑提供的交互按钮（营地设施按钮） */
-  getBuildingInteractions: () => SceneInteraction[]
+  /** 获取当前场景中营地建筑基本信息列表 */
+  getCampsiteBuildings: () => CampsiteBuildingInfo[]
+  /** 进入建筑交互模式 */
+  enterBuilding: (buildId: string) => void
+  /** 退出建筑交互模式返回场景 */
+  exitBuilding: () => void
+  /** 设置底部日志消息 */
+  setLogMessage: (message: string) => void
   /** 执行建造配方 */
   executeBuildRecipe: (recipeId: string) => CraftResult
+  /** 执行建筑升级 */
+  executeUpgradeBuild: (buildId: string, targetSubBuildId: string) => CraftResult
+  /** 执行拆除建筑 */
+  executeDeconstruct: (buildId: string) => CraftResult
+  /** 执行制作配方 */
+  executeCraftRecipe: (recipeId: string, quantity: number) => CraftResult
+  /** 执行烹饪配方 */
+  executeCookRecipe: (recipeId: string) => CraftResult
   /** 退出建造模式 */
   exitBuildMode: () => void
   /** 替换文本中的占位符 */
@@ -116,8 +132,15 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     selectEventOption: game.selectEventOption,
     handleInteraction: game.handleInteraction,
     getCurrentInteractions: game.getCurrentInteractions,
-    getBuildingInteractions: game.getBuildingInteractions,
+    getCampsiteBuildings: game.getCampsiteBuildings,
+    enterBuilding: game.enterBuilding,
+    exitBuilding: game.exitBuilding,
+    setLogMessage: game.setLogMessage,
     executeBuildRecipe: game.executeBuildRecipe,
+    executeUpgradeBuild: game.executeUpgradeBuildMode,
+    executeDeconstruct: game.executeDeconstructBuilding,
+    executeCraftRecipe: game.executeCraftRecipeMode,
+    executeCookRecipe: game.executeCookRecipeMode,
     exitBuildMode: game.exitBuildMode,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
@@ -155,8 +178,15 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     selectEventOption: game.selectEventOption,
     handleInteraction: game.handleInteraction,
     getCurrentInteractions: game.getCurrentInteractions,
-    getBuildingInteractions: game.getBuildingInteractions,
+    getCampsiteBuildings: game.getCampsiteBuildings,
+    enterBuilding: game.enterBuilding,
+    exitBuilding: game.exitBuilding,
+    setLogMessage: game.setLogMessage,
     executeBuildRecipe: game.executeBuildRecipe,
+    executeUpgradeBuild: game.executeUpgradeBuildMode,
+    executeDeconstruct: game.executeDeconstructBuilding,
+    executeCraftRecipe: game.executeCraftRecipeMode,
+    executeCookRecipe: game.executeCookRecipeMode,
     exitBuildMode: game.exitBuildMode,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,

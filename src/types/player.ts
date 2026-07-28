@@ -383,8 +383,11 @@ export interface PlayerProgress {
   /** 基地位置（无基地则为null） */
   baseLocation: PlayerLocation | null
 
-  /** 营地建筑记录（subSceneId -> buildingId[]），追踪每个营地已经建造的建筑 */
+  /** 营地建筑记录（subSceneId -> buildId[]），追踪每个营地已经建造的建筑 */
   campBuildings: Record<string, string[]>
+
+  /** 营地建筑等级记录（subSceneId -> { buildId: currentSubBuildId }），追踪每个建筑当前子建筑等级 */
+  campBuildingLevels: Record<string, Record<string, string>>
 }
 
 // ============================================================

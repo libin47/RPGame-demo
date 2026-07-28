@@ -1,18 +1,19 @@
 <!-- EventPanel.vue - 事件面板
-     显示事件文本描述与可选的交互选项 -->
+     显示事件文本描述与可选的交互选项
+     样式与 ScenePanel 视觉统一 -->
 <template>
   <div class="event-panel">
-    <!-- 事件文本 -->
+    <!-- 事件文本区（带暗角氛围） -->
     <div class="event-text">
-      <!-- 上一帧选项结果文本（带背景框） -->
-      <div v-if="frameTextPrefix" class="result-prefix">{{ frameTextPrefix }}</div>
-      <div class="frame-text">{{ resolvedText }}</div>
-      <!-- 文本变体（斜体、条件满足时显示） -->
-      <div v-for="v in props.variations" :key="v.content" class="text-variation">{{ v.content }}</div>
+      <div class="vignette-overlay"></div>
+      <div class="content">
+        <!-- 上一帧选项结果文本 -->
+        <div v-if="frameTextPrefix" class="result-prefix">{{ frameTextPrefix }}</div>
+        <p class="frame-text">{{ resolvedText }}</p>
+        <!-- 文本变体（斜体、条件满足时显示） -->
+        <p v-for="v in props.variations" :key="v.content" class="text-variation">{{ v.content }}</p>
+      </div>
     </div>
-
-    <!-- 分割线 -->
-    <div class="divider"></div>
 
     <!-- 选项列表 -->
     <div class="option-list">
@@ -24,7 +25,7 @@
         :disabled="!isAvailable(option.id)"
         @click="onOptionClick(option.id)"
       >
-        {{ option.text }}
+        {{ option.name }}
       </button>
     </div>
   </div>
@@ -33,7 +34,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { EventFrame, EventOption, EventTextVariation } from '@/types/event'
-import { EventOptionStyle } from '@/types/event'
 
 // ============================================================
 // 组件属性
@@ -78,11 +78,11 @@ const options = computed<EventOption[]>(() => {
 
 /** 根据选项样式类型返回 CSS 类名 */
 function optionButtonClass(option: EventOption): string {
-  const style = option.optionStyle
-  if (style === EventOptionStyle.DANGER) return 'opt-danger'
-  if (style === EventOptionStyle.SPECIAL) return 'opt-special'
-  if (style === EventOptionStyle.HIDDEN) return 'opt-hidden'
-  if (style === EventOptionStyle.MADNESS) return 'opt-madness'
+  const style = option.buttonStyle
+  if (style === 'danger') return 'opt-danger'
+  if (style === 'special') return 'opt-special'
+  if (style === 'hidden') return 'opt-hidden'
+  if (style === 'madness') return 'opt-madness'
   return 'opt-default'
 }
 
@@ -99,110 +99,151 @@ function isAvailable(optionId: string): boolean {
 </script>
 
 <style scoped>
+/* ═══════════════════════════════════════════
+   容器
+   ═══════════════════════════════════════════ */
 .event-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
+/* ═══════════════════════════════════════════
+   事件文本区（与 ScenePanel 的 scene-narrative 统一）
+   ═══════════════════════════════════════════ */
 .event-text {
   flex: 1;
-  padding: 24px 20px 16px;
   overflow-y: auto;
-  line-height: 2.0;
-  font-size: 15px;
-  color: #f0f0f0;
+  padding: 1rem 1.2rem 1.5rem;
+  line-height: 1.75;
+  font-size: var(--font-lg);
+  position: relative;
 }
 
-/* 选项结果文本背景框 */
+/* 暗角遮罩 */
+.vignette-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse at center top,
+      rgba(0, 0, 0, 0) 20%,
+      rgba(0, 0, 0, 0.15) 60%,
+      rgba(0, 0, 0, 0.3) 100%
+    ),
+    radial-gradient(ellipse at center bottom, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0.1) 50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+}
+
+/* 上一帧选项结果文本（与 ScenePanel 的 scene-prefix 统一） */
 .result-prefix {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
+  margin: 0 0 0.8em 0;
+  font-style: italic;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 0.4em 0.6em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   white-space: pre-wrap;
-  line-height: 1.8;
+  color: var(--text-primary);
+  line-height: 1.75;
+  font-size: var(--font-lg);
 }
 
 .frame-text {
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   white-space: pre-wrap;
-  line-height: 2.0;
+  color: var(--text-primary);
 }
 
 /* 文本变体：斜体，其余与主文本相同 */
 .text-variation {
   font-style: italic;
   white-space: pre-wrap;
-  line-height: 2.0;
-  margin-top: 8px;
+  line-height: 1.75;
+  margin-top: 0.6em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-  margin: 0 20px;
-}
-
+/* ═══════════════════════════════════════════
+   选项区（与 ScenePanel 的 interactions 统一）
+   ═══════════════════════════════════════════ */
 .option-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.15);
+  gap: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  border-top: 1px solid var(--border-weak);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .option-btn {
-  padding: 12px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.04);
-  color: #d0d0d0;
-  font-size: 14px;
+  color: var(--text-secondary);
+  font-size: var(--font-md);
   cursor: pointer;
   text-align: left;
-  transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: all var(--transition-fast);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .option-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .option-btn:active {
   transform: translateY(1px);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+/* 默认选项 */
+.opt-default {
+  border-color: var(--border-mid);
+  color: var(--text-secondary);
+}
+
+.opt-default:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
 }
 
 /* 危险选项（红色） */
 .opt-danger {
-  border-color: rgba(229, 57, 53, 0.5);
+  border-color: rgba(255, 107, 107, 0.5);
   color: #ff6b6b;
 }
 
 .opt-danger:hover {
-  background: rgba(229, 57, 53, 0.1);
-  border-color: #e53935;
+  background: rgba(255, 107, 107, 0.1);
+  border-color: #ff6b6b;
 }
 
 /* 特殊选项（金色） */
 .opt-special {
-  border-color: rgba(255, 179, 0, 0.5);
+  border-color: rgba(255, 213, 79, 0.5);
   color: #ffd54f;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 200, 0, 0.03));
 }
 
 .opt-special:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 200, 0, 0.06));
-  border-color: #ffb300;
+  background: rgba(255, 213, 79, 0.1);
+  border-color: #ffd54f;
 }
 
-/* 隐藏选项（半透明） */
+/* 隐藏选项（半透明、虚线边框） */
 .opt-hidden {
   opacity: 0.5;
   border-style: dashed;
@@ -216,11 +257,10 @@ function isAvailable(optionId: string): boolean {
 .opt-madness {
   border-color: rgba(123, 31, 162, 0.5);
   color: #ce93d8;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(123, 31, 162, 0.04));
 }
 
 .opt-madness:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(123, 31, 162, 0.08));
+  background: rgba(123, 31, 162, 0.1);
   border-color: #7b1fa2;
 }
 
@@ -228,13 +268,13 @@ function isAvailable(optionId: string): boolean {
 .opt-unavailable {
   opacity: 0.45;
   cursor: not-allowed;
-  border-color: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-weak);
   color: #888;
 }
 
 .opt-unavailable:hover {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-weak);
   color: #888;
   box-shadow: none;
   transform: none;

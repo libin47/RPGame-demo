@@ -347,7 +347,10 @@ export function findFirstVisibleFrame(
 ): EventFrame | undefined {
   const sorted = [...frames].sort((a, b) => a.order - b.order)
 
-  return sorted.find((frame) => evaluateDisplayFlag(frame, player) && evaluateCondition(frame.displayCondition, player))
+  return sorted.find(
+    (frame) =>
+      evaluateDisplayFlag(frame, player) && evaluateCondition(frame.displayCondition, player),
+  )
 }
 
 /**
@@ -370,8 +373,8 @@ export function getVisibleOptions(frame: EventFrame, player: PlayerState): Event
         return false
       }
       // 检查 isOneTime：若已选过则隐藏
-      if (option.isOneTime && option.selectedFlag) {
-        if (player.flags[option.selectedFlag]) {
+      if (option.isOneTime && option.usedFlag) {
+        if (player.flags[option.usedFlag]) {
           return false
         }
       }
@@ -388,19 +391,22 @@ export function getVisibleOptions(frame: EventFrame, player: PlayerState): Event
  * @param player - 当前玩家状态
  * @returns 可见变体列表（按原顺序）
  */
-export function getVisibleVariations(
-  frame: EventFrame,
-  player: PlayerState,
-): EventTextVariation[] {
+export function getVisibleVariations(frame: EventFrame, player: PlayerState): EventTextVariation[] {
   if (!frame.textVariations || frame.textVariations.length === 0) return []
 
   return frame.textVariations.filter((v) => {
     // 检查 displayFlag
-    if (v.displayFlag && !v.displayFlag.every((flag) => player.flags[flag] === true || player.flags[flag] === 1)) {
+    if (
+      v.displayFlag &&
+      !v.displayFlag.every((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+    ) {
       return false
     }
     // 检查 hideFlag
-    if (v.hideFlag && v.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)) {
+    if (
+      v.hideFlag &&
+      v.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+    ) {
       return false
     }
     // 检查 condition
@@ -445,6 +451,3 @@ export function canTriggerEvent(event: GameEvent, player: PlayerState): boolean 
 
   return true
 }
-
-
-

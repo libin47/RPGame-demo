@@ -4,7 +4,7 @@
 // ============================================================
 
 import type { GameEvent, EventRegistry } from '../types/event'
-import { EventType, EventOptionStyle, EventOptionCostType } from '../types/event'
+import { EventType } from '../types/event'
 import {
   EffectType,
   AttributeType,
@@ -17,6 +17,7 @@ import {
 } from '../types/effect'
 import { FlagOperation } from '@/types/flag'
 import { RecipeType } from '@/types/recipe'
+import { OptionCostType } from '@/types/option'
 
 // ============================================================
 // 搜索飞机残骸
@@ -33,7 +34,7 @@ const event_beach_飞机残骸: GameEvent = {
       options: [
         {
           id: 'event_beach_飞机残骸_1_1',
-          text: '从裂口进入',
+          name: '从裂口进入',
           results: [
             {
               type: 'switchScene',
@@ -54,7 +55,7 @@ const event_beach_飞机残骸: GameEvent = {
       options: [
         {
           id: '座椅下方',
-          text: '座椅下方',
+          name: '座椅下方',
           results: [
             {
               type: 'nextFrame',
@@ -76,11 +77,11 @@ const event_beach_飞机残骸: GameEvent = {
           ],
           displayPriority: 3,
           isOneTime: true,
-          selectedFlag: 'event_beach_飞机残骸_2_options_1',
+          usedFlag: 'event_beach_飞机残骸_2_options_1',
         },
         {
           id: '头顶的行李架',
-          text: '头顶的行李架',
+          name: '头顶的行李架',
           results: [
             {
               type: 'nextFrame',
@@ -102,11 +103,11 @@ const event_beach_飞机残骸: GameEvent = {
           ],
           displayPriority: 2,
           isOneTime: true,
-          selectedFlag: 'event_beach_飞机残骸_2_options_2',
+          usedFlag: 'event_beach_飞机残骸_2_options_2',
         },
         {
           id: '座椅夹缝',
-          text: '座椅夹缝',
+          name: '座椅夹缝',
           results: [
             {
               type: 'nextFrame',
@@ -131,11 +132,11 @@ const event_beach_飞机残骸: GameEvent = {
           ],
           displayPriority: 1,
           isOneTime: true,
-          selectedFlag: 'event_beach_飞机残骸_2_options_3',
+          usedFlag: 'event_beach_飞机残骸_2_options_3',
         },
         {
           id: '座椅夹缝',
-          text: '座椅夹缝',
+          name: '座椅夹缝',
           results: [
             {
               type: 'nextFrame',
@@ -160,11 +161,11 @@ const event_beach_飞机残骸: GameEvent = {
           ],
           displayPriority: 1,
           isOneTime: true,
-          selectedFlag: 'event_beach_飞机残骸_2_options_3',
+          usedFlag: 'event_beach_飞机残骸_2_options_3',
         },
         {
           id: '头等舱',
-          text: '头等舱',
+          name: '头等舱',
           results: [
             {
               type: 'nextFrame',
@@ -203,7 +204,7 @@ const event_beach_飞机残骸: GameEvent = {
           },
           displayPriority: 1,
           isOneTime: true,
-          selectedFlag: 'event_beach_飞机残骸_2_options_4',
+          usedFlag: 'event_beach_飞机残骸_2_options_4',
         },
       ],
     },
@@ -214,7 +215,7 @@ const event_beach_飞机残骸: GameEvent = {
       options: [
         {
           id: 'leave_wreckage',
-          text: '离开残骸',
+          name: '离开残骸',
           results: [
             {
               type: 'endEvent',
@@ -232,7 +233,7 @@ const event_beach_飞机残骸: GameEvent = {
       options: [
         {
           id: 'leave_wreckage',
-          text: '离开残骸',
+          name: '离开残骸',
           results: [
             {
               type: 'endEvent',
@@ -271,7 +272,7 @@ const event_飞机残骸_搜索座椅: GameEvent = {
       options: [
         {
           id: '继续',
-          text: '继续',
+          name: '继续',
           results: [
             {
               type: 'endEvent',
@@ -320,7 +321,7 @@ const event_飞机残骸_搜索行李架: GameEvent = {
       options: [
         {
           id: '继续',
-          text: '继续',
+          name: '继续',
           results: [
             {
               type: 'endEvent',
@@ -358,7 +359,7 @@ const event_飞机残骸_搜索夹缝: GameEvent = {
       options: [
         {
           id: '继续',
-          text: '继续',
+          name: '继续',
           results: [
             {
               type: 'endEvent',
@@ -416,7 +417,7 @@ const event_飞机残骸_搜索头等舱: GameEvent = {
       options: [
         {
           id: '继续',
-          text: '继续',
+          name: '继续',
           results: [
             {
               type: 'endEvent',
@@ -443,7 +444,7 @@ const event_飞机残骸_驾驶舱: GameEvent = {
       options: [
         {
           id: '离开',
-          text: '离开',
+          name: '离开',
           results: [
             {
               type: 'endEvent',
@@ -461,7 +462,7 @@ const event_飞机残骸_驾驶舱: GameEvent = {
       options: [
         {
           id: '尝试踹门',
-          text: '尝试踢门',
+          name: '尝试踢门',
           results: [
             {
               type: 'nextFrame',
@@ -494,7 +495,7 @@ const event_飞机残骸_驾驶舱: GameEvent = {
         },
         {
           id: '离开',
-          text: '离开',
+          name: '离开',
           results: [
             {
               type: 'endEvent',
@@ -553,7 +554,7 @@ const event_飞机残骸_驾驶舱: GameEvent = {
       options: [
         {
           id: '离开',
-          text: '离开',
+          name: '离开',
           results: [
             {
               type: 'endEvent',
@@ -579,7 +580,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
       options: [
         {
           id: '金属残片',
-          text: '金属残片',
+          name: '金属残片',
           results: [
             {
               type: 'nextFrame',
@@ -598,7 +599,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
         },
         {
           id: '布料',
-          text: '布料',
+          name: '布料',
           results: [
             {
               type: 'nextFrame',
@@ -617,7 +618,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
         },
         {
           id: '药品',
-          text: '药品',
+          name: '药品',
           results: [
             {
               type: 'nextFrame',
@@ -656,7 +657,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
       options: [
         {
           id: '离去',
-          text: '离去',
+          name: '离去',
           results: [
             {
               type: 'endEvent',
@@ -686,7 +687,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
       options: [
         {
           id: '离去',
-          text: '离去',
+          name: '离去',
           results: [
             {
               type: 'endEvent',
@@ -713,7 +714,7 @@ const event_机翼营地_搭建营地: GameEvent = {
       options: [
         {
           id: '铺地',
-          text: '铺地(需要防水布)',
+          name: '铺地(需要防水布)',
           availableCondition: {
             target: {
               type: ConditionTargetType.ITEM,
@@ -724,24 +725,25 @@ const event_机翼营地_搭建营地: GameEvent = {
           },
           costs: [
             {
-              costType: EventOptionCostType.ITEM,
+              costType: OptionCostType.ITEM,
               itemId: '防水布',
               value: 1,
+              affectedByCoefficient: false,
             },
           ],
           results: [
             {
-              type: 'nextFrame',
-              targetFrameId: '搭建营地',
+              type: 'endEvent',
+              exitText: '你将防水布铺在沙地了，你可以在这里休息了。',
             },
           ],
           displayPriority: 10,
           isOneTime: true,
-          selectedFlag: 'event_机翼营地_铺地',
+          usedFlag: 'event_机翼营地_铺地',
         },
         {
           id: '离开',
-          text: '离开',
+          name: '离开',
           results: [
             {
               type: 'endEvent',
@@ -768,7 +770,7 @@ const event_椰树林_摘椰子: GameEvent = {
       options: [
         {
           id: '爬上去',
-          text: '爬上去',
+          name: '爬上去',
           results: [
             {
               type: 'nextFrame',
@@ -810,7 +812,7 @@ const event_椰树林_摘椰子: GameEvent = {
 
         {
           id: '用木竿打',
-          text: '用木竿打',
+          name: '用木竿打',
           availableCondition: {
             target: {
               type: ConditionTargetType.ITEM,
@@ -831,7 +833,7 @@ const event_椰树林_摘椰子: GameEvent = {
         },
         {
           id: '离开',
-          text: '离开',
+          name: '离开',
           results: [
             {
               type: 'endEvent',
@@ -849,7 +851,7 @@ const event_椰树林_摘椰子: GameEvent = {
       options: [
         {
           id: '收获椰子',
-          text: '收获椰子',
+          name: '收获椰子',
 
           results: [
             {
@@ -892,7 +894,7 @@ const event_椰树林_摘椰子: GameEvent = {
       options: [
         {
           id: '离去',
-          text: '不甘离去',
+          name: '不甘离去',
 
           results: [
             {
@@ -912,7 +914,7 @@ const event_椰树林_摘椰子: GameEvent = {
       options: [
         {
           id: '捡起椰子',
-          text: '捡起椰子',
+          name: '捡起椰子',
 
           results: [
             {
@@ -952,7 +954,7 @@ const event_椰树林_砍树: GameEvent = {
       options: [
         {
           id: '无能离去',
-          text: '无能离去',
+          name: '无能离去',
           results: [
             {
               type: 'endEvent',
@@ -979,7 +981,7 @@ const event_椰树林_砍树: GameEvent = {
       options: [
         {
           id: '砍伐',
-          text: '砍伐',
+          name: '砍伐',
 
           results: [
             {
@@ -995,6 +997,16 @@ const event_椰树林_砍树: GameEvent = {
                   },
                   probability: 1.0,
                   description: '获得木头*2',
+                },
+                {
+                  effect: {
+                    type: EffectType.ITEM,
+                    itemId: '石头',
+                    changeType: ItemChangeType.ADD,
+                    quantity: 10,
+                  },
+                  probability: 1.0,
+                  description: '获得石头*10',
                 },
                 {
                   effect: {
@@ -1049,7 +1061,7 @@ const event_椰树林_砍树: GameEvent = {
       options: [
         {
           id: '收获颇丰',
-          text: '收获颇丰',
+          name: '收获颇丰',
 
           results: [
             {
@@ -1068,7 +1080,7 @@ const event_椰树林_砍树: GameEvent = {
       options: [
         {
           id: '收获离去',
-          text: '收获离去',
+          name: '收获离去',
 
           results: [
             {
@@ -1099,7 +1111,7 @@ const event_beach_大螃蟹: GameEvent = {
       options: [
         {
           id: 'fight_crab',
-          text: '战斗',
+          name: '战斗',
           results: [
             {
               type: 'triggerBattle',
@@ -1115,11 +1127,11 @@ const event_beach_大螃蟹: GameEvent = {
         },
         {
           id: 'flee_crab',
-          text: '离开',
+          name: '离开',
           description: '离开',
           costs: [
             {
-              costType: EventOptionCostType.STAMINA,
+              costType: OptionCostType.STAMINA,
               value: 10,
             },
           ],
@@ -1140,7 +1152,7 @@ const event_beach_大螃蟹: GameEvent = {
       options: [
         {
           id: 'butcher_crab',
-          text: '分解蟹肉',
+          name: '分解蟹肉',
           results: [
             {
               type: 'endEvent',
@@ -1170,7 +1182,7 @@ const event_beach_大螃蟹: GameEvent = {
       options: [
         {
           id: 'return_beach',
-          text: '返回海滩',
+          name: '返回海滩',
           results: [
             {
               type: 'endEvent',
@@ -1188,7 +1200,7 @@ const event_beach_大螃蟹: GameEvent = {
       options: [
         {
           id: 'accept_defeat',
-          text: '...',
+          name: '...',
           results: [
             {
               type: 'endEvent',
@@ -1218,7 +1230,7 @@ const eventStrangeTrees: GameEvent = {
       options: [
         {
           id: 'touch_moss',
-          text: '触摸苔藓',
+          name: '触摸苔藓',
           results: [
             {
               type: 'nextFrame',
@@ -1242,7 +1254,7 @@ const eventStrangeTrees: GameEvent = {
         },
         {
           id: 'leave_trees',
-          text: '离开',
+          name: '离开',
           results: [
             {
               type: 'endEvent',
@@ -1260,7 +1272,7 @@ const eventStrangeTrees: GameEvent = {
       options: [
         {
           id: 'back_away',
-          text: '后退离开',
+          name: '后退离开',
           results: [
             {
               type: 'endEvent',
@@ -1290,10 +1302,10 @@ const eventGatherBerries: GameEvent = {
       options: [
         {
           id: 'gather_berries',
-          text: '采集浆果',
+          name: '采集浆果',
           costs: [
             {
-              costType: EventOptionCostType.STAMINA,
+              costType: OptionCostType.STAMINA,
               value: 8,
             },
           ],
@@ -1319,7 +1331,7 @@ const eventGatherBerries: GameEvent = {
         },
         {
           id: 'leave_berries',
-          text: '离开',
+          name: '离开',
           results: [
             {
               type: 'endEvent',
@@ -1349,7 +1361,7 @@ const eventGatherBerries: GameEvent = {
       options: [
         {
           id: 'done_gathering',
-          text: '继续前进',
+          name: '继续前进',
           results: [
             {
               type: 'endEvent',
@@ -1380,10 +1392,10 @@ const eventGatherWood: GameEvent = {
       options: [
         {
           id: 'collect_wood',
-          text: '收集树枝',
+          name: '收集树枝',
           costs: [
             {
-              costType: EventOptionCostType.STAMINA,
+              costType: OptionCostType.STAMINA,
               value: 5,
             },
           ],
@@ -1409,7 +1421,7 @@ const eventGatherWood: GameEvent = {
         },
         {
           id: 'ignore_wood',
-          text: '忽略',
+          name: '忽略',
           results: [
             {
               type: 'endEvent',
@@ -1427,7 +1439,7 @@ const eventGatherWood: GameEvent = {
       options: [
         {
           id: 'continue_explore',
-          text: '继续探索',
+          name: '继续探索',
           results: [
             {
               type: 'endEvent',
@@ -1458,7 +1470,7 @@ const eventGlowingMoss: GameEvent = {
       options: [
         {
           id: 'collect_moss',
-          text: '采集苔藓',
+          name: '采集苔藓',
           results: [
             {
               type: 'nextFrame',
@@ -1482,7 +1494,7 @@ const eventGlowingMoss: GameEvent = {
         },
         {
           id: 'leave_moss',
-          text: '忽略',
+          name: '忽略',
           results: [
             {
               type: 'endEvent',
@@ -1500,7 +1512,7 @@ const eventGlowingMoss: GameEvent = {
       options: [
         {
           id: 'continue_cave',
-          text: '继续探索洞穴',
+          name: '继续探索洞穴',
           results: [
             {
               type: 'endEvent',
@@ -1531,7 +1543,7 @@ const eventJournalFragment: GameEvent = {
       options: [
         {
           id: 'read_journal',
-          text: '阅读日志',
+          name: '阅读日志',
           results: [
             {
               type: 'nextFrame',
@@ -1564,7 +1576,7 @@ const eventJournalFragment: GameEvent = {
         },
         {
           id: 'ignore_journal',
-          text: '不理会',
+          name: '不理会',
           results: [
             {
               type: 'endEvent',
@@ -1594,7 +1606,7 @@ const eventJournalFragment: GameEvent = {
       options: [
         {
           id: 'close_journal',
-          text: '合上日志',
+          name: '合上日志',
           results: [
             {
               type: 'endEvent',
@@ -1626,7 +1638,7 @@ const eventCaveMarkings: GameEvent = {
       options: [
         {
           id: 'study_markings',
-          text: '仔细研究',
+          name: '仔细研究',
           results: [
             {
               type: 'nextFrame',
@@ -1650,7 +1662,7 @@ const eventCaveMarkings: GameEvent = {
         },
         {
           id: 'ignore_markings',
-          text: '不去理会',
+          name: '不去理会',
           results: [
             {
               type: 'endEvent',
@@ -1668,7 +1680,7 @@ const eventCaveMarkings: GameEvent = {
       options: [
         {
           id: 'leave_cave_area',
-          text: '离开',
+          name: '离开',
           results: [
             {
               type: 'endEvent',

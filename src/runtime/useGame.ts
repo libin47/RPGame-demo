@@ -2,7 +2,14 @@
 
 import { reactive, readonly } from 'vue'
 import type { PlayerState } from '@/types/player'
-import type { Scene, SceneDescription, SubScene, SceneInteraction } from '@/types/scene'
+import type {
+  Scene,
+  SceneDescription,
+  SubScene,
+  SceneInteraction,
+  InteractionType,
+  InteractionBehaviorParams,
+} from '@/types/scene'
 import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
 import type { EffectResult } from '@/types/effect'
 import type { EndingConfig } from '@/types/ending'
@@ -23,7 +30,13 @@ import { startCG } from '@/engine'
 import type { CGPlayState } from '@/engine'
 import { ItemCategory } from '@/types/item'
 import { equipItem as engineEquipItem, unequipSlot, useConsumable } from '@/engine'
-import { executeBuild } from '@/engine'
+import {
+  executeBuild,
+  executeUpgradeBuild,
+  executeDeconstruct,
+  executeCraft as engineExecuteCraft,
+  executeCook as engineExecuteCook,
+} from '@/engine'
 import type { CraftResult } from '@/engine'
 
 /**
@@ -34,7 +47,8 @@ export type GameMode =
   | 'event' // 事件界面：事件文本 + 选项按钮
   | 'battle' // 战斗界面
   | 'inventory' // 背包界面（后续实现）
-  | 'build' // 建造界面（后续实现）
+  | 'build' // 建造界面
+  | 'building' // 建筑交互界面
   | 'craft' // 制作界面（后续实现）
   | 'map' // 地图界面（后续实现）
   | 'ending' // 结局界面
@@ -95,12 +109,23 @@ interface GameRuntimeState {
   /** 当前交易商人ID（仅在 mode === 'trade' 时有值） */
   currentTraderId: string | null
 
+  /** 当前交互的建筑ID（仅在 mode === 'building' 时有值） */
+  currentBuildingId: string | null
+
   /** 战斗中待跳转的帧ID（从 TriggerBattleResult 中存储） */
   pendingBattleFrameIds: {
     victoryFrameId?: string
     defeatFrameId?: string
     escapeFrameId?: string
   } | null
+}
+
+/**
+ * 营地建筑基本信息（用于场景中显示"营地设施"入口）
+ */
+export interface CampsiteBuildingInfo {
+  buildId: string
+  buildName: string
 }
 
 /**
@@ -142,6 +167,7 @@ function createGameState(initialPlayer: PlayerState) {
     endingReason: '',
     currentCG: null,
     currentTraderId: null,
+    currentBuildingId: null,
     pendingBattleFrameIds: null,
   })
 
@@ -280,11 +306,11 @@ export function useGame(initialPlayer: PlayerState) {
     const resolver = getEffectResolver()
 
     // 标记选项已选（用于 isOneTime 追踪）
-    if (option.selectedFlag) {
-      state.player.flags[option.selectedFlag] = true
+    if (option.usedFlag) {
+      state.player.flags[option.usedFlag] = true
       // 打印已选标志位
-      console.log(`已选标志位: ${option.selectedFlag}`)
-      console.log(`已选标志位值: ${state.player.flags[option.selectedFlag]}`)
+      console.log(`已选标志位: ${option.usedFlag}`)
+      console.log(`已选标志位值: ${state.player.flags[option.usedFlag]}`)
     }
 
     // 先执行选项的消耗（后续实现）
@@ -619,7 +645,6 @@ export function useGame(initialPlayer: PlayerState) {
           if (params.functionType === 'build') {
             // 进入建造模式
             state.mode = 'build'
-            state.logMessage = '进入建造模式'
           } else {
             state.logMessage = `功能 "${params.functionType}" 尚未实现`
           }
@@ -647,14 +672,13 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
-   * 执行建造配方
+   * 执行建造
    */
-  function executeBuildRecipe(recipeId: string): CraftResult {
+  function executeBuildRecipe(buildId: string): CraftResult {
     const subSceneId = state.currentSubScene?.id
-    const result = executeBuild(state.player, recipeId, subSceneId)
+    const result = executeBuild(state.player, buildId, subSceneId)
 
     if (result.success) {
-      // 推进游戏时间
       if (result.timeUsed > 0) {
         advanceGameTime(result.timeUsed)
       }
@@ -667,53 +691,117 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 执行建筑升级
+   */
+  function executeUpgradeBuildMode(buildId: string, targetSubBuildId: string): CraftResult {
+    const subSceneId = state.currentSubScene?.id
+    if (!subSceneId) {
+      state.logMessage = '当前不在营地场景中'
+      return { success: false, message: '当前不在营地场景中', timeUsed: 0 }
+    }
+
+    const result = executeUpgradeBuild(state.player, buildId, targetSubBuildId, subSceneId)
+
+    if (result.success) {
+      if (result.timeUsed > 0) {
+        advanceGameTime(result.timeUsed)
+      }
+      state.logMessage = result.message
+    } else {
+      state.logMessage = result.message
+    }
+
+    return result
+  }
+
+  /**
+   * 执行拆除建筑
+   */
+  function executeDeconstructBuilding(buildId: string): CraftResult {
+    const subSceneId = state.currentSubScene?.id
+    if (!subSceneId) {
+      state.logMessage = '当前不在营地场景中'
+      return { success: false, message: '当前不在营地场景中', timeUsed: 0 }
+    }
+
+    const result = executeDeconstruct(state.player, buildId, subSceneId)
+
+    if (result.success) {
+      if (result.timeUsed > 0) {
+        advanceGameTime(result.timeUsed)
+      }
+      state.logMessage = result.message
+      // 退出建筑交互模式返回场景
+      exitBuilding()
+    } else {
+      state.logMessage = result.message
+    }
+
+    return result
+  }
+
+  /**
    * 退出建造模式返回场景
    */
   function exitBuildMode(): void {
     state.mode = 'normal'
-    state.logMessage = '退出了建造模式'
   }
 
   /**
-   * 获取当前场景中已有建筑提供的交互按钮列表
-   * 用于在营地子场景中显示除固定交互外的建筑交互按钮
+   * 获取当前场景中已有建筑的基本信息列表（建筑名 + 等级）
+   * 用于在营地子场景中显示"营地设施"入口
    */
-  function getBuildingInteractions(): SceneInteraction[] {
+  function getCampsiteBuildings(): CampsiteBuildingInfo[] {
     const subScene = state.currentSubScene
     if (!subScene || !subScene.isCampsite) return []
 
-    // 获取当前营地的所有建筑
     const initIds: string[] = subScene.buildingInit ?? []
     const builtIds: string[] = state.player.progress.campBuildings[subScene.id] ?? []
     const allIds = new Set([...initIds, ...builtIds])
 
-    const interactions: SceneInteraction[] = []
+    const result: CampsiteBuildingInfo[] = []
 
     for (const bldId of allIds) {
-      const building = registry.getBuilding(bldId)
-      if (!building || !building.providedInteractions) continue
+      const build = registry.getBuilding(bldId)
+      if (!build) continue
 
-      for (const pi of building.providedInteractions) {
-        // 将 BuildProvidedInteraction 转换为 SceneInteraction
-        interactions.push({
-          id: pi.interactionId,
-          name: pi.interactionName,
-          interactionType: pi.interactionType as any,
-          displayPriority: 3,
-          isOneTime: false,
-          behaviorParams: pi.params
-            ? ({
-                interactionType: pi.interactionType,
-                ...pi.params,
-              } as any)
-            : undefined,
-          // 从 building 的 providedInteractions 中读取显示条件
-          displayCondition: pi.displayCondition,
-        })
-      }
+      const currentSubId =
+        state.player.progress.campBuildingLevels[subScene.id]?.[bldId] ?? build.defaultBuild
+      const currentSub = build.subBuild.find((s) => s.buildId === currentSubId)
+      if (!currentSub) continue
+
+      result.push({
+        buildId: bldId,
+        buildName: currentSub.buildName,
+      })
     }
 
-    return interactions
+    return result
+  }
+
+  /**
+   * 进入建筑交互模式
+   */
+  function enterBuilding(buildId: string): void {
+    state.mode = 'building'
+    state.currentBuildingId = buildId
+    state.logMessage = ''
+  }
+
+  /**
+   * 退出建筑交互模式返回场景
+   */
+  function exitBuilding(): void {
+    state.mode = 'normal'
+    state.currentBuildingId = null
+    state.logMessage = ''
+  }
+
+  /**
+   * 设置底部日志消息
+   */
+  function setLogMessage(message: string): void {
+    state.logMessage = message
   }
 
   /**
@@ -728,12 +816,22 @@ export function useGame(initialPlayer: PlayerState) {
         return false
       }
       // hideFlag 检查
-      if (i.hideFlag && i.hideFlag.some((flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1)) {
+      if (
+        i.hideFlag &&
+        i.hideFlag.some(
+          (flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1,
+        )
+      ) {
         return false
       }
-      
+
       // displayFlag 检查
-      if (i.displayFlag && !i.displayFlag.every((flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1)) {
+      if (
+        i.displayFlag &&
+        !i.displayFlag.every(
+          (flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1,
+        )
+      ) {
         return false
       }
 
@@ -1027,14 +1125,45 @@ export function useGame(initialPlayer: PlayerState) {
     state.logMessage = '该物品未装备'
   }
 
+  /**
+   * 执行制作配方（由 RecipePanel 调用）
+   */
+  function executeCraftRecipeMode(recipeId: string, quantity: number): CraftResult {
+    const result = engineExecuteCraft(state.player, recipeId, quantity)
+    if (result.success && result.timeUsed > 0) {
+      advanceGameTime(result.timeUsed)
+    }
+    state.logMessage = result.message
+    return result
+  }
+
+  /**
+   * 执行烹饪配方（由 RecipePanel 调用）
+   */
+  function executeCookRecipeMode(recipeId: string): CraftResult {
+    const result = engineExecuteCook(state.player, recipeId)
+    if (result.success && result.timeUsed > 0) {
+      advanceGameTime(result.timeUsed)
+    }
+    state.logMessage = result.message
+    return result
+  }
+
   return {
     state: readonly(state) as GameRuntimeState,
     enterEvent,
     selectEventOption,
     handleInteraction,
     getCurrentInteractions,
-    getBuildingInteractions,
+    getCampsiteBuildings,
+    enterBuilding,
+    exitBuilding,
+    setLogMessage,
     executeBuildRecipe,
+    executeUpgradeBuildMode,
+    executeDeconstructBuilding,
+    executeCraftRecipeMode,
+    executeCookRecipeMode,
     exitBuildMode,
     resolveText,
     advanceGameTime,

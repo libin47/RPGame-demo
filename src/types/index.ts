@@ -5,6 +5,7 @@ export * from './effect'
 export * from './flag'
 
 // 内容系统
+export * from './option'
 export * from './cg'
 export * from './scene'
 export * from './event'
@@ -31,7 +32,7 @@ export * from './status'
 // 经济系统
 export * from './trade'
 // 建筑系统
-export * from './building'
+export * from './build'
 
 // 注册表
 export * from './registry'

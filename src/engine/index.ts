@@ -92,6 +92,8 @@ export {
   executeCook,
   calculateCookQuality,
   executeBuild,
+  executeUpgradeBuild,
+  executeDeconstruct,
   executeRepair,
   getCraftableRecipes,
   getRepairableItems,

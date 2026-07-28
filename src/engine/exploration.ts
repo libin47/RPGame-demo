@@ -77,7 +77,10 @@ function isDescriptionEligible(desc: SceneDescription, player: PlayerState): boo
     return false
   }
   // hideFlag快捷flag判断
-  if (desc.hideFlag && desc.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)) {
+  if (
+    desc.hideFlag &&
+    desc.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+  ) {
     return false
   }
 
@@ -175,7 +178,7 @@ export function markDescriptionSeen(desc: SceneDescription, player: PlayerState)
       player.flags[desc.seenFlag] = true
     }
   }
-  if(desc.seenCountFlag){
+  if (desc.seenCountFlag) {
     const currentVal = player.flags[desc.seenCountFlag]
     if (typeof currentVal === 'number') {
       player.flags[desc.seenCountFlag] = currentVal + 1
@@ -253,7 +256,6 @@ function getWeatherTypeFromId(weatherId: string): WeatherType | null {
   return null
 }
 
-
 /**
  * 获取场景描述文本变体
  * 搜索符合条件的第一条变体，如果都不满足则返回原始文本
@@ -270,9 +272,14 @@ export function resolveTextVariation(
 ): string {
   if (!variations || variations.length === 0) return defaultText
 
-  const matched = variations.find((v) => evaluateCondition(v.condition, player)&&evaluateTextVariationFlag(v, player))
-  console.log(matched ? matched.content : defaultText)
-  return matched ? matched.content : defaultText
+  const matched = variations.filter(
+    (v) => evaluateCondition(v.condition, player) && evaluateTextVariationFlag(v, player),
+  )
+  if (matched.length === 0) return defaultText
+
+  // 如果matched不为空，则将matched中每一项的content拼接起来，否则返回defaultText
+
+  return matched.map((v) => v.content).join('\n\n')
 }
 
 // 场景描述文本变体-快捷条件判断
@@ -283,12 +290,17 @@ export function evaluateTextVariationFlag(
   // displayFlag快捷flag判断
   if (
     textVariations.displayFlag &&
-    !textVariations.displayFlag.every((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+    !textVariations.displayFlag.every(
+      (flag) => player.flags[flag] === true || player.flags[flag] === 1,
+    )
   ) {
     return false
   }
   // hideFlag快捷flag判断
-  if (textVariations.hideFlag && textVariations.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)) {
+  if (
+    textVariations.hideFlag &&
+    textVariations.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+  ) {
     return false
   }
   return true

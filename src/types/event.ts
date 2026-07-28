@@ -3,6 +3,7 @@
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
 import type { FlagValue } from './flag'
+import type { ButtonOption } from './option'
 
 // ============================================================
 // 事件配置
@@ -145,92 +146,9 @@ export interface EventTextVariation {
  * - 切换场景
  * - 触发其他事件
  */
-export interface EventOption {
-  /** 选项ID（帧内唯一） */
-  id: string
-
-  /** 选项文本（显示在按钮上） */
-  text: string
-  /** 文本变体（根据条件显示不同文本） */
-  textVariations?: EventTextVariation[]
-
-  /** 选项描述（可选，长按或tooltip显示） */
-  description?: string
-
-  /** 选项显示条件（满足条件时才显示此选项） */
-  displayCondition?: Condition
-  // 选项显示条件-标志位，用于判断是否显示此选项
-  displayFlag?: string[]
-  /** 选项可用条件（满足条件时才可点击，不满足时灰显） */
-  availableCondition?: Condition
-  /** 不可用时的提示文本 */
-  unavailableTooltip?: string
-
-  /** 选项样式 */
-  optionStyle?: EventOptionStyle
-
-  /** 选择此选项消耗的资源 */
-  costs?: EventOptionCost[]
-
+export interface EventOption extends ButtonOption {
   /** 选项结果列表（按权重概率触发，支持条件过滤） */
   results: EventOptionResult[]
-
-  /** 选项优先级（数字越大显示越靠前） */
-  displayPriority?: number
-
-  /** 是否需要确认弹窗（防止误操作重要选项） */
-  requiresConfirmation?: boolean
-  /** 确认弹窗文本 */
-  confirmationText?: string
-
-  /** 此选项是否只能选择一次（再次进入此帧时灰显或隐藏） */
-  isOneTime?: boolean
-  /** 选择后设置的标志位 */
-  selectedFlag?: string
-
-  /** 选择后选项文本的变化（如"敲门"→"再次敲门"） */
-  textAfterSelected?: string
-}
-
-/**
- * 事件选项样式
- */
-export enum EventOptionStyle {
-  /** 默认样式 */
-  DEFAULT = 'default',
-  /** 危险操作（红色，如攻击、跳崖等） */
-  DANGER = 'danger',
-  /** 特殊/关键操作（金色/高亮） */
-  SPECIAL = 'special',
-  /** 隐藏选项（满足条件才显示，显示时可能是半透明或特殊效果） */
-  HIDDEN = 'hidden',
-  /** 理智相关选项（低SAN值下特有样式） */
-  MADNESS = 'madness',
-}
-
-/**
- * 事件选项消耗
- */
-export interface EventOptionCost {
-  /** 消耗类型 */
-  costType: EventOptionCostType
-  /** 消耗值 */
-  value: number
-  /** 消耗的物品ID（costType为ITEM时使用） */
-  itemId?: string
-  /** 消耗的物品数量（costType为ITEM时使用） */
-  itemQuantity?: number
-}
-
-/**
- * 事件选项消耗类型
- */
-export enum EventOptionCostType {
-  STAMINA = 'stamina',
-  SATIETY = 'satiety',
-  SAN = 'san',
-  HP = 'hp',
-  ITEM = 'item',
 }
 
 // ============================================================
@@ -268,18 +186,18 @@ export interface EventResultBase {
  * - 触发另一个事件
  */
 export type EventOptionResult =
-  | (NextFrameResult & EventResultBase)
-  | (EndEventResult & EventResultBase)
-  | (TriggerBattleResult & EventResultBase)
-  | (PlayCGResult & EventResultBase)
-  | (OpenTradeResult & EventResultBase)
-  | (SwitchSceneResult & EventResultBase)
-  | (TriggerEventResult & EventResultBase)
+  | NextFrameResult
+  | EndEventResult
+  | TriggerBattleResult
+  | PlayCGResult
+  | OpenTradeResult
+  | SwitchSceneResult
+  | TriggerEventResult
 
 /**
  * 跳转到同一事件的另一个帧
  */
-export interface NextFrameResult {
+export interface NextFrameResult extends EventResultBase {
   type: 'nextFrame'
   /** 目标帧ID（同一事件内） */
   targetFrameId: string
@@ -290,7 +208,7 @@ export interface NextFrameResult {
 /**
  * 结束事件，返回场景
  */
-export interface EndEventResult {
+export interface EndEventResult extends EventResultBase {
   type: 'endEvent'
   /** 返回场景后显示的文字（可选，如"你离开了小屋"） */
   exitText?: string
@@ -299,7 +217,7 @@ export interface EndEventResult {
 /**
  * 触发战斗
  */
-export interface TriggerBattleResult {
+export interface TriggerBattleResult extends EventResultBase {
   type: 'triggerBattle'
   /** 敌人配置ID */
   enemyId: string[]
@@ -318,7 +236,7 @@ export interface TriggerBattleResult {
 /**
  * 播放CG
  */
-export interface PlayCGResult {
+export interface PlayCGResult extends EventResultBase {
   type: 'playCG'
   /** CG配置ID */
   cgId: string
@@ -329,7 +247,7 @@ export interface PlayCGResult {
 /**
  * 进入交易界面
  */
-export interface OpenTradeResult {
+export interface OpenTradeResult extends EventResultBase {
   type: 'openTrade'
   /** 交易对象ID */
   traderId: string
@@ -340,7 +258,7 @@ export interface OpenTradeResult {
 /**
  * 切换场景
  */
-export interface SwitchSceneResult {
+export interface SwitchSceneResult extends EventResultBase {
   type: 'switchScene'
   /** 目标场景ID */
   sceneId: string
@@ -353,7 +271,7 @@ export interface SwitchSceneResult {
 /**
  * 触发另一个事件
  */
-export interface TriggerEventResult {
+export interface TriggerEventResult extends EventResultBase {
   type: 'triggerEvent'
   /** 目标事件ID */
   eventId: string

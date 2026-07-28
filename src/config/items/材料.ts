@@ -91,4 +91,49 @@ const 布料: MaterialItem = {
   tags: ['material', 'cloth'],
 }
 
-export { 镜子, 防水布, 尼龙绳, 木头, 金属碎片, 布料 }
+/** 石头 */
+const 石头: MaterialItem = {
+  id: '石头',
+  name: '石头',
+  description: '一块石头。',
+  category: ItemCategory.MATERIAL,
+  iconId: 'icon_stone',
+  weight: 0.2,
+  maxStackSize: -1,
+  isSellable: true,
+  basePrice: 4,
+  isKeyItem: false,
+  tags: ['material', 'stone'],
+}
+
+/** 铁片 */
+const 铁片: MaterialItem = {
+  id: '铁片',
+  name: '铁片',
+  description: '一块经过简单加工的金属片，可以用来修复工具或制作更复杂的物品。',
+  category: ItemCategory.MATERIAL,
+  iconId: 'icon_metal_fragment',
+  weight: 0.3,
+  maxStackSize: -1,
+  isSellable: true,
+  basePrice: 8,
+  isKeyItem: false,
+  tags: ['material', 'metal', 'sheet'],
+}
+
+/** 布料碎片 */
+const 布料碎片: MaterialItem = {
+  id: '布料碎片',
+  name: '布料碎片',
+  description: '一块裁剪过的布料碎片，适合修补衣物或制作简易绷带。',
+  category: ItemCategory.MATERIAL,
+  iconId: 'icon_cloth',
+  weight: 0.05,
+  maxStackSize: -1,
+  isSellable: true,
+  basePrice: 1,
+  isKeyItem: false,
+  tags: ['material', 'cloth', 'scrap'],
+}
+
+export { 镜子, 防水布, 尼龙绳, 木头, 金属碎片, 石头, 铁片, 布料碎片 }

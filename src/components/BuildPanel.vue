@@ -1,98 +1,128 @@
 <!-- BuildPanel.vue - 建造面板
-     显示当前营地的已有建筑和可建造的配方列表 -->
+     显示当前营地的已有建筑（含升级）和可建造的建筑列表 -->
 <template>
   <div class="build-panel">
-    <!-- 头部 -->
+    <!-- 头部（只保留标题） -->
     <div class="panel-header">
       <h2 class="panel-title">建造 - {{ subScene?.name || '营地' }}</h2>
-      <button class="btn-back" @click="$emit('close')">返回场景</button>
     </div>
 
     <div class="panel-body">
       <!-- ==================== 已有建筑 ==================== -->
-      <div class="section" v-if="existingBuildings.length > 0">
+      <div class="section" v-if="existingItems.length > 0">
         <h3 class="section-title">已有建筑</h3>
         <div class="building-grid">
-          <div
-            v-for="bld in existingBuildings"
-            :key="bld.buildingId"
-            class="building-card existing"
-          >
-            <div class="building-icon">{{ getCategoryIcon(bld.buildingType) }}</div>
-            <div class="building-info">
-              <span class="building-name">{{ bld.buildingName }}</span>
-              <p class="building-desc">{{ bld.descriptionConfig.description }}</p>
+          <div v-for="item in existingItems" :key="item.buildId" class="building-card existing">
+            <div class="building-header">
+              <span class="building-name">{{ item.subBuild.buildName }}</span>
+              <span v-if="item.subBuild.isDecorativeOnly" class="tag-deco">装饰</span>
             </div>
+            <p class="building-desc">{{ item.subBuild.descriptionConfig.description }}</p>
             <!-- 建筑提供的交互 -->
-            <div v-if="bld.providedInteractions?.length" class="provided-actions">
-              <span
-                v-for="act in bld.providedInteractions"
-                :key="act.interactionId"
-                class="action-tag"
-              >{{ act.interactionName }}</span>
+            <div
+              v-if="item.subBuild.interactions && item.subBuild.interactions.length > 0"
+              class="provided-actions"
+            >
+              <span v-for="act in item.subBuild.interactions" :key="act.id" class="action-tag">{{
+                act.name
+              }}</span>
+            </div>
+            <!-- 升级按钮 -->
+            <div v-if="item.availableUpgrades.length > 0" class="upgrade-section">
+              <div
+                v-for="upg in item.availableUpgrades"
+                :key="upg.targetBuildId"
+                class="upgrade-item"
+              >
+                <span class="upgrade-label">升级至 {{ upg.targetName }}</span>
+                <div class="upgrade-materials">
+                  <span
+                    v-for="mat in upg.materialDetails"
+                    :key="mat.itemId"
+                    class="material-item"
+                    :class="mat.hasEnough ? 'mat-ok' : 'mat-miss'"
+                  >
+                    {{ mat.itemName }} {{ mat.current }}/{{ mat.required }}
+                  </span>
+                </div>
+                <div v-if="upg.costDetails.length > 0" class="upgrade-costs">
+                  <span
+                    v-for="cost in upg.costDetails"
+                    :key="cost.type"
+                    class="cost-item"
+                    :class="cost.hasEnough ? 'cost-ok' : 'cost-miss'"
+                  >
+                    {{ cost.label }}: {{ cost.current }}/{{ cost.required }}
+                  </span>
+                </div>
+                <p v-if="upg.failReason" class="fail-reason">{{ upg.failReason }}</p>
+                <button
+                  class="btn-upgrade"
+                  :disabled="!upg.canUpgrade"
+                  @click="onUpgrade(item.buildId, upg.targetBuildId)"
+                >
+                  升级
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ==================== 可建造配方 ==================== -->
+      <!-- ==================== 可建造 ==================== -->
       <div class="section">
         <h3 class="section-title">可建造</h3>
-        <div v-if="availableRecipes.length === 0" class="empty-hint">
-          当前营地没有可建造的项目
-        </div>
-        <div class="recipe-list" v-else>
+        <div v-if="availableBuilds.length === 0" class="empty-hint">当前营地没有可建造的项目</div>
+        <div class="build-list" v-else>
           <div
-            v-for="recipe in availableRecipes"
-            :key="recipe.id"
-            class="recipe-card"
-            :class="{ 'recipe-disabled': !recipe.canBuild }"
+            v-for="bld in availableBuilds"
+            :key="bld.buildId"
+            class="build-card"
+            :class="{ 'build-disabled': !bld.canBuild }"
           >
-            <div class="recipe-icon">{{ getCategoryIcon(recipe.buildCategory) }}</div>
-            <div class="recipe-main">
-              <div class="recipe-header">
-                <span class="recipe-name">{{ recipe.name }}</span>
-                <span class="recipe-time">⏱ {{ recipe.requirements.timeMinutes }}分钟</span>
+            <div class="build-main">
+              <div class="build-header">
+                <span class="build-name">{{ bld.subBuildName }}</span>
+                <span class="build-time">⏱ {{ bld.buildTime }}分钟</span>
               </div>
-              <p class="recipe-desc">{{ recipe.buildResult.descriptionConfig.description }}</p>
+              <p class="build-desc">{{ bld.subBuildDesc }}</p>
               <!-- 材料 -->
-              <div class="recipe-materials">
+              <div class="build-materials">
                 <span
-                  v-for="mat in recipe.materialDetails"
+                  v-for="mat in bld.materialDetails"
                   :key="mat.itemId"
                   class="material-item"
-                  :class="{ 'material-sufficient': mat.hasEnough, 'material-insufficient': !mat.hasEnough }"
+                  :class="mat.hasEnough ? 'mat-ok' : 'mat-miss'"
                 >
                   {{ mat.itemName }} {{ mat.current }}/{{ mat.required }}
                 </span>
               </div>
               <!-- 消耗 -->
-              <div class="recipe-costs" v-if="recipe.costDetails.length">
+              <div class="build-costs" v-if="bld.costDetails.length > 0">
                 <span
-                  v-for="cost in recipe.costDetails"
+                  v-for="cost in bld.costDetails"
                   :key="cost.type"
                   class="cost-item"
-                  :class="{ 'cost-sufficient': cost.hasEnough, 'cost-insufficient': !cost.hasEnough }"
+                  :class="cost.hasEnough ? 'cost-ok' : 'cost-miss'"
                 >
                   {{ cost.label }}: {{ cost.current }}/{{ cost.required }}
                 </span>
               </div>
-              <!-- 不满足原因 -->
-              <p v-if="recipe.failReason" class="fail-reason">{{ recipe.failReason }}</p>
+              <!-- 前置依赖 -->
+              <p v-if="bld.prereqFail" class="fail-reason">{{ bld.prereqFail }}</p>
+              <p v-if="bld.failReason" class="fail-reason">{{ bld.failReason }}</p>
             </div>
-            <div class="recipe-action">
-              <button
-                class="btn-build"
-                :disabled="!recipe.canBuild"
-                @click="onBuild(recipe.id)"
-              >建造</button>
+            <div class="build-action">
+              <button class="btn-build" :disabled="!bld.canBuild" @click="onBuild(bld.buildId)">
+                建造
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 底部消息 -->
-      <p v-if="logMessage" class="log-message">{{ logMessage }}</p>
+      <!-- 返回场景按钮（加大） -->
+      <button class="btn-return" @click="$emit('close')">返回场景</button>
     </div>
   </div>
 </template>
@@ -101,61 +131,57 @@
 import { computed } from 'vue'
 import type { SubScene } from '@/types/scene'
 import type { PlayerState } from '@/types/player'
-import type { BuildRecipe } from '@/types/build'
-import type { BuildResult, BuildCategory } from '@/types/building'
+import type { Build, SubBuild, buildUpgrade } from '@/types/build'
 import { getRegistry } from '@/engine'
-import { canCraftRecipe } from '@/engine'
 
 const props = defineProps<{
   subScene: SubScene | null
   playerState: PlayerState
-  logMessage: string
 }>()
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'build', recipeId: string): void
+  (e: 'build', buildId: string): void
+  (e: 'upgrade', buildId: string, targetSubBuildId: string): void
 }>()
 
 const registry = getRegistry()
 
 // ============================================================
-// 计算：当前营地已有建筑（buildingInit + 已建造）
+// 辅助：计算当前子场景中已有建筑的 Build ID 列表
 // ============================================================
-const existingBuildings = computed<BuildResult[]>(() => {
-  const ss = props.subScene
-  if (!ss) return []
+function getSubScene(): string | null {
+  return props.subScene?.id ?? null
+}
 
-  // 初始建筑
-  const initIds: string[] = ss.buildingInit ?? []
-  // 运行时已建造的建筑
-  const subSceneId = ss.id
-  const builtIds: string[] = props.playerState.progress.campBuildings[subSceneId] ?? []
+function getExistingBuildIds(): string[] {
+  const ssId = getSubScene()
+  if (!ssId) return []
+  const initIds = props.subScene?.buildingInit ?? []
+  const builtIds = props.playerState.progress.campBuildings[ssId] ?? []
+  return [...new Set([...initIds, ...builtIds])]
+}
 
-  // 合并去重
-  const allIds = new Set([...initIds, ...builtIds])
-  const results: BuildResult[] = []
-  for (const id of allIds) {
-    const building = registry.getBuilding(id)
-    if (building) results.push(building)
-  }
-  return results
-})
+function getCurrentSubBuildId(buildId: string): string {
+  const ssId = getSubScene()
+  if (!ssId) return ''
+  return props.playerState.progress.campBuildingLevels[ssId]?.[buildId] ?? ''
+}
 
 // ============================================================
-// 计算：可建造的配方列表
+// 已有建筑详情
 // ============================================================
-interface RecipeDisplayItem {
-  id: string
-  name: string
-  buildCategory: BuildCategory
-  requirements: BuildRecipe['requirements']
-  buildResult: BuildResult
-  /** 是否可以建造（满足所有条件） */
-  canBuild: boolean
-  /** 失败原因（不能建造时的原因） */
+interface ExistingBuildingItem {
+  buildId: string
+  subBuild: SubBuild
+  availableUpgrades: UpgradeDisplayItem[]
+}
+
+interface UpgradeDisplayItem {
+  targetBuildId: string
+  targetName: string
+  canUpgrade: boolean
   failReason: string | null
-  /** 材料详情（含当前数量） */
   materialDetails: Array<{
     itemId: string
     itemName: string
@@ -163,7 +189,6 @@ interface RecipeDisplayItem {
     current: number
     hasEnough: boolean
   }>
-  /** 消耗详情（含当前值） */
   costDetails: Array<{
     type: string
     label: string
@@ -173,104 +198,200 @@ interface RecipeDisplayItem {
   }>
 }
 
-const availableRecipes = computed<RecipeDisplayItem[]>(() => {
+const existingItems = computed<ExistingBuildingItem[]>(() => {
+  const ids = getExistingBuildIds()
+  const result: ExistingBuildingItem[] = []
+
+  for (const bldId of ids) {
+    const build = registry.getBuilding(bldId)
+    if (!build) continue
+
+    const currentSubId = getCurrentSubBuildId(bldId) || build.defaultBuild
+    const currentSub = build.subBuild.find((s) => s.buildId === currentSubId)
+    if (!currentSub) continue
+
+    // 计算可用升级
+    const upgrades: UpgradeDisplayItem[] = (currentSub.upgrade ?? []).map((u) => {
+      const targetSub = build.subBuild.find((s) => s.buildId === u.targetBuildId)
+      const targetName = targetSub?.buildName ?? u.targetBuildId
+
+      // 材料详情
+      const materialDetails = u.upgradeItems.map((m) => {
+        const count = countItem(m.itemId)
+        return {
+          itemId: m.itemId,
+          itemName: registry.getItemName(m.itemId),
+          required: m.quantity,
+          current: count,
+          hasEnough: count >= m.quantity,
+        }
+      })
+
+      // 消耗详情
+      const costDetails = u.upgradeCost.map((c) => {
+        const labelMap: Record<string, string> = {
+          stamina: '体力',
+          satiety: '饱食度',
+          san: '理智',
+          hp: '生命值',
+        }
+        const current = getSurvivalValue(c.costType)
+        const required = c.affectedByCoefficient ? Math.round(c.value * getStaminaCoeff()) : c.value
+        return {
+          type: c.costType,
+          label: labelMap[c.costType] ?? c.costType,
+          required,
+          current,
+          hasEnough: current >= required,
+        }
+      })
+
+      // 检查前置建筑
+      let prereqFail: string | null = null
+      if (u.prerequisiteBuildings && u.prerequisiteBuildings.length > 0) {
+        for (const prereq of u.prerequisiteBuildings) {
+          if (!ids.includes(prereq.buildId)) {
+            const prereqBuild = registry.getBuilding(prereq.buildId)
+            prereqFail = `需要先建造 ${prereqBuild?.defaultBuild ?? prereq.buildId}`
+            break
+          }
+        }
+      }
+
+      const canUpgrade =
+        materialDetails.every((m) => m.hasEnough) &&
+        costDetails.every((c) => c.hasEnough) &&
+        prereqFail === null
+
+      return {
+        targetBuildId: u.targetBuildId,
+        targetName,
+        canUpgrade,
+        failReason: prereqFail,
+        materialDetails,
+        costDetails,
+      }
+    })
+
+    result.push({ buildId: bldId, subBuild: currentSub, availableUpgrades: upgrades })
+  }
+
+  return result
+})
+
+// ============================================================
+// 可建造列表
+// ============================================================
+interface BuildDisplayItem {
+  buildId: string
+  subBuildName: string
+  subBuildDesc: string
+  buildTime: number
+  canBuild: boolean
+  failReason: string | null
+  prereqFail: string | null
+  materialDetails: Array<{
+    itemId: string
+    itemName: string
+    required: number
+    current: number
+    hasEnough: boolean
+  }>
+  costDetails: Array<{
+    type: string
+    label: string
+    required: number
+    current: number
+    hasEnough: boolean
+  }>
+}
+
+const availableBuilds = computed<BuildDisplayItem[]>(() => {
   const ss = props.subScene
   if (!ss) return []
 
   const allowedIds = ss.buildingList ?? []
-  // 如果没有指定 buildingList，显示所有已解锁的配方
-  const allBuildRecipes = registry.getAllBuildRecipes()
+  const allBuilds = registry.getAllBuildings()
+  const existIds = new Set(getExistingBuildIds())
+  const ssId = getSubScene()
 
-  // 当前已存在的建筑ID
-  const existIds = new Set(existingBuildings.value.map((b) => b.buildingId))
+  const result: BuildDisplayItem[] = []
 
-  const result: RecipeDisplayItem[] = []
+  for (const build of allBuilds) {
+    // 过滤 buildingList
+    if (allowedIds.length > 0 && !allowedIds.includes(build.buildId)) continue
 
-  for (const recipe of allBuildRecipes) {
-    // 过滤：如果指定了 buildingList，只显示允许的
-    if (allowedIds.length > 0 && !allowedIds.includes(recipe.id)) continue
+    // 过滤未解锁
+    if (!props.playerState.unlockedRecipes.buildRecipes.includes(build.buildId)) continue
 
-    // 过滤：未解锁的
-    if (!props.playerState.unlockedRecipes.buildRecipes.includes(recipe.id)) continue
+    // 过滤已建造
+    if (existIds.has(build.buildId)) continue
 
-    // 过滤：Unique建筑已存在
-    if (recipe.buildResult.isUnique && existIds.has(recipe.buildResult.buildingId)) continue
+    // 获取默认子建筑
+    const defaultSub = build.subBuild.find((s) => s.buildId === build.defaultBuild)
+    if (!defaultSub) continue
 
     // 材料详情
-    const materialDetails = recipe.materials.map((mat) => {
-      const count = props.playerState.inventory.reduce((sum, inv) => {
-        if (inv.itemId === mat.itemId) {
-          const isEquipped = Object.values(props.playerState.equipment).includes(mat.itemId)
-          return sum + (isEquipped ? 0 : inv.quantity)
-        }
-        return sum
-      }, 0)
-      return {
-        itemId: mat.itemId,
-        itemName: registry.getItemName(mat.itemId),
-        required: mat.quantity,
-        current: count,
-        hasEnough: mat.isConsumed ? count >= mat.quantity : true,
-      }
-    })
+    const materialDetails = build.defaultItems.map((m) => ({
+      itemId: m.itemId,
+      itemName: registry.getItemName(m.itemId),
+      required: m.quantity,
+      current: countItem(m.itemId),
+      hasEnough: countItem(m.itemId) >= m.quantity,
+    }))
 
     // 消耗详情
-    const costDetails = recipe.costs.map((cost) => {
+    const costDetails = build.defaultCost.map((c) => {
       const labelMap: Record<string, string> = {
         stamina: '体力',
         satiety: '饱食度',
         san: '理智',
         hp: '生命值',
       }
-      let current = 0
-      switch (cost.costType) {
-        case 'stamina':
-          current = props.playerState.survival.stamina
-          break
-        case 'satiety':
-          current = props.playerState.survival.satiety
-          break
-        case 'san':
-          current = props.playerState.survival.san
-          break
-        case 'hp':
-          current = props.playerState.survival.hp
-          break
-      }
-      const required = cost.affectedByCoefficient
-        ? Math.round(cost.value * props.playerState.attributes.coefficients.staminaConsumptionCoefficient)
-        : cost.value
+      const current = getSurvivalValue(c.costType)
+      const required = c.affectedByCoefficient ? Math.round(c.value * getStaminaCoeff()) : c.value
       return {
-        type: cost.costType,
-        label: labelMap[cost.costType] ?? cost.costType,
+        type: c.costType,
+        label: labelMap[c.costType] ?? c.costType,
         required,
         current,
         hasEnough: current >= required,
       }
     })
 
-    // 检查能否建造
-    const canCraft = canCraftRecipe(props.playerState, recipe)
-    // 额外检查前置建筑
+    // 前置建筑检查
     let prereqFail: string | null = null
-    if (recipe.prerequisiteBuildings && recipe.prerequisiteBuildings.length > 0) {
-      for (const prereq of recipe.prerequisiteBuildings) {
-        if (!existIds.has(prereq)) {
-          const prereqName = registry.getBuilding(prereq)?.buildingName ?? prereq
-          prereqFail = `需要先建造 ${prereqName}`
+    if (build.prerequisiteBuildings && build.prerequisiteBuildings.length > 0) {
+      for (const prereq of build.prerequisiteBuildings) {
+        if (!existIds.has(prereq.buildId)) {
+          const prereqBuild = registry.getBuilding(prereq.buildId)
+          prereqFail = `需要先建造 ${prereqBuild?.defaultBuild ?? prereq.buildId}`
           break
         }
       }
     }
 
+    // 材料/消耗检查（用 canCraftRecipe 的风格，但这里我们手动做了）
+    const matOk = materialDetails.every((m) => m.hasEnough)
+    const costOk = costDetails.every((c) => c.hasEnough)
+
+    let failReason: string | null = null
+    if (!matOk) {
+      const missing = materialDetails.find((m) => !m.hasEnough)
+      failReason = missing ? `材料不足：${missing.itemName}` : null
+    } else if (!costOk) {
+      const missing = costDetails.find((c) => !c.hasEnough)
+      failReason = missing ? `${missing.label}不足` : null
+    }
+
     result.push({
-      id: recipe.id,
-      name: recipe.name,
-      buildCategory: recipe.buildCategory,
-      requirements: recipe.requirements,
-      buildResult: recipe.buildResult,
-      canBuild: canCraft === null && prereqFail === null,
-      failReason: prereqFail ?? canCraft,
+      buildId: build.buildId,
+      subBuildName: defaultSub.buildName,
+      subBuildDesc: defaultSub.descriptionConfig.description,
+      buildTime: build.defaultTime,
+      canBuild: matOk && costOk && prereqFail === null,
+      failReason,
+      prereqFail,
       materialDetails,
       costDetails,
     })
@@ -280,27 +401,48 @@ const availableRecipes = computed<RecipeDisplayItem[]>(() => {
 })
 
 // ============================================================
-// 辅助
+// 辅助工具
 // ============================================================
 
-const categoryIcons: Record<string, string> = {
-  defense: '🛡️',
-  production: '⚙️',
-  storage: '📦',
-  living: '🛏️',
-  craftingStation: '🔧',
-  lighting: '🔥',
-  decoration: '🎨',
-  infrastructure: '🏗️',
-  ritual: '🔮',
+function countItem(itemId: string): number {
+  return props.playerState.inventory.reduce((sum, inv) => {
+    if (inv.itemId === itemId) {
+      const isEquipped = Object.values(props.playerState.equipment).includes(itemId)
+      return sum + (isEquipped ? 0 : inv.quantity)
+    }
+    return sum
+  }, 0)
 }
 
-function getCategoryIcon(category: BuildCategory | string): string {
-  return categoryIcons[category] || '🏗️'
+function getSurvivalValue(costType: string): number {
+  switch (costType) {
+    case 'stamina':
+      return props.playerState.survival.stamina
+    case 'satiety':
+      return props.playerState.survival.satiety
+    case 'san':
+      return props.playerState.survival.san
+    case 'hp':
+      return props.playerState.survival.hp
+    default:
+      return 0
+  }
 }
 
-function onBuild(recipeId: string): void {
-  emit('build', recipeId)
+function getStaminaCoeff(): number {
+  return props.playerState.attributes.coefficients.staminaConsumptionCoefficient
+}
+
+// ============================================================
+// 事件
+// ============================================================
+
+function onBuild(buildId: string): void {
+  emit('build', buildId)
+}
+
+function onUpgrade(buildId: string, targetSubBuildId: string): void {
+  emit('upgrade', buildId, targetSubBuildId)
 }
 </script>
 
@@ -350,7 +492,6 @@ function onBuild(recipeId: string): void {
   padding: 1rem 1.2rem;
 }
 
-/* ---- 分区 ---- */
 .section {
   margin-bottom: 1.5rem;
 }
@@ -369,52 +510,57 @@ function onBuild(recipeId: string): void {
   padding: 1rem 0;
 }
 
-/* ---- 已有建筑卡片 ---- */
+/* ---- 已有建筑 ---- */
 .building-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
 .building-card {
-  padding: 0.6rem;
+  padding: 0.7rem;
   border: 1px solid var(--border-weak);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.03);
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
 }
 
 .building-card.existing {
   border-color: rgba(78, 205, 196, 0.3);
 }
 
-.building-icon {
-  font-size: 1.5rem;
-}
-
-.building-info {
+.building-header {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.2rem;
 }
 
 .building-name {
   font-weight: bold;
+  font-size: var(--font-base);
   color: var(--accent);
 }
 
+.tag-deco {
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  background: rgba(255, 213, 79, 0.12);
+  color: #ffd54f;
+  font-size: var(--font-xs);
+}
+
 .building-desc {
-  margin: 0;
+  margin: 0 0 0.3rem 0;
   font-size: var(--font-xs);
   color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .provided-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
+  margin-bottom: 0.3rem;
 }
 
 .action-tag {
@@ -425,114 +571,50 @@ function onBuild(recipeId: string): void {
   font-size: var(--font-xs);
 }
 
-/* ---- 配方列表 ---- */
-.recipe-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+/* ---- 升级 ---- */
+.upgrade-section {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--border-weak);
 }
 
-.recipe-card {
-  display: flex;
-  gap: 0.6rem;
-  padding: 0.7rem;
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.03);
-  transition: all var(--transition-fast);
-}
-
-.recipe-card:not(.recipe-disabled):hover {
-  border-color: rgba(78, 205, 196, 0.4);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.recipe-disabled {
-  opacity: 0.55;
-  border-color: var(--border-weak);
-}
-
-.recipe-icon {
-  font-size: 1.8rem;
-  width: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.recipe-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.recipe-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.recipe-name {
-  font-weight: bold;
-  color: var(--text-primary);
-}
-
-.recipe-time {
-  font-size: var(--font-xs);
-  color: var(--text-muted);
-}
-
-.recipe-desc {
-  margin: 0;
-  font-size: var(--font-xs);
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-/* 材料 */
-.recipe-materials {
+.upgrade-item {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.3rem;
 }
 
-.material-item {
-  padding: 0.1rem 0.4rem;
+.upgrade-label {
+  font-size: var(--font-xs);
+  color: #ffd54f;
+  min-width: 5rem;
+}
+
+.upgrade-materials,
+.upgrade-costs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.material-item,
+.cost-item {
+  padding: 0.1rem 0.35rem;
   border-radius: 3px;
   font-size: var(--font-xs);
 }
 
-.material-sufficient {
-  background: rgba(78, 205, 196, 0.1);
-  color: #4ecd8a;
+.mat-ok,
+.cost-ok {
+  color: var(--text-muted);
 }
-
-.material-insufficient {
+.mat-miss {
   background: rgba(255, 107, 107, 0.1);
   color: #ff6b6b;
 }
-
-/* 消耗 */
-.recipe-costs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
-.cost-item {
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
-  font-size: var(--font-xs);
-}
-
-.cost-sufficient {
-  color: var(--text-muted);
-}
-
-.cost-insufficient {
+.cost-miss {
   background: rgba(255, 107, 107, 0.1);
   color: #ff6b6b;
 }
@@ -543,8 +625,91 @@ function onBuild(recipeId: string): void {
   color: #ff6b6b;
 }
 
-/* 建造按钮 */
-.recipe-action {
+.btn-upgrade {
+  padding: 0.2rem 0.7rem;
+  border: 1px solid rgba(255, 213, 79, 0.4);
+  border-radius: var(--radius-md);
+  background: rgba(255, 213, 79, 0.08);
+  color: #ffd54f;
+  font-size: var(--font-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-upgrade:hover:not(:disabled) {
+  background: rgba(255, 213, 79, 0.15);
+}
+.btn-upgrade:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ---- 可建造 ---- */
+.build-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.build-card {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all var(--transition-fast);
+}
+
+.build-card:not(.build-disabled):hover {
+  border-color: rgba(78, 205, 196, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.build-disabled {
+  opacity: 0.55;
+  border-color: var(--border-weak);
+}
+
+.build-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.build-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.build-name {
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.build-time {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.build-desc {
+  margin: 0;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.build-materials,
+.build-costs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.build-action {
   display: flex;
   align-items: center;
 }
@@ -564,18 +729,29 @@ function onBuild(recipeId: string): void {
 .btn-build:hover:not(:disabled) {
   background: rgba(78, 205, 196, 0.25);
 }
-
 .btn-build:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
-/* 日志 */
-.log-message {
-  padding: 0.5rem 0.8rem;
-  background: rgba(0, 0, 0, 0.2);
+/* ---- 底部返回按钮 ---- */
+.btn-return {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  margin-top: 0.8rem;
+  border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  font-size: var(--font-sm);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-secondary);
+  font-size: var(--font-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.btn-return:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
 }
 </style>

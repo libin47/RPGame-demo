@@ -20,16 +20,17 @@
       <!-- 场景模式 -->
       <ScenePanel
         v-if="game.state.mode === 'normal'"
-        :resolved-description="resolvedDescription"
         :description-config="game.state.currentDescriptionConfig"
         :interactions="game.getCurrentInteractions()"
-        :building-interactions="game.getBuildingInteractions()"
+        :campsite-buildings="game.getCampsiteBuildings()"
         :is-campsite="!!game.state.currentSubScene?.isCampsite"
         :scene-text-prefix="game.state.sceneTextPrefix"
         :scene-text-after="game.state.sceneTextAfter"
         :background-color="backgroundColor"
+        :player-state="game.state.player"
         @enter-event="onEnterEventFromEntry"
         @interaction="game.handleInteraction"
+        @enter-building="onEnterBuilding"
       />
 
       <!-- 事件模式 -->
@@ -57,9 +58,35 @@
         v-else-if="game.state.mode === 'build'"
         :sub-scene="game.state.currentSubScene"
         :player-state="game.state.player"
-        :log-message="game.state.logMessage"
         @close="game.exitBuildMode()"
         @build="onBuildRecipe"
+        @upgrade="onUpgradeBuild"
+      />
+
+      <!-- 建筑交互模式 - 配方子模式 -->
+      <RecipePanel
+        v-else-if="game.state.mode === 'building' && recipeMode"
+        :mode="recipeMode"
+        :device-level="recipeDeviceLevel"
+        :player-state="game.state.player"
+        @close="onExitRecipe"
+        @execute="onRecipeExecute"
+      />
+
+      <!-- 建筑交互模式 -->
+      <BuildingDetail
+        v-else-if="game.state.mode === 'building' && currentBuildingData"
+        :build="currentBuildingData.build"
+        :sub-build="currentBuildingData.subBuild"
+        :player-state="game.state.player"
+        :sub-scene-id="game.state.currentSubScene?.id ?? null"
+        @exit="onExitBuilding"
+        @enter-event="onEnterEventFromEntry"
+        @dismantle="onDismantleBuilding"
+        @upgrade="onUpgradeBuild"
+        @repair="onRepairBuilding"
+        @log="onBuildingLog"
+        @enter-recipe="onEnterRecipe"
       />
 
       <!-- 其他模式（占位提示） -->
@@ -95,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import StatusBar from '@/components/StatusBar.vue'
 import ScenePanel from '@/components/ScenePanel.vue'
@@ -105,8 +132,10 @@ import InventoryPanel from '@/components/InventoryPanel.vue'
 import SystemMenu from '@/components/SystemMenu.vue'
 import AttributesPanel from '@/components/AttributesPanel.vue'
 import BuildPanel from '@/components/BuildPanel.vue'
-import { PlayerActionType, getTimeOfDay, getRegistry, getResolvedDescriptionText } from '@/engine'
-import { getVisibleOptions, getVisibleVariations, isOptionAvailable, resolveTextVariation } from '@/engine'
+import BuildingDetail from '@/components/BuildingDetail.vue'
+import RecipePanel from '@/components/RecipePanel.vue'
+import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
+import { getVisibleOptions, getVisibleVariations, isOptionAvailable } from '@/engine'
 import { getGameInstance } from '@/runtime/gameInstance'
 import type { GameInstance } from '@/runtime/gameInstance'
 import { useUI } from '@/runtime/useUI'
@@ -114,6 +143,29 @@ import { useUI } from '@/runtime/useUI'
 const router = useRouter()
 const { uiState, toggleInventory, toggleSettings, toggleAttributes } = useUI()
 const registry = getRegistry()
+
+// ============================================================
+// 配方面板状态（由 BuildingDetail 进入）
+// ============================================================
+
+const recipeMode = ref<'craft' | 'cook' | null>(null)
+const recipeDeviceLevel = ref(0)
+
+function onEnterRecipe(payload: { mode: 'craft' | 'cook'; deviceLevel: number }): void {
+  recipeMode.value = payload.mode
+  recipeDeviceLevel.value = payload.deviceLevel
+}
+
+function onExitRecipe(): void {
+  recipeMode.value = null
+}
+
+function onRecipeExecute(result: import('@/engine').CraftResult): void {
+  if (result.success && result.timeUsed > 0) {
+    game.value.advanceGameTime(result.timeUsed)
+  }
+  game.value.setLogMessage(result.message)
+}
 
 // ============================================================
 // 游戏实例
@@ -177,13 +229,6 @@ const hasSanItem = computed<boolean>(() => {
 // ============================================================
 // 文本替换
 // ============================================================
-
-const resolvedDescription = computed<string>(() => {
-  // return game.value.resolveText(game.value.state.sceneDescription)
-  const currentDescriptionConfig = game.value.state.currentDescriptionConfig
-  if (!currentDescriptionConfig) return ''
-  return getResolvedDescriptionText(currentDescriptionConfig, game.value.state.player)
-})
 
 const resolvedFrameText = computed<string>(() => {
   if (!game.value.state.currentFrame) return ''
@@ -261,9 +306,57 @@ function onOpenAttributes(): void {
   toggleAttributes()
 }
 
+/** 当前交互的建筑数据（用于 BuildingDetail） */
+const currentBuildingData = computed<{
+  build: import('@/types/build').Build
+  subBuild: import('@/types/build').SubBuild
+} | null>(() => {
+  const buildId = game.value.state.currentBuildingId
+  if (!buildId) return null
+  const build = registry.getBuilding(buildId)
+  if (!build) return null
+  const subSceneId = game.value.state.currentSubScene?.id
+  const currentSubId = subSceneId
+    ? game.value.state.player.progress.campBuildingLevels[subSceneId]?.[buildId]
+    : undefined
+  const subBuild = build.subBuild.find((s) => s.buildId === (currentSubId ?? build.defaultBuild))
+  if (!subBuild) return null
+  return { build, subBuild }
+})
+
 /** 执行建造配方 */
 function onBuildRecipe(recipeId: string): void {
   game.value.executeBuildRecipe(recipeId)
+}
+
+/** 执行建筑升级 */
+function onUpgradeBuild(buildId: string, targetSubBuildId: string): void {
+  game.value.executeUpgradeBuild(buildId, targetSubBuildId)
+}
+
+/** 进入建筑交互模式 */
+function onEnterBuilding(buildId: string): void {
+  game.value.enterBuilding(buildId)
+}
+
+/** 退出建筑交互模式 */
+function onExitBuilding(): void {
+  game.value.exitBuilding()
+}
+
+/** 拆除建筑 */
+function onDismantleBuilding(buildId: string): void {
+  game.value.executeDeconstruct(buildId)
+}
+
+/** 修理建筑（BuildingDetail 内部已完成消耗，这里仅处理日志） */
+function onRepairBuilding(_buildId: string): void {
+  // 实际维修逻辑在 BuildingDetail 内部完成
+}
+
+/** 建筑交互日志 */
+function onBuildingLog(message: string): void {
+  game.value.setLogMessage(message)
 }
 
 /** 监听结局/CG模式，自动跳转 */

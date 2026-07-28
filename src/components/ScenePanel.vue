@@ -50,19 +50,19 @@
       </button>
     </div>
 
-    <!-- 营地建筑交互按钮（区别于固定交互，显示在更下方） -->
+    <!-- 营地建筑入口（区别于固定交互，显示建筑名称列表） -->
     <div
-      v-if="props.isCampsite && (props.buildingInteractions?.length ?? 0) > 0"
+      v-if="props.isCampsite && (props.campsiteBuildings?.length ?? 0) > 0"
       class="building-interactions"
     >
       <div class="building-section-label">营地设施</div>
       <button
-        v-for="interaction in props.buildingInteractions"
-        :key="interaction.id"
+        v-for="bld in props.campsiteBuildings"
+        :key="bld.buildId"
         class="interaction-btn btn-building"
-        @click="onInteractionClick(interaction.id)"
+        @click="onEnterBuilding(bld.buildId)"
       >
-        {{ interaction.name }}
+        {{ bld.buildName }}
       </button>
     </div>
   </div>
@@ -71,6 +71,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { SceneDescription, SceneEventEntry, SceneInteraction } from '@/types/scene'
+import { getResolvedDescriptionText } from '@/engine'
+import type { PlayerState } from '@/types/player'
+
+/**
+ * 营地建筑基本信息（从 useGame.getCampsiteBuildings 获取）
+ */
+interface CampsiteBuildingInfo {
+  buildId: string
+  buildName: string
+}
 
 // ============================================================
 // 解析后的文本段类型
@@ -95,14 +105,12 @@ interface TextSegment {
 // ============================================================
 
 const props = defineProps<{
-  /** 当前展示的场景描述文本（已替换占位符） */
-  resolvedDescription: string
   /** 当前场景描述配置（包含 eventEntries） */
   descriptionConfig: SceneDescription | null
   /** 当前可用的交互按钮列表 */
   interactions: SceneInteraction[]
-  /** 营地建筑提供的交互按钮列表 */
-  buildingInteractions?: SceneInteraction[]
+  /** 营地建筑基本信息列表（显示建筑名入口） */
+  campsiteBuildings?: CampsiteBuildingInfo[]
   /** 是否为营地场景 */
   isCampsite?: boolean
   /** 场景文本前缀（从事件返回时显示在场景描述前） */
@@ -111,6 +119,8 @@ const props = defineProps<{
   sceneTextAfter: string
   /** 随时段变化的背景色 */
   backgroundColor?: string
+  // 玩家状态
+  playerState: PlayerState
 }>()
 
 // ============================================================
@@ -122,6 +132,8 @@ const emit = defineEmits<{
   (e: 'enterEvent', eventId: string): void
   /** 点击交互按钮 */
   (e: 'interaction', interactionId: string): void
+  /** 点击营地建筑名进入建筑交互模式 */
+  (e: 'enterBuilding', buildId: string): void
 }>()
 
 // ============================================================
@@ -130,7 +142,10 @@ const emit = defineEmits<{
 
 /** 解析后的文本段列表 */
 const parsedSegments = computed<TextSegment[]>(() => {
-  const text = props.resolvedDescription
+  const currentDescriptionConfig = props.descriptionConfig
+  if (!currentDescriptionConfig) return []
+  const text = getResolvedDescriptionText(currentDescriptionConfig, props.playerState)
+  console.log(text)
   const entries = props.descriptionConfig?.eventEntries || []
 
   if (entries.length === 0) {
@@ -204,6 +219,11 @@ function onEntryClick(eventId: string | undefined): void {
 /** 点击交互按钮 */
 function onInteractionClick(interactionId: string): void {
   emit('interaction', interactionId)
+}
+
+/** 点击营地建筑名进入建筑交互 */
+function onEnterBuilding(buildId: string): void {
+  emit('enterBuilding', buildId)
 }
 
 /** 交互按钮样式类 */

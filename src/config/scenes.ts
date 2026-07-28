@@ -10,7 +10,8 @@ import {
   LogicOperator,
 } from '@/types/effect'
 import type { Scene, SubScene, SceneRegistry } from '../types/scene'
-import { InteractionType, InteractionCostType, Direction, FunctionType } from '../types/scene'
+import { InteractionType, Direction, FunctionType } from '../types/scene'
+import { OptionCostType, type OptionCost } from '../types/option'
 
 // ============================================================
 // 条件定义
@@ -107,7 +108,7 @@ const beach: Scene = {
 
       isAutoTrigger: false,
       isOneTime: false,
-      hideFlag: ['beach_抵达机翼营地',],
+      hideFlag: ['beach_抵达机翼营地'],
       eventFlag: 'beach_抵达机翼营地',
     },
 
@@ -157,7 +158,7 @@ const beach: Scene = {
       interactionType: InteractionType.EXPLORE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 10,
           affectedByCoefficient: true,
         },
@@ -175,7 +176,7 @@ const beach: Scene = {
       interactionType: InteractionType.ENTER_SUB_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 10,
           affectedByCoefficient: true,
         },
@@ -194,7 +195,7 @@ const beach: Scene = {
       interactionType: InteractionType.ENTER_SUB_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 10,
           affectedByCoefficient: true,
         },
@@ -213,7 +214,7 @@ const beach: Scene = {
       interactionType: InteractionType.ENTER_SUB_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 10,
           affectedByCoefficient: true,
         },
@@ -232,7 +233,7 @@ const beach: Scene = {
       interactionType: InteractionType.ENTER_SUB_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 10,
           affectedByCoefficient: true,
         },
@@ -258,6 +259,24 @@ const beach_飞机残骸: SubScene = {
       id: 'beach_飞机残骸_1',
       priority: 1,
       text: '机舱里面的光线很暗。舷窗被烟熏黑了，只有几束光从机身断裂处的缝隙挤进来，在倾斜的地板上切出细长的光带。空气里有烧焦塑料的味道，还有一股更淡但更刺鼻的气味——航空燃油。好在只是残余。\n\n舱内的一切都是倾斜的。座椅歪向一边，行李架的门有的震开了，有的卡死。过道被杂物堵住大半，你得侧身才能通过。\n\n你从前舱开始搜索。',
+      textVariations: [
+        {
+          content:
+            '正在翻找的你，突然意识到一个问题——没有声音、没有其他人、甚至没有任何尸体。\n\n你是唯一的幸存者吗？',
+          displayFlag: [
+            'beach_飞机残骸_搜索座椅',
+            'beach_飞机残骸_搜索行李架',
+            'beach_飞机残骸_搜索头等舱',
+            'beach_飞机残骸_搜索夹缝',
+          ],
+          hideFlag: ['beach_飞机残骸_搜索幸存者'],
+        },
+        {
+          content:
+            '你翻遍了机舱。\n\n依然没有看到任何幸存者、或者尸体。但是残留的片片血迹竟让你有种莫名安心。\n\n你透过舷窗望向窗外。\n\n半截机翼斜插在沙中，形成了一个天然的遮蔽。\n\n你可以在那里建造一个简单的避难所。你需要休息。',
+          displayFlag: ['beach_飞机残骸_搜索幸存者'],
+        },
+      ],
       isAutoTrigger: false,
       isOneTime: false,
     },
@@ -266,19 +285,6 @@ const beach_飞机残骸: SubScene = {
       priority: 10,
       text: '残骸散落半个沙滩。\n\n硝烟已经散去，你也许可以在废墟中找到点儿有用的东西。',
       displayFlag: ['beach_抵达机翼营地'],
-      isAutoTrigger: false,
-      isOneTime: false,
-    },
-    {
-      id: 'beach_飞机残骸_结束新手',
-      priority: 2,
-      text: '你翻遍了机舱。\n\n虽然有残留的血迹，但是没有看到任何幸存者、或者尸体。你是唯一的幸存者吗？\n\n你透过舷窗望向窗外。\n\n半截机翼斜插在沙中，形成了一个天然的遮蔽。\n\n你可以在那里建造一个简单的避难所。你需要休息。',
-      displayFlag: [
-        'beach_飞机残骸_搜索座椅',
-        'beach_飞机残骸_搜索行李架',
-        'beach_飞机残骸_搜索头等舱',
-        'beach_飞机残骸_搜索夹缝',
-      ],
       isAutoTrigger: false,
       isOneTime: false,
     },
@@ -296,7 +302,7 @@ const beach_飞机残骸: SubScene = {
       },
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 5,
           affectedByCoefficient: false,
         },
@@ -316,7 +322,7 @@ const beach_飞机残骸: SubScene = {
       },
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 5,
           affectedByCoefficient: false,
         },
@@ -336,7 +342,7 @@ const beach_飞机残骸: SubScene = {
       },
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 5,
           affectedByCoefficient: false,
         },
@@ -356,7 +362,7 @@ const beach_飞机残骸: SubScene = {
       },
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 5,
           affectedByCoefficient: false,
         },
@@ -398,7 +404,7 @@ const beach_飞机残骸: SubScene = {
       interactionType: InteractionType.EXPLORE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 10,
           affectedByCoefficient: true,
         },
@@ -420,7 +426,7 @@ const beach_飞机残骸: SubScene = {
       interactionType: InteractionType.EXIT_SUB_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 5,
           affectedByCoefficient: false,
         },
@@ -437,13 +443,19 @@ const beach_机翼营地: SubScene = {
   name: '机翼营地',
   parentSceneId: 'beach',
   isCampsite: true,
-  buildingList: ['build_campfire', 'build_wooden_wall'],
+  buildingList: ['营火', '木墙'],
   buildingInit: [],
   descriptions: [
     {
       id: 'beach_机翼营地_1',
       priority: 10,
       text: '只有半截机翼和沙子，你需要完善它才可以作为营地。',
+      textVariations: [
+        {
+          content: '地上铺着一层防水布，算是勉强有一个栖身之所了。',
+          displayFlag: ['event_机翼营地_铺地'],
+        },
+      ],
       isAutoTrigger: false,
       isOneTime: true,
       seenFlag: 'beach_抵达机翼营地',
@@ -454,8 +466,11 @@ const beach_机翼营地: SubScene = {
       text: '半截机翼插在地上，是一个“天然”的庇护所。',
       textVariations: [
         {
+          content: '半截机翼插在地上，是一个“天然”的庇护所。',
+        },
+        {
           content: '地上铺着一层防水布，算是勉强有一个栖身之所了。',
-          displayFlag: ['beach_抵达机翼营地'],
+          displayFlag: ['event_机翼营地_铺地'],
         },
       ],
       isAutoTrigger: false,
@@ -481,6 +496,7 @@ const beach_机翼营地: SubScene = {
       id: '休息',
       name: '休息',
       description: '休息',
+      displayFlag: ['event_机翼营地_铺地'],
       interactionType: InteractionType.REST,
       behaviorParams: {
         interactionType: InteractionType.REST,
@@ -492,6 +508,7 @@ const beach_机翼营地: SubScene = {
       id: '建造',
       name: '建造',
       description: '建造',
+      displayFlag: ['event_机翼营地_铺地'],
       interactionType: InteractionType.FUNCTION,
       behaviorParams: {
         interactionType: InteractionType.FUNCTION,
@@ -507,7 +524,7 @@ const beach_机翼营地: SubScene = {
       interactionType: InteractionType.EXIT_SUB_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 5,
           affectedByCoefficient: false,
         },
@@ -564,7 +581,7 @@ const beach_椰树林: SubScene = {
       interactionType: InteractionType.EXIT_SUB_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 5,
           affectedByCoefficient: false,
         },
@@ -621,7 +638,7 @@ const beach_礁石区: SubScene = {
       interactionType: InteractionType.EXIT_SUB_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 5,
           affectedByCoefficient: false,
         },
@@ -685,7 +702,7 @@ const forest: Scene = {
       interactionType: InteractionType.EXPLORE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 12,
           affectedByCoefficient: true,
         },
@@ -703,7 +720,7 @@ const forest: Scene = {
       interactionType: InteractionType.MOVE_TO_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 25,
           affectedByCoefficient: true,
         },
@@ -727,7 +744,7 @@ const forest: Scene = {
       interactionType: InteractionType.REST,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 0,
           affectedByCoefficient: false,
         },
@@ -808,7 +825,7 @@ const beach_cave: SubScene = {
       interactionType: InteractionType.EXPLORE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 15,
           affectedByCoefficient: true,
         },
@@ -826,7 +843,7 @@ const beach_cave: SubScene = {
       interactionType: InteractionType.EXIT_SUB_SCENE,
       costs: [
         {
-          costType: InteractionCostType.STAMINA,
+          costType: OptionCostType.STAMINA,
           value: 5,
           affectedByCoefficient: false,
         },

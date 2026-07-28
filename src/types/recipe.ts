@@ -92,7 +92,7 @@ export interface RecipeCost {
   /** 消耗值 */
   value: number
   /** 是否受玩家属性/技能系数影响 */
-  affectedByCoefficient: boolean
+  affectedByCoefficient?: boolean
 }
 
 /**
@@ -159,7 +159,7 @@ export interface BaseRecipe {
   products: RecipeProduct[]
 
   /** 是否可以重复制作/烹饪（建造通常为一次性） */
-  isRepeatable: boolean
+  isRepeatable?: boolean
 }
 
 export interface RecipeRegistry {

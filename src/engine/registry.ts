@@ -9,8 +9,7 @@ import type { WeaponType } from '@/types/weapon'
 import type { DamageType } from '@/types/damage'
 import type { SurvivalSkill, BattleSkill, PassiveSkill } from '@/types/skill'
 import type { StatusConfig } from '@/types/status'
-import type { BuildResult } from '@/types/building'
-import type { BuildRecipe } from '@/types/build'
+import type { Build } from '@/types/build'
 import type { CraftRecipe } from '@/types/craft'
 import type { CookRecipe } from '@/types/cook'
 import type { TraderConfig } from '@/types/trade'
@@ -110,19 +109,29 @@ class GameRegistryManager {
     return this.registry.craftRecipes.recipes[id]
   }
 
+  /** 获取所有制作配方 */
+  getAllCraftRecipes(): Record<string, CraftRecipe> {
+    return this.registry.craftRecipes.recipes
+  }
+
   /** 获取烹饪配方 */
   getCookRecipe(id: string): CookRecipe | undefined {
     return this.registry.cookRecipes.recipes[id]
   }
 
+  /** 获取所有烹饪配方 */
+  getAllCookRecipes(): Record<string, CookRecipe> {
+    return this.registry.cookRecipes.recipes
+  }
+
   /** 获取建造配方 */
-  getBuildRecipe(id: string): BuildRecipe | undefined {
-    return this.registry.buildRecipes.recipes[id]
+  getBuildRecipe(id: string): Build | undefined {
+    return this.registry.builds.builds[id]
   }
 
   /** 获取所有建造配方 */
-  getAllBuildRecipes(): BuildRecipe[] {
-    return Object.values(this.registry.buildRecipes.recipes)
+  getAllBuildRecipes(): Build[] {
+    return Object.values(this.registry.builds.builds)
   }
 
   // ============================================================
@@ -130,13 +139,13 @@ class GameRegistryManager {
   // ============================================================
 
   /** 根据建筑ID获取建筑配置 */
-  getBuilding(id: string): BuildResult | undefined {
-    return this.registry.buildings.build[id]
+  getBuilding(id: string): Build | undefined {
+    return this.registry.builds.builds[id]
   }
 
   /** 获取所有建筑配置 */
-  getAllBuildings(): BuildResult[] {
-    return Object.values(this.registry.buildings.build)
+  getAllBuildings(): Build[] {
+    return Object.values(this.registry.builds.builds)
   }
 
   // ============================================================
@@ -237,7 +246,9 @@ class GameRegistryManager {
 
   getTimeOfDayConfig(timeOfDay: string): TimeOfDayConfig | undefined {
     // TimeOfDay 枚举值直接作为 key
-    return this.registry.seasonWeather.timeOfDayConfigs[timeOfDay as keyof typeof this.registry.seasonWeather.timeOfDayConfigs]
+    return this.registry.seasonWeather.timeOfDayConfigs[
+      timeOfDay as keyof typeof this.registry.seasonWeather.timeOfDayConfigs
+    ]
   }
 
   /** 初始季节 */

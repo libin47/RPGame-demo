@@ -10,14 +10,13 @@ import type { SkillRegistry } from './skill'
 import type { EnemyRegistry } from './enemy'
 import type { CraftRecipeRegistry } from './craft'
 import type { CookRecipeRegistry } from './cook'
-import type { BuildRecipeRegistry } from './build'
 import type { StatusRegistry } from './status'
 import type { TradeRegistry } from './trade'
 import type { FlagRegistry } from './flag'
 import type { SeasonWeatherRegistry } from './seasonWeather'
 import type { MapRegistry } from './map'
 import type { CharacterRegistry } from './character'
-import type { BuildRegistry } from './building'
+import type { BuildRegistry } from './build'
 import type { EndingRegistry } from './ending'
 
 /**
@@ -66,9 +65,6 @@ export interface GameRegistry {
   /** 烹饪配方注册表 */
   cookRecipes: CookRecipeRegistry
 
-  /** 建造配方注册表 */
-  buildRecipes: BuildRecipeRegistry
-
   /** 异常状态注册表 */
   statuses: StatusRegistry
 
@@ -85,7 +81,7 @@ export interface GameRegistry {
   maps: MapRegistry
 
   /** 建筑注册表 */
-  buildings: BuildRegistry
+  builds: BuildRegistry
 
   /** 职业注册表 */
   characters: CharacterRegistry

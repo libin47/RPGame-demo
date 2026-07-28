@@ -439,78 +439,278 @@ export function executeCook(player: PlayerState, recipeId: string): CraftResult 
 // ============================================================
 
 /**
- * 执行建造配方
+ * 执行建造（使用新的Build类型 — 独立于配方系统）
  *
  * @param player - 当前玩家（会被直接修改）
- * @param recipeId - 建造配方ID
- * @param subSceneId - 当前子场景ID（用于追踪营地建筑，可选）
+ * @param buildId - 建筑Build ID
+ * @param subSceneId - 当前子场景ID（用于追踪营地建筑）
  * @returns 执行结果
  */
 export function executeBuild(
   player: PlayerState,
-  recipeId: string,
+  buildId: string,
   subSceneId?: string,
 ): CraftResult {
   const registry = getRegistry()
-  const recipe = registry.getBuildRecipe(recipeId)
+  const build = registry.getBuilding(buildId)
 
-  if (!recipe) {
-    return { success: false, message: `建造配方 ${recipeId} 未找到`, timeUsed: 0 }
+  if (!build) {
+    return { success: false, message: `建筑 ${buildId} 未找到`, timeUsed: 0 }
   }
 
-  // 检查配方是否解锁
-  if (!player.unlockedRecipes.buildRecipes.includes(recipeId)) {
-    return { success: false, message: `配方 ${recipe.name} 尚未解锁`, timeUsed: 0 }
+  // 必须处于子场景中才能建造
+  if (!subSceneId) {
+    return { success: false, message: '当前不在营地场景中，无法建造', timeUsed: 0 }
   }
 
-  // 检查前置建筑
-  if (recipe.prerequisiteBuildings && recipe.prerequisiteBuildings.length > 0) {
-    // 若在营地场景中，检查前置建筑是否已建造
-    if (subSceneId && player.progress.campBuildings[subSceneId]) {
-      const existing = player.progress.campBuildings[subSceneId]
-      for (const prereq of recipe.prerequisiteBuildings) {
-        if (!existing.includes(prereq)) {
-          const prereqName = registry.getBuilding(prereq)?.buildingName ?? prereq
-          return { success: false, message: `需要先建造 ${prereqName}`, timeUsed: 0 }
-        }
+  // 检查是否已解锁
+  if (!player.unlockedRecipes.buildRecipes.includes(buildId)) {
+    return { success: false, message: `建筑 ${build.defaultBuild} 尚未解锁`, timeUsed: 0 }
+  }
+
+  // 检查是否已建造（同类建筑只允许一个）
+  const existing = player.progress.campBuildings[subSceneId] ?? []
+  if (existing.includes(buildId)) {
+    return { success: false, message: `${build.defaultBuild} 已经建造过了`, timeUsed: 0 }
+  }
+
+  // 检查前置建筑依赖
+  if (build.prerequisiteBuildings && build.prerequisiteBuildings.length > 0) {
+    for (const prereq of build.prerequisiteBuildings) {
+      if (!existing.includes(prereq.buildId)) {
+        const prereqBuild = registry.getBuilding(prereq.buildId)
+        const prereqName = prereqBuild?.defaultBuild ?? prereq.buildId
+        return { success: false, message: `需要先建造 ${prereqName}`, timeUsed: 0 }
       }
     }
   }
 
-  // 检查资源条件
-  const canDo = canCraftRecipe(player, recipe as BaseRecipe)
-  if (canDo) {
-    return { success: false, message: canDo, timeUsed: 0 }
+  // 检查材料（使用 defaultItems）
+  const materials = build.defaultItems.map((m) => ({
+    itemId: m.itemId,
+    quantity: m.quantity,
+    isConsumed: true,
+  }))
+  const materialCheck = checkMaterials(player, materials)
+  if (materialCheck) return { success: false, message: materialCheck, timeUsed: 0 }
+
+  // 检查消耗（使用 defaultCost）
+  const costCheck = checkCosts(player, build.defaultCost)
+  if (costCheck) return { success: false, message: costCheck, timeUsed: 0 }
+
+  // 检查条件
+  if (build.requirements) {
+    const reqCheck = checkRequirements(player, build.requirements)
+    if (reqCheck) return { success: false, message: reqCheck, timeUsed: 0 }
   }
 
   // 执行消耗
-  applyCosts(player, recipe.costs)
-  consumeMaterials(player, recipe.materials)
+  applyCosts(player, build.defaultCost)
+  consumeMaterials(player, materials)
 
-  // 产出建筑产物（若有物品产物则加入背包）
-  if (recipe.products && recipe.products.length > 0) {
-    produceItems(player, recipe.products)
+  // 记录建筑
+  if (!player.progress.campBuildings[subSceneId]) {
+    player.progress.campBuildings[subSceneId] = []
   }
+  player.progress.campBuildings[subSceneId].push(buildId)
 
-  // 记录已建造的建筑ID到营地建筑记录中
-  if (subSceneId) {
-    if (!player.progress.campBuildings[subSceneId]) {
-      player.progress.campBuildings[subSceneId] = []
-    }
-    if (!player.progress.campBuildings[subSceneId].includes(recipe.buildResult.buildingId)) {
-      player.progress.campBuildings[subSceneId].push(recipe.buildResult.buildingId)
-    }
+  // 记录默认子建筑等级
+  if (!player.progress.campBuildingLevels[subSceneId]) {
+    player.progress.campBuildingLevels[subSceneId] = {}
   }
+  player.progress.campBuildingLevels[subSceneId][buildId] = build.defaultBuild
 
   // 统计建造数
   player.statistics.buildingsConstructed++
 
+  // 获取默认子建筑名称
+  const defaultSub = build.subBuild.find((s) => s.buildId === build.defaultBuild)
+  const buildName = defaultSub?.buildName ?? build.defaultBuild
+
   return {
     success: true,
-    message: `建造了 ${recipe.buildResult.buildingName}`,
-    products: recipe.products.map((p) => ({ itemId: p.itemId, quantity: p.baseQuantity })),
-    consumedMaterials: recipe.materials.map((m) => ({ itemId: m.itemId, quantity: m.quantity })),
-    timeUsed: recipe.requirements.timeMinutes,
+    message: `建造了 ${buildName}`,
+    timeUsed: build.defaultTime,
+  }
+}
+
+/**
+ * 升级建筑至指定子建筑等级
+ *
+ * @param player - 当前玩家
+ * @param buildId - 建筑Build ID
+ * @param targetSubBuildId - 目标子建筑ID
+ * @param subSceneId - 当前子场景ID
+ * @returns 执行结果
+ */
+export function executeUpgradeBuild(
+  player: PlayerState,
+  buildId: string,
+  targetSubBuildId: string,
+  subSceneId: string,
+): CraftResult {
+  const registry = getRegistry()
+  const build = registry.getBuilding(buildId)
+
+  if (!build) {
+    return { success: false, message: `建筑 ${buildId} 未找到`, timeUsed: 0 }
+  }
+
+  // 检查建筑是否已存在
+  const existing = player.progress.campBuildings[subSceneId] ?? []
+  if (!existing.includes(buildId)) {
+    return { success: false, message: `尚未建造 ${build.defaultBuild}，无法升级`, timeUsed: 0 }
+  }
+
+  // 获取当前子建筑和升级配置
+  const currentSubLevel = player.progress.campBuildingLevels[subSceneId]?.[buildId]
+  const currentSub = build.subBuild.find((s) => s.buildId === currentSubLevel)
+  if (!currentSub) {
+    return { success: false, message: '当前建筑等级数据异常', timeUsed: 0 }
+  }
+
+  // 查找升级配置
+  const upgradeConfig = currentSub.upgrade?.find((u) => u.targetBuildId === targetSubBuildId)
+  if (!upgradeConfig) {
+    return {
+      success: false,
+      message: `没有从 ${currentSub.buildName} 到目标等级的升级路径`,
+      timeUsed: 0,
+    }
+  }
+
+  // 检查升级材料
+  const upgradeMaterials = upgradeConfig.upgradeItems.map((m) => ({
+    itemId: m.itemId,
+    quantity: m.quantity,
+    isConsumed: true,
+  }))
+  const materialCheck = checkMaterials(player, upgradeMaterials)
+  if (materialCheck) return { success: false, message: materialCheck, timeUsed: 0 }
+
+  // 检查升级消耗
+  const costCheck = checkCosts(player, upgradeConfig.upgradeCost)
+  if (costCheck) return { success: false, message: costCheck, timeUsed: 0 }
+
+  // 检查升级条件
+  if (upgradeConfig.requirements) {
+    const reqCheck = checkRequirements(player, upgradeConfig.requirements)
+    if (reqCheck) return { success: false, message: reqCheck, timeUsed: 0 }
+  }
+
+  // 检查前置建筑
+  if (upgradeConfig.prerequisiteBuildings && upgradeConfig.prerequisiteBuildings.length > 0) {
+    for (const prereq of upgradeConfig.prerequisiteBuildings) {
+      if (!existing.includes(prereq.buildId)) {
+        const prereqBuild = registry.getBuilding(prereq.buildId)
+        const prereqName = prereqBuild?.defaultBuild ?? prereq.buildId
+        return { success: false, message: `升级需要先建造 ${prereqName}`, timeUsed: 0 }
+      }
+    }
+  }
+
+  // 执行消耗
+  applyCosts(player, upgradeConfig.upgradeCost)
+  consumeMaterials(player, upgradeMaterials)
+
+  // 更新建筑等级
+  if (!player.progress.campBuildingLevels[subSceneId]) {
+    player.progress.campBuildingLevels[subSceneId] = {}
+  }
+  player.progress.campBuildingLevels[subSceneId][buildId] = targetSubBuildId
+
+  // 获取目标子建筑名称
+  const targetSub = build.subBuild.find((s) => s.buildId === targetSubBuildId)
+  const targetName = targetSub?.buildName ?? targetSubBuildId
+
+  return {
+    success: true,
+    message: `${targetName} 升级完成`,
+    timeUsed: upgradeConfig.upgradeCost.reduce((sum, c) => sum + c.value, 0),
+  }
+}
+
+/**
+ * 拆除建筑
+ *
+ * @param player - 当前玩家（会被直接修改）
+ * @param buildId - 建筑 Build ID
+ * @param subSceneId - 当前子场景 ID
+ * @returns 执行结果
+ */
+export function executeDeconstruct(
+  player: PlayerState,
+  buildId: string,
+  subSceneId: string,
+): CraftResult {
+  const registry = getRegistry()
+  const build = registry.getBuilding(buildId)
+
+  if (!build) {
+    return { success: false, message: `建筑 ${buildId} 未找到`, timeUsed: 0 }
+  }
+
+  // 获取当前子建筑等级
+  const currentSubId =
+    player.progress.campBuildingLevels[subSceneId]?.[buildId] ?? build.defaultBuild
+  const currentSub = build.subBuild.find((s) => s.buildId === currentSubId)
+
+  if (!currentSub) {
+    return { success: false, message: `建筑数据异常`, timeUsed: 0 }
+  }
+
+  // 检查是否可拆除
+  if (!currentSub.isDeconstructable) {
+    return { success: false, message: `${currentSub.buildName} 不可拆除`, timeUsed: 0 }
+  }
+
+  // 检查建筑是否存在
+  const existing = player.progress.campBuildings[subSceneId] ?? []
+  if (!existing.includes(buildId)) {
+    return { success: false, message: `${currentSub.buildName} 不存在于当前营地`, timeUsed: 0 }
+  }
+
+  // 检查拆除消耗（体力等）
+  if (currentSub.deconstructionCost && currentSub.deconstructionCost.length > 0) {
+    const costCheck = checkCosts(player, currentSub.deconstructionCost)
+    if (costCheck) return { success: false, message: costCheck, timeUsed: 0 }
+  }
+
+  // 执行消耗
+  if (currentSub.deconstructionCost && currentSub.deconstructionCost.length > 0) {
+    applyCosts(player, currentSub.deconstructionCost)
+  }
+
+  // 返还材料
+  if (currentSub.deconstructionReturnItems && currentSub.deconstructionReturnItems.length > 0) {
+    for (const item of currentSub.deconstructionReturnItems) {
+      addItem(player, item.itemId, item.quantity)
+    }
+  }
+
+  // 从营地记录中移除
+  const buildingList = player.progress.campBuildings[subSceneId]
+  if (buildingList) {
+    const idx = buildingList.indexOf(buildId)
+    if (idx !== -1) {
+      buildingList.splice(idx, 1)
+    }
+  }
+  if (player.progress.campBuildingLevels[subSceneId]) {
+    delete player.progress.campBuildingLevels[subSceneId]![buildId]
+  }
+
+  // 拆除耗时
+  const timeUsed = currentSub.deconstructionTime ?? 0
+
+  return {
+    success: true,
+    message: `拆除了 ${currentSub.buildName}`,
+    timeUsed,
+    products: currentSub.deconstructionReturnItems?.map((i) => ({
+      itemId: i.itemId,
+      quantity: i.quantity,
+    })),
   }
 }
 

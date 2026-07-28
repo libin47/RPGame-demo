@@ -243,6 +243,7 @@ export function createNewPlayerState(
     unlockedEndingIds: [],
     baseLocation: null,
     campBuildings: {},
+    campBuildingLevels: {},
   }
 
   // 统计

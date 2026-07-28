@@ -3,6 +3,7 @@
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
 import type { TimeOfDay, WeatherType, SeasonPhase } from './seasonWeather'
+import type { ButtonOption } from './option'
 // ============================================================
 // 基础场景类型（Scene 和 SubScene 的公共字段）
 // ============================================================
@@ -246,66 +247,17 @@ export interface SceneImageVariation {
  * 场景固定交互按钮
  * 显示在界面下方右侧的按钮，提供场景固有的功能入口
  */
-export interface SceneInteraction {
-  // 交互ID
-  id: string
-  // 交互名称（显示在按钮上）
-  name: string
-  // 交互描述（可选，长按或tooltip显示）
-  description?: string
-  // 交互名称变体（根据条件显示不同名称）
-  nameVariations?: SceneTextVariation[]
-
+export interface SceneInteraction extends ButtonOption {
   // 交互类型（决定 behaviorParams 的结构）
   interactionType: InteractionType
 
-  // ========== 显示控制 ==========
-  // 显示条件（满足条件时此交互按钮才显示）
-  displayCondition?: Condition
-  // 显示标志位（满足条件时此按钮才显示）
-  displayFlag?: string[]
-  // 不显示标志位
-  hideFlag?: string[]
-
-  // 可用条件（满足条件时此按钮才可点击，不满足时灰显）
-  availableCondition?: Condition
-  // 不可用时的提示文本
-  unavailableTooltip?: string
-
-  // ========== 消耗 ==========
-  // 执行此交互消耗的资源
-  costs?: InteractionCost[]
-
   // ========== 交互行为参数 ==========
   behaviorParams?: InteractionBehaviorParams
-
-  // 交互是否需要确认弹窗
-  requiresConfirmation?: boolean
-  // 确认弹窗文本
-  confirmationText?: string
-
-  // ========== 限制 ==========
-  // 交互优先级（数字越大显示越靠前）
-  displayPriority: number
-
-  // 此交互是否只能使用一次
-  isOneTime: boolean
-  // 使用后设置的标志位
-  usedFlag?: string
-  usedCountFlag?: string
 
   // 交互冷却时间（游戏内分钟数，-1表示无冷却）
   cooldownMinutes?: number
   // 冷却标志位前缀（实际冷却标志位为 前缀+交互ID）
   cooldownFlagPrefix?: string
-
-  // ========== 视觉效果 ==========
-  // 交互动画效果
-  animationEffect?: 'none' | 'fade' | 'slide' | 'shake'
-  // 按钮图标资源ID
-  iconId?: string
-  // 按钮样式
-  buttonStyle?: 'default' | 'primary' | 'danger' | 'special'
 }
 
 /**
@@ -472,40 +424,6 @@ export interface MoveRequirement {
   operator?: 'equal' | 'greaterEqual' | 'greater' | 'lessEqual' | 'less'
   hint: string
   isConsumed?: boolean
-}
-
-/**
- * 交互消耗
- */
-export interface InteractionCost {
-  // 消耗类型
-  costType: InteractionCostType
-  // 消耗值（基础值，可能受系数影响）
-  value: number
-  // 消耗值是否受玩家体力消耗系数影响
-  affectedByCoefficient: boolean
-
-  // ========== 物品消耗专用 ==========
-  // 消耗的物品ID（仅当 costType 为 ITEM 时使用）
-  itemId?: string
-  // 消耗的物品数量（仅当 costType 为 ITEM 时使用，默认1）
-  itemQuantity?: number
-}
-
-/**
- * 交互消耗类型
- */
-export enum InteractionCostType {
-  // 体力
-  STAMINA = 'stamina',
-  // 饱食度
-  SATIETY = 'satiety',
-  // SAN值
-  SAN = 'san',
-  // 生命值
-  HP = 'hp',
-  // 物品（需配合 itemId 和 itemQuantity）
-  ITEM = 'item',
 }
 
 // ============================================================

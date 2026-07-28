@@ -7,36 +7,128 @@ import type {
   RecipeCost,
   RecipeProduct,
 } from './recipe'
-import type { RecipeType } from './recipe'
-import type { BuildResult } from './building'
-import type { BuildCategory } from './building'
-
+import type { RepairMaterial } from './item'
+import type { Condition, EffectResult } from './effect'
+import type { ButtonOption } from './option'
 
 // ============================================================
-// 建造配方
+// 建筑
 // ============================================================
 
 /**
- * 建造配方配置
- * 在基地或临时营地中建造的建筑/设施。
- * 例如：建造木墙、建造工作台、建造田地、建造床铺等。
+ * 建造产物
  */
-export interface BuildRecipe extends BaseRecipe {
-  recipeType: RecipeType.BUILD
-
-  /** 建造类型细分 */
-  buildCategory: BuildCategory
-
-  /** 建造产物为建筑实体（建筑在场景中以交互对象形式存在，而非背包物品） */
-  buildResult: BuildResult
-
-  /** 建造前置条件（必须先建造某些建筑才能建造此建筑） */
-  prerequisiteBuildings?: string[]
+export interface Build {
+  /** 建筑实体ID（用于场景中标识此建筑） */
+  buildId: string
+  // 子建筑配置（build作为一类建筑，一类建筑只允许一个，根据升级情况在子建筑中选择）
+  subBuild: SubBuild[]
+  // 默认子建筑ID
+  defaultBuild: string
+  // 默认建造材料
+  defaultItems: RepairMaterial[]
+  // 默认建造花费
+  defaultCost: RecipeCost[]
+  defaultTime: number
+  // 默认建造条件
+  requirements?: RecipeRequirements
+  // 默认建造建筑依赖
+  prerequisiteBuildings?: BuildDependency[]
 }
 
+export interface SubBuild {
+  /** 建筑实体ID */
+  buildId: string
+  /** 建筑名称 */
+  buildName: string
+  /** 建筑描述 */
+  descriptionConfig: BuildingDescriptionConfig
+  // 是否纯装饰建筑
+  isDecorativeOnly?: boolean
+  /** 建筑升级路径 */
+  upgrade?: buildUpgrade[]
+  /** 是否可以拆除 */
+  isDeconstructable: boolean
+  /** 拆除返还材料及数量 */
+  deconstructionReturnItems?: RepairMaterial[]
+  // 拆除时间（时间）
+  deconstructionTime?: number
+  // 拆除花费
+  deconstructionCost?: RecipeCost[]
+  /** 建筑是否可以被敌人攻击/摧毁 */
+  isDestructible: boolean
+  /** 建筑耐久度（被摧毁前可承受的攻击次数或伤害值） */
+  durability?: number
+  /** 修复所需材料及数量 */
+  repairMaterials?: RepairMaterial[]
+  /** 建造完成后产生的持续效果（如床铺提供休息加成） */
+  passiveEffects?: EffectResult[]
+  /** 建筑提供的交互功能（建好后场景中出现的新交互） */
+  interactions?: buildOption[]
+  /** 建筑外观（在地图/场景中显示的图标） */
+  visualConfig?: BuildVisualConfig
+}
 
+export interface buildUpgrade {
+  /** 升级后的建筑子ID */
+  targetBuildId: string
+  /** 所需升级材料及数量 */
+  upgradeItems: RepairMaterial[]
+  /** 升级条件 */
+  requirements?: RecipeRequirements
+  /** 升级花费（时间） */
+  upgradeCost: RecipeCost[]
+  /** 升级建筑依赖 */
+  prerequisiteBuildings?: BuildDependency[]
+}
 
+/**
+ * 建筑提供的交互
+ */
+export interface buildOption extends ButtonOption {
+  /** 交互类型 */
+  interactionType: 'craft' | 'cook' | 'rest' | 'store' | 'collect' | 'repair' | 'special' | 'event'
+  /** 交互参数 */
+  buildLevel?: number
+  eventId?: string
+  restTime?: number
+}
 
+// 建筑描述配置
+export interface BuildingDescriptionConfig {
+  /** 建筑描述 */
+  description: string
+  /** 建筑描述（长） */
+  longDescription?: string
+  /** 建筑损坏描述 */
+  damageDescription?: string
+  /** 建筑损坏描述（长） */
+  damageLongDescription?: string
+  /** 建筑被摧毁描述 */
+  destroyedDescription?: string
+  /** 建筑被摧毁描述（长） */
+  destroyedLongDescription?: string
+}
+
+/**
+ * 建筑外观配置
+ */
+export interface BuildVisualConfig {
+  /** 建筑完整状态图标资源ID */
+  intactImageId: string
+  /** 建筑损坏状态图标资源ID */
+  damagedImageId?: string
+  /** 建筑被摧毁状态图标资源ID */
+  destroyedImageId?: string
+}
+
+// 建筑依赖
+export interface BuildDependency {
+  /** 建筑依赖ID */
+  buildId: string
+  /** 建筑依赖子建筑ID */
+  buildSubId?: string
+}
 
 // ============================================================
 // 建造配方注册表
@@ -45,7 +137,7 @@ export interface BuildRecipe extends BaseRecipe {
 /**
  * 建造配方注册表
  */
-export interface BuildRecipeRegistry {
+export interface BuildRegistry {
   /** 所有建造配方 */
-  recipes: Record<string, BuildRecipe>
+  builds: Record<string, Build>
 }
