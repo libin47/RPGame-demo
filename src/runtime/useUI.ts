@@ -5,9 +5,6 @@ import { reactive } from 'vue'
 
 /** UI 状态接口 */
 export interface UIState {
-  /** 是否显示背包面板 */
-  showInventory: boolean
-
   /** 是否显示系统菜单（保存/读档） */
   showSettings: boolean
 
@@ -33,7 +30,6 @@ export interface UIState {
 /** 创建 UI 状态（响应式） */
 function createUIState(): UIState {
   return reactive<UIState>({
-    showInventory: false,
     showSettings: false,
     showAttributes: false,
     showBuild: false,
@@ -49,11 +45,6 @@ function createUIState(): UIState {
  */
 export function useUI() {
   const uiState = createUIState()
-
-  /** 切换背包面板 */
-  function toggleInventory(): void {
-    uiState.showInventory = !uiState.showInventory
-  }
 
   /** 切换系统菜单 */
   function toggleSettings(): void {
@@ -87,7 +78,6 @@ export function useUI() {
 
   /** 关闭所有面板 */
   function closeAllPanels(): void {
-    uiState.showInventory = false
     uiState.showSettings = false
     uiState.showAttributes = false
     uiState.showBuild = false
@@ -109,7 +99,6 @@ export function useUI() {
 
   return {
     uiState,
-    toggleInventory,
     toggleSettings,
     toggleAttributes,
     toggleBuild,

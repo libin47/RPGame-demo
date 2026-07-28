@@ -67,6 +67,10 @@ export interface GameInstance {
   executeCookRecipe: (recipeId: string) => CraftResult
   /** 退出建造模式 */
   exitBuildMode: () => void
+  /** 打开背包 */
+  openInventory: () => void
+  /** 关闭背包 */
+  closeInventory: () => void
   /** 替换文本中的占位符 */
   resolveText: (text: string) => string
   /** 推进游戏时间（分钟），自动处理跨天、天气、被动效果等 */
@@ -142,6 +146,8 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     executeCraftRecipe: game.executeCraftRecipeMode,
     executeCookRecipe: game.executeCookRecipeMode,
     exitBuildMode: game.exitBuildMode,
+    openInventory: game.openInventory,
+    closeInventory: game.closeInventory,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
     executeBattleAction: game.executeBattleAction,
@@ -188,6 +194,8 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     executeCraftRecipe: game.executeCraftRecipeMode,
     executeCookRecipe: game.executeCookRecipeMode,
     exitBuildMode: game.exitBuildMode,
+    openInventory: game.openInventory,
+    closeInventory: game.closeInventory,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
     executeBattleAction: game.executeBattleAction,

@@ -122,6 +122,7 @@ export interface SceneDescription {
   // {strange_altar} 和 {footprints} 会被替换为蓝色下划线文本，对应 eventEntries 中的 key
   text: string
   // 文本变体（根据条件显示不同文本，例如根据SAN值改变描述风格）
+  // 覆盖text文本的内容
   textVariations?: SceneTextVariation[]
 
   // 文本样式（特殊效果，受SAN值等影响）

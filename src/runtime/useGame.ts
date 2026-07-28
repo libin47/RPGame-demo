@@ -118,6 +118,9 @@ interface GameRuntimeState {
     defeatFrameId?: string
     escapeFrameId?: string
   } | null
+
+  /** 进入背包前的模式（关闭背包后恢复） */
+  previousMode: GameMode
 }
 
 /**
@@ -169,6 +172,7 @@ function createGameState(initialPlayer: PlayerState) {
     currentTraderId: null,
     currentBuildingId: null,
     pendingBattleFrameIds: null,
+    previousMode: 'normal',
   })
 
   // 标记初始描述为已看过
@@ -798,6 +802,24 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 打开背包
+   * 记录当前模式，切换为 inventory
+   */
+  function openInventory(): void {
+    state.previousMode = state.mode
+    state.mode = 'inventory'
+  }
+
+  /**
+   * 关闭背包
+   * 恢复进入背包前的模式
+   */
+  function closeInventory(): void {
+    state.mode = state.previousMode
+    state.logMessage = ''
+  }
+
+  /**
    * 设置底部日志消息
    */
   function setLogMessage(message: string): void {
@@ -1165,6 +1187,8 @@ export function useGame(initialPlayer: PlayerState) {
     executeCraftRecipeMode,
     executeCookRecipeMode,
     exitBuildMode,
+    openInventory,
+    closeInventory,
     resolveText,
     advanceGameTime,
     executeBattleAction,

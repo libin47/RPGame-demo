@@ -98,7 +98,7 @@ export interface EventFrame {
 
   /** 帧文本（展示给玩家的内容，支持换行） */
   text: string
-  /** 文本变体（根据条件显示不同文本，如SAN值影响叙事） */
+  /** 文本变体（根据条件显示不同文本，如SAN值影响叙事），目前是显示在text文本之后，并不覆盖 */
   textVariations?: EventTextVariation[]
 
   /** 帧图片（可选，覆盖事件的背景图） */

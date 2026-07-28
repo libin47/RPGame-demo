@@ -33,6 +33,16 @@
         @enter-building="onEnterBuilding"
       />
 
+      <!-- 背包模式 -->
+      <InventoryPanel
+        v-else-if="game.state.mode === 'inventory'"
+        :player-state="game.state.player"
+        @close="game.closeInventory()"
+        @use-item="onUseItem"
+        @equip-item="onEquipItem"
+        @unequip-item="onUnequipItem"
+      />
+
       <!-- 事件模式 -->
       <EventPanel
         v-else-if="game.state.mode === 'event' && game.state.currentFrame"
@@ -100,17 +110,6 @@
       <span class="log-text">{{ game.state.logMessage }}</span>
     </div>
 
-    <!-- 背包面板覆盖层 -->
-    <div v-if="uiState.showInventory" class="panel-overlay">
-      <InventoryPanel
-        :player-state="game.state.player"
-        @close="uiState.showInventory = false"
-        @use-item="onUseItem"
-        @equip-item="onEquipItem"
-        @unequip-item="onUnequipItem"
-      />
-    </div>
-
     <!-- 系统菜单（保存/读档） -->
     <SystemMenu v-if="uiState.showSettings" @close="uiState.showSettings = false" />
 
@@ -141,7 +140,7 @@ import type { GameInstance } from '@/runtime/gameInstance'
 import { useUI } from '@/runtime/useUI'
 
 const router = useRouter()
-const { uiState, toggleInventory, toggleSettings, toggleAttributes } = useUI()
+const { uiState, toggleSettings, toggleAttributes } = useUI()
 const registry = getRegistry()
 
 // ============================================================
@@ -296,9 +295,9 @@ function onOpenSettings(): void {
   toggleSettings()
 }
 
-/** 打开/关闭背包 */
+/** 打开背包 */
 function onOpenInventory(): void {
-  toggleInventory()
+  game.value.openInventory()
 }
 
 /** 打开属性面板 */

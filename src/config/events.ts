@@ -767,6 +767,12 @@ const event_椰树林_摘椰子: GameEvent = {
       id: 'event_椰树林_摘椰子_1',
       order: 1,
       text: '椰子高高在上，你想怎么摘呢？',
+      textVariations: [
+        {
+          content: '椰子在看着你？',
+          displayFlag: ['beach_抵达机翼营地'],
+        },
+      ],
       options: [
         {
           id: '爬上去',
