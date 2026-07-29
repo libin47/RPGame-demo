@@ -13,7 +13,7 @@ import type { Build } from '@/types/build'
 import type { CraftRecipe } from '@/types/craft'
 import type { CookRecipe } from '@/types/cook'
 import type { TraderConfig } from '@/types/trade'
-import type { Flag } from '@/types/flag'
+import type { Param } from '@/types/param'
 import type { CGScene } from '@/types/cg'
 import type { CharacterClass } from '@/types/character'
 import type { SeasonConfig, WeatherConfig, TimeOfDayConfig } from '@/types/seasonWeather'
@@ -198,20 +198,20 @@ class GameRegistryManager {
   // 标志位
   // ============================================================
 
-  getFlag(id: string): Flag | undefined {
-    return this.registry.flags.flags[id]
+  getParam(id: string): Param | undefined {
+    return this.registry.params.params[id]
   }
 
   /** 获取所有标志位配置 */
-  getAllFlags(): Flag[] {
-    return Object.values(this.registry.flags.flags)
+  getAllParams(): Param[] {
+    return Object.values(this.registry.params)
   }
 
   /** 获取标志位的默认值 */
-  getFlagDefaultValue(id: string): boolean | number | string {
-    const flag = this.getFlag(id)
-    if (flag) return flag.defaultValue
-    return false
+  getParamDefaultValue(id: string): number {
+    const param = this.getParam(id)
+    if (param) return param.defaultValue
+    return 0
   }
 
   // ============================================================

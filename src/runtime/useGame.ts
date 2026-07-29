@@ -668,9 +668,9 @@ export function useGame(initialPlayer: PlayerState) {
     if (interaction.usedCountFlag) {
       const currentVal = state.player.flags[interaction.usedCountFlag]
       if (typeof currentVal === 'number') {
-        state.player.flags[interaction.usedCountFlag] = (currentVal + 1) % 1000000000
+        state.player.flagsNum[interaction.usedCountFlag] = (currentVal + 1) % 1000000000
       } else if (currentVal === undefined) {
-        state.player.flags[interaction.usedCountFlag] = 1
+        state.player.flagsNum[interaction.usedCountFlag] = 1
       }
     }
   }
@@ -841,7 +841,7 @@ export function useGame(initialPlayer: PlayerState) {
       if (
         i.hideFlag &&
         i.hideFlag.some(
-          (flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1,
+          (flag) => state.player.flags[flag] === true,
         )
       ) {
         return false
@@ -851,7 +851,7 @@ export function useGame(initialPlayer: PlayerState) {
       if (
         i.displayFlag &&
         !i.displayFlag.every(
-          (flag) => state.player.flags[flag] === true || state.player.flags[flag] === 1,
+          (flag) => state.player.flags[flag] === true,
         )
       ) {
         return false

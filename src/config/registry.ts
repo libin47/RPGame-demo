@@ -9,7 +9,7 @@ import { enemyRegistry } from './enemies'
 import { craftRecipeRegistry } from './craftRecipes'
 import { cookRecipeRegistry } from './cookRecipes'
 import { tradeRegistry } from './traders'
-import { flagRegistry } from './flags'
+import { paramRegistry } from './params'
 import { sceneRegistry } from './scenes'
 import { eventRegistry } from './events'
 import { cgRegistry } from './cgs'
@@ -33,7 +33,7 @@ export const gameRegistry: GameRegistry = {
   cookRecipes: cookRecipeRegistry,
   statuses: statusRegistry,
   traders: tradeRegistry,
-  flags: flagRegistry,
+  params: paramRegistry,
   seasonWeather: seasonWeatherRegistry,
   maps: mapRegistry,
   characters: characterRegistry,

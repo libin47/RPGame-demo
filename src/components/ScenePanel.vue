@@ -138,7 +138,7 @@ const parsedInteractions = computed<SceneInteraction[]>(() => {
           variation.displayFlag &&
           variation.displayFlag?.length > 0 &&
           variation.displayFlag.every(
-            (flag) => props.playerState.flags[flag] === true || props.playerState.flags[flag] === 1,
+            (flag) => props.playerState.flags[flag] === true,
           )
         ) {
           interaction.name = variation.content

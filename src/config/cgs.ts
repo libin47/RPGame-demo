@@ -2,7 +2,6 @@
 import { AttributeOperation, EffectType } from '@/types/effect'
 import type { CGScene, CGRegistry } from '../types/cg'
 import { CGType, CGScreenEffectType } from '../types/cg'
-import { FlagOperation } from '@/types/flag'
 
 const openingCG: CGScene = {
   id: 'opening',
@@ -197,8 +196,8 @@ const openingCG: CGScene = {
                 effect: {
                   type: EffectType.FLAG,
                   flagId: 'current_quest_stage',
-                  operation: FlagOperation.SET,
-                  value: 'woke_up_on_beach',
+                  operation: 'set',
+                  value: true,
                 },
                 probability: 1,
               },

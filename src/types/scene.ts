@@ -272,16 +272,16 @@ export interface InteractionBase {
   name: string
   // 描述
   description?: string
-  // 交互名称
-  interactionName: string
-  // 花费体力
-  costEnergy?: number
+  // 描述标题
+  descriptionTitle?: string
   // 显示条件
   displayCondition?: Condition
   displayFlag?: string[]
   hideFlag?: string[]
   // 可用条件
   availableCondition?: Condition
+  // 花费体力
+  costEnergy?: number
   // 花费时间 分钟
   costTime?: number
   // 背景图片

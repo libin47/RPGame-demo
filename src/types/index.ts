@@ -2,7 +2,7 @@
 
 // 核心系统
 export * from './effect'
-export * from './flag'
+export * from './param'
 
 // 内容系统
 export * from './option'

@@ -12,7 +12,7 @@ import type { CraftRecipeRegistry } from './craft'
 import type { CookRecipeRegistry } from './cook'
 import type { StatusRegistry } from './status'
 import type { TradeRegistry } from './trade'
-import type { FlagRegistry } from './flag'
+import type { ParamRegistry } from './param'
 import type { SeasonWeatherRegistry } from './seasonWeather'
 import type { MapRegistry } from './map'
 import type { CharacterRegistry } from './character'
@@ -71,8 +71,8 @@ export interface GameRegistry {
   /** 交易注册表 */
   traders: TradeRegistry
 
-  /** 标志位注册表 */
-  flags: FlagRegistry
+  /** 参数注册表 */
+  params: ParamRegistry
 
   /** 季节天气注册表 */
   seasonWeather: SeasonWeatherRegistry

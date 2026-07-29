@@ -1,7 +1,6 @@
 // effect.ts - 效果数据结构
 
 import type { RecipeType } from './recipe'
-import type { FlagOperation } from './flag'
 
 // ============================================================
 // 效果类型枚举
@@ -18,6 +17,8 @@ export enum EffectType {
   SCENE = 'scene',
   /** 标志位设置 */
   FLAG = 'flag',
+  /** 标志位数值设置 */
+  FLAG_NUM = 'flagNum',
   /** 战斗触发 */
   BATTLE = 'battle',
   /** CG触发 */
@@ -165,8 +166,15 @@ export interface SceneEffect {
 export interface FlagEffect {
   type: EffectType.FLAG
   flagId: string
-  operation: FlagOperation
-  value?: number | string | boolean
+  operation: 'set' | 'toggle'
+  value?: boolean
+}
+/** 标志位数值效果 */
+export interface FlagNumEffect {
+  type: EffectType.FLAG_NUM
+  flagId: string
+  operation: 'set' | 'add' | 'subtract' 
+  value?: number
 }
 
 /** 战斗效果 */
@@ -250,6 +258,7 @@ export type Effect =
   | ItemEffect
   | SceneEffect
   | FlagEffect
+  | FlagNumEffect
   | BattleEffect
   | CGEffect
   | EventTriggerEffect

@@ -18,7 +18,7 @@ export { craftRecipeRegistry } from './craftRecipes'
 export { cookRecipeRegistry } from './cookRecipes'
 
 export { tradeRegistry } from './traders'
-export { flagRegistry } from './flags'
+export { flagRegistry } from './params'
 export { sceneRegistry } from './scenes'
 export { eventRegistry } from './events'
 export { cgRegistry } from './cgs'

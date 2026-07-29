@@ -72,21 +72,21 @@ function isDescriptionEligible(desc: SceneDescription, player: PlayerState): boo
   // displayFlag快捷flag判断
   if (
     desc.displayFlag &&
-    !desc.displayFlag.every((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+    !desc.displayFlag.every((flag) => player.flags[flag] === true )
   ) {
     return false
   }
   // hideFlag快捷flag判断
   if (
     desc.hideFlag &&
-    desc.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+    desc.hideFlag.some((flag) => player.flags[flag] === true )
   ) {
     return false
   }
 
   // 看过次数达到上限
   if (desc.viewLimit !== undefined && desc.viewLimit > 0 && desc.seenFlag) {
-    const viewCount = (player.flags[desc.seenFlag] as number) ?? 0
+    const viewCount = (player.flagsNum[desc.seenFlag] as number) ?? 0
     if (viewCount >= desc.viewLimit) {
       return false
     }
@@ -169,23 +169,15 @@ export function getResolvedDescriptionText(desc: SceneDescription, player: Playe
  */
 export function markDescriptionSeen(desc: SceneDescription, player: PlayerState): void {
   if (desc.seenFlag) {
-    const currentVal = player.flags[desc.seenFlag]
-    if (typeof currentVal === 'number') {
-      player.flags[desc.seenFlag] = currentVal + 1
-    } else if (currentVal === undefined) {
-      player.flags[desc.seenFlag] = 1
-    } else {
+
       player.flags[desc.seenFlag] = true
-    }
   }
   if (desc.seenCountFlag) {
-    const currentVal = player.flags[desc.seenCountFlag]
+    const currentVal = player.flagsNum[desc.seenCountFlag]
     if (typeof currentVal === 'number') {
-      player.flags[desc.seenCountFlag] = currentVal + 1
+      player.flagsNum[desc.seenCountFlag] = (currentVal + 1) % 1000000000
     } else if (currentVal === undefined) {
-      player.flags[desc.seenCountFlag] = 1
-    } else {
-      player.flags[desc.seenCountFlag] = 1
+      player.flagsNum[desc.seenCountFlag] = 1
     }
   }
 }
@@ -291,7 +283,7 @@ export function evaluateTextVariationFlag(
   if (
     textVariations.displayFlag &&
     !textVariations.displayFlag.every(
-      (flag) => player.flags[flag] === true || player.flags[flag] === 1,
+      (flag) => player.flags[flag] === true ,
     )
   ) {
     return false
@@ -299,7 +291,7 @@ export function evaluateTextVariationFlag(
   // hideFlag快捷flag判断
   if (
     textVariations.hideFlag &&
-    textVariations.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+    textVariations.hideFlag.some((flag) => player.flags[flag] === true )
   ) {
     return false
   }

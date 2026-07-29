@@ -398,14 +398,14 @@ export function getVisibleVariations(frame: EventFrame, player: PlayerState): Ev
     // 检查 displayFlag
     if (
       v.displayFlag &&
-      !v.displayFlag.every((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+      !v.displayFlag.every((flag) => player.flags[flag] === true)
     ) {
       return false
     }
     // 检查 hideFlag
     if (
       v.hideFlag &&
-      v.hideFlag.some((flag) => player.flags[flag] === true || player.flags[flag] === 1)
+      v.hideFlag.some((flag) => player.flags[flag] === true)
     ) {
       return false
     }

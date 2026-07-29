@@ -1,7 +1,6 @@
 // player.ts - 玩家运行时状态数据结构
-
-import type { FlagValue } from './flag'
 import type { Season, SeasonPhase } from './seasonWeather'
+import type { Param } from './param'
 
 // ============================================================
 // 玩家运行时状态
@@ -80,7 +79,10 @@ export interface PlayerState {
   // ============================================================
 
   /** 运行时标志位（当前值） */
-  flags: Record<string, FlagValue>
+  flags: Record<string, boolean>
+  flagsNum: Record<string, number>
+  /** 运行时参数（当前值） */
+  params: Record<string, number>
 
   // ============================================================
   // 经济
@@ -266,7 +268,6 @@ export interface PlayerSkillLevel {
  */
 export interface PlayerEquipment {
   weapon: string | null
-  offHand: string | null
   head: string | null
   body: string | null
   hands: string | null
@@ -274,7 +275,6 @@ export interface PlayerEquipment {
   back: string | null
   neck: string | null
   finger: string | null
-  tool: string | null
   light: string | null
 }
 

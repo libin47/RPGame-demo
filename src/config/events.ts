@@ -15,7 +15,6 @@ import {
   ConditionTargetType,
   ComparisonOperator,
 } from '../types/effect'
-import { FlagOperation } from '@/types/flag'
 import { RecipeType } from '@/types/recipe'
 import { OptionCostType } from '@/types/option'
 
@@ -545,7 +544,7 @@ const event_飞机残骸_驾驶舱: GameEvent = {
           effect: {
             type: EffectType.FLAG,
             flagId: 'event_飞机残骸_进入驾驶舱',
-            operation: FlagOperation.SET,
+            operation: 'set',
             value: true,
           },
           probability: 1.0,

@@ -3,7 +3,6 @@
 import type { PlayerState } from '@/types/player'
 import type { EffectResult, Effect } from '@/types/effect'
 import { EffectType, AttributeType, AttributeOperation, ItemChangeType } from '@/types/effect'
-import { FlagOperation } from '@/types/flag'
 import { getRegistry } from './registry'
 import { applyStatus, removeStatus } from './status'
 
@@ -75,6 +74,9 @@ export class EffectResolver {
 
       case EffectType.FLAG:
         return this.executeFlagEffect(player, effect)
+
+      case EffectType.FLAG_NUM:
+        return this.executeFlagNumEffect(player, effect)
 
       case EffectType.SKILL:
         return this.executeSkillEffect(player, effect)
@@ -711,8 +713,6 @@ export class EffectResolver {
     // 武器
     if (category === 'weapon') return 'weapon'
 
-    // 工具
-    if (category === 'tool') return 'tool'
 
     // 防具：通过 equipmentSlot 字段判断
     if (category === 'armor' && 'equipmentSlot' in itemConfig) {
@@ -743,11 +743,11 @@ export class EffectResolver {
     const { flagId, operation, value } = effect
 
     switch (operation) {
-      case FlagOperation.SET:
+      case 'set':
         player.flags[flagId] = value ?? true
         break
 
-      case FlagOperation.TOGGLE: {
+      case 'toggle': {
         const currentVal = player.flags[flagId]
         if (typeof currentVal === 'boolean') {
           player.flags[flagId] = !currentVal
@@ -757,15 +757,35 @@ export class EffectResolver {
         break
       }
 
-      case FlagOperation.ADD: {
-        const currentNum = typeof player.flags[flagId] === 'number' ? player.flags[flagId] : 0
-        player.flags[flagId] = currentNum + (typeof value === 'number' ? value : 1)
+      default:
+        return `未知标志位操作: ${operation}`
+    }
+
+    return null
+  }
+    /**
+   * 执行标志位效果
+   */
+  private executeFlagNumEffect(
+    player: PlayerState,
+    effect: Extract<Effect, { type: EffectType.FLAG_NUM }>,
+  ): string | null {
+    const { flagId, operation, value } = effect
+
+    switch (operation) {
+      case 'set':
+        player.flagsNum[flagId] = value ?? 0
+        break
+
+      case 'add': {
+        const currentNum = typeof player.flagsNum[flagId] === 'number' ? player.flagsNum[flagId] : 0
+        player.flagsNum[flagId] = currentNum + (typeof value === 'number' ? value : 1)
         break
       }
 
-      case FlagOperation.SUBTRACT: {
-        const currentNum = typeof player.flags[flagId] === 'number' ? player.flags[flagId] : 0
-        player.flags[flagId] = Math.max(0, currentNum - (typeof value === 'number' ? value : 1))
+      case 'subtract': {
+        const currentNum = typeof player.flagsNum[flagId] === 'number' ? player.flagsNum[flagId] : 0
+        player.flagsNum[flagId] = Math.max(0, currentNum - (typeof value === 'number' ? value : 1))
         break
       }
 

@@ -2,7 +2,6 @@
 
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
-import type { FlagValue } from './flag'
 import type { ButtonOption } from './option'
 
 // ============================================================
@@ -171,7 +170,7 @@ export interface EventResultBase {
   /** 执行的效果列表 */
   effects?: EffectResult[]
   /** 设置标志位 */
-  setFlags?: Record<string, FlagValue>
+  setFlags?: Record<string, boolean>
 }
 
 /**
