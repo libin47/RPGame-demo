@@ -10,6 +10,7 @@
       :has-time-item="hasTimeItem"
       :has-san-item="hasSanItem"
       :background-color="backgroundColor"
+      :hide-toolbar="game.state.mode === 'inventory'"
       @open-settings="onOpenSettings"
       @open-inventory="onOpenInventory"
       @open-attributes="onOpenAttributes"
@@ -295,8 +296,9 @@ function onOpenSettings(): void {
   toggleSettings()
 }
 
-/** 打开背包 */
+/** 打开背包（仅在场景模式下允许） */
 function onOpenInventory(): void {
+  if (game.value.state.mode !== 'normal') return
   game.value.openInventory()
 }
 

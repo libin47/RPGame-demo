@@ -1220,487 +1220,324 @@ const event_beach_大螃蟹: GameEvent = {
   eventType: EventType.BATTLE,
   isRepeatable: true,
 }
-
 // ============================================================
-// 变异树木
+// 海滩：大海的馈赠 (翻找冲上岸的杂物)
 // ============================================================
-
-const eventStrangeTrees: GameEvent = {
-  id: 'event_strange_trees',
-  name: '变异树木',
+const event_beach_大海的馈赠: GameEvent = {
+  id: 'event_beach_大海的馈赠',
+  name: '大海的馈赠',
   frames: [
     {
-      id: 'approach_trees',
+      id: 'event_beach_大海的馈赠_1',
       order: 1,
-      text: '你走近那些树干上有异常突起的树木。树皮表面覆盖着一种暗紫色的苔藓，散发着微弱的光芒。',
+      text: '潮水线像一条模糊的边界，把大海的垃圾和宝藏一并吐在沙滩上。海藻、碎木片、塑料瓶，还有一些看不出原貌的东西。\n\n你弯下腰，仔细翻找。',
       options: [
         {
-          id: 'touch_moss',
-          name: '触摸苔藓',
+          id: '寻找漂浮物',
+          name: '寻找可用物资',
           results: [
             {
               type: 'nextFrame',
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.ATTRIBUTE,
-                    attribute: AttributeType.SAN,
-                    operation: AttributeOperation.SUBTRACT,
-                    value: 5,
-                  },
-                  probability: 1.0,
-                  description: 'SAN-5',
-                },
-              ],
-              targetFrameId: 'touch_result',
-              text: '你伸手触碰了那暗紫色的苔藓。\n触感冰凉而湿润，一种奇异的共鸣感顺着指尖传遍全身。',
+              targetFrameId: 'event_beach_大海的馈赠_成功',
+              weight: 7,
+              text: '你找到了一些有用的东西。',
             },
-          ],
-          displayPriority: 2,
-        },
-        {
-          id: 'leave_trees',
-          name: '离开',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你决定不去碰那些可疑的树木',
-            },
-          ],
-          displayPriority: 1,
-        },
-      ],
-    },
-    {
-      id: 'touch_result',
-      order: 2,
-      text: '你感到一阵眩晕。那些苔藓在你的注视下似乎在微微蠕动。\n也许这不是什么好兆头。',
-      options: [
-        {
-          id: 'back_away',
-          name: '后退离开',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你快步离开了这片区域，但那股冰凉的感觉仍停留在指尖',
-            },
-          ],
-          displayPriority: 1,
-        },
-      ],
-    },
-  ],
-  eventType: EventType.NORMAL,
-}
-
-// ============================================================
-// 采集浆果
-// ============================================================
-
-const eventGatherBerries: GameEvent = {
-  id: 'event_gather_berries',
-  name: '采集浆果',
-  frames: [
-    {
-      id: 'gather_start',
-      order: 1,
-      text: '灌木丛中长满了红色的浆果，看起来可以食用。你要采集一些吗？',
-      options: [
-        {
-          id: 'gather_berries',
-          name: '采集浆果',
-          costs: [
-            {
-              costType: OptionCostType.STAMINA,
-              value: 8,
-            },
-          ],
-          results: [
             {
               type: 'nextFrame',
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.GAIN_EXP,
-                    target: GainExpTarget.SURVIVAL_SKILL,
-                    targetId: 'gathering',
-                    amount: 15,
-                  },
-                  probability: 1.0,
-                  description: '获得采集经验',
-                },
-              ],
-              targetFrameId: 'gather_result',
+              targetFrameId: 'event_beach_大海的馈赠_失败',
+              weight: 3,
+              text: '但这次，只是一堆无用的垃圾。',
             },
           ],
-          displayPriority: 1,
+          displayPriority: 5,
+          isOneTime: false,
         },
         {
-          id: 'leave_berries',
-          name: '离开',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你决定不采摘这些浆果',
-            },
-          ],
-          displayPriority: 2,
+          id: '离开',
+          name: '不找了',
+          results: [{ type: 'endEvent' }],
+          displayPriority: 1,
+          isOneTime: false,
         },
       ],
     },
     {
-      id: 'gather_result',
+      id: 'event_beach_大海的馈赠_成功',
       order: 2,
-      text: '你小心地采摘了一些浆果。',
+      text: '你的运气不错。',
       onEnterEffects: [
         {
           effect: {
             type: EffectType.ITEM,
-            itemId: 'wild_berries',
+            itemId: '塑料瓶',
+            changeType: ItemChangeType.ADD,
+            quantity: 1,
+          },
+          probability: 0.8,
+          description: '获得塑料瓶',
+        },
+        {
+          effect: {
+            type: EffectType.ITEM,
+            itemId: '绳子',
+            changeType: ItemChangeType.ADD,
+            quantity: 1,
+          },
+          probability: 0.4,
+          description: '获得一截绳子',
+        },
+        {
+          effect: {
+            type: EffectType.ITEM,
+            itemId: '生锈的铁片',
+            changeType: ItemChangeType.ADD,
+            quantity: 1,
+          },
+          probability: 0.3,
+          description: '获得生锈的铁片',
+        },
+      ],
+      options: [
+        {
+          id: '收好离开',
+          name: '收好东西',
+          results: [{ type: 'endEvent' }],
+          displayPriority: 5,
+          isOneTime: false,
+        },
+      ],
+    },
+    {
+      id: 'event_beach_大海的馈赠_失败',
+      order: 2,
+      text: '你扒拉了半天，只有湿漉漉的海草和碎成渣的泡沫塑料。看来今天大海很吝啬。',
+      options: [
+        {
+          id: '失望离开',
+          name: '离开',
+          results: [{ type: 'endEvent' }],
+          displayPriority: 5,
+          isOneTime: false,
+        },
+      ],
+    },
+  ],
+  eventType: EventType.NORMAL,
+}
+
+// ============================================================
+// 礁石区：采集贻贝 (危险的采集)
+// ============================================================
+const event_礁石区_采集: GameEvent = {
+  id: 'event_礁石区_采集',
+  name: '采集贻贝',
+  frames: [
+    {
+      id: 'event_礁石区_采集_1',
+      order: 1,
+      text: '贻贝牢牢附着在被海浪反复冲刷的礁石上。要取下来，你就必须靠近湿滑的边缘。一个浪头打来，冰冷的海水溅了你一身。',
+      options: [
+        {
+          id: '小心采集',
+          name: '小心地采集',
+          results: [
+            {
+              type: 'nextFrame',
+              targetFrameId: 'event_礁石区_采集_成功',
+              weight: 8,
+              condition: {
+                target: {
+                  type: ConditionTargetType.ATTRIBUTE,
+                  attributeType: AttributeType.AGILITY,
+                },
+                operator: ComparisonOperator.GREATER,
+                value: 10,
+              },
+            },
+            {
+              type: 'nextFrame',
+              targetFrameId: 'event_礁石区_采集_失败',
+              weight: 2,
+              text: '脚下一滑，你的手按在了锋利的藤壶壳上。',
+            },
+          ],
+          displayPriority: 5,
+          isOneTime: false,
+        },
+        {
+          id: '冒险采集',
+          name: '尽可能多拿',
+          results: [
+            {
+              type: 'nextFrame',
+              targetFrameId: 'event_礁石区_采集_大成功',
+              weight: 5,
+              condition: {
+                target: {
+                  type: ConditionTargetType.ATTRIBUTE,
+                  attributeType: AttributeType.AGILITY,
+                },
+                operator: ComparisonOperator.GREATER,
+                value: 20,
+              },
+            },
+            {
+              type: 'nextFrame',
+              targetFrameId: 'event_礁石区_采集_失败',
+              weight: 5,
+              text: '你贪婪地想一次多拿几个，一个浪头打来，你失去了平衡。',
+            },
+          ],
+          displayPriority: 4,
+          isOneTime: false,
+        },
+        {
+          id: '离开',
+          name: '离开',
+          results: [{ type: 'endEvent' }],
+          displayPriority: 1,
+          isOneTime: false,
+        },
+      ],
+    },
+    {
+      id: 'event_礁石区_采集_成功',
+      order: 2,
+      text: '你稳稳地站在礁石上，用随身的工具撬下了一大捧肥美的贻贝。',
+      onEnterEffects: [
+        {
+          effect: {
+            type: EffectType.ITEM,
+            itemId: '贻贝',
             changeType: ItemChangeType.ADD,
             quantity: 3,
           },
           probability: 1.0,
-          description: '获得浆果',
+          description: '获得贻贝*3',
         },
       ],
       options: [
         {
-          id: 'done_gathering',
-          name: '继续前进',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你继续探索森林',
-            },
-          ],
-          displayPriority: 1,
-        },
-      ],
-    },
-  ],
-  eventType: EventType.NORMAL,
-  isRepeatable: true,
-}
-
-// ============================================================
-// 收集落枝
-// ============================================================
-
-const eventGatherWood: GameEvent = {
-  id: 'event_gather_wood',
-  name: '收集落枝',
-  frames: [
-    {
-      id: 'gather_wood_start',
-      order: 1,
-      text: '地面上散落着不少干枯的树枝，是生火的好材料。',
-      options: [
-        {
-          id: 'collect_wood',
-          name: '收集树枝',
-          costs: [
-            {
-              costType: OptionCostType.STAMINA,
-              value: 5,
-            },
-          ],
-          results: [
-            {
-              type: 'nextFrame',
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: 'firewood',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 5,
-                  },
-                  probability: 1.0,
-                  description: '获得木材',
-                },
-              ],
-              targetFrameId: 'wood_result',
-            },
-          ],
-          displayPriority: 1,
-        },
-        {
-          id: 'ignore_wood',
-          name: '忽略',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你决定不收集这些树枝',
-            },
-          ],
-          displayPriority: 2,
+          id: '收好离开',
+          name: '收好离开',
+          results: [{ type: 'endEvent' }],
+          displayPriority: 5,
+          isOneTime: false,
         },
       ],
     },
     {
-      id: 'wood_result',
+      id: 'event_礁石区_采集_大成功',
       order: 2,
-      text: '你收集了一些干树枝，可以作为引火材料使用。',
-      options: [
+      text: '你动作迅速，赶在下一个大浪打来之前，把这一片礁石上的贻贝搜刮了个干净。',
+      onEnterEffects: [
         {
-          id: 'continue_explore',
-          name: '继续探索',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你继续在森林中探索',
-            },
-          ],
-          displayPriority: 1,
+          effect: {
+            type: EffectType.ITEM,
+            itemId: '贻贝',
+            changeType: ItemChangeType.ADD,
+            quantity: 6,
+          },
+          probability: 1.0,
+          description: '获得贻贝*6',
         },
       ],
-    },
-  ],
-  eventType: EventType.NORMAL,
-  isRepeatable: true,
-}
-
-// ============================================================
-// 发光苔藓
-// ============================================================
-
-const eventGlowingMoss: GameEvent = {
-  id: 'event_glowing_moss',
-  name: '发光苔藓',
-  frames: [
-    {
-      id: 'observe_moss',
-      order: 1,
-      text: '洞穴墙壁上覆盖着一层发着幽蓝光芒的苔藓，照亮了周围一小片区域。',
       options: [
         {
-          id: 'collect_moss',
-          name: '采集苔藓',
-          results: [
-            {
-              type: 'nextFrame',
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: 'glowing_moss',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 2,
-                  },
-                  probability: 1.0,
-                  description: '获得发光苔藓',
-                },
-              ],
-              targetFrameId: 'moss_collected',
-              text: '你小心地刮下了一些发光苔藓，它们在你手中微弱地闪烁着。',
-            },
-          ],
-          displayPriority: 1,
-        },
-        {
-          id: 'leave_moss',
-          name: '忽略',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你决定不去碰那些发光的苔藓',
-            },
-          ],
-          displayPriority: 2,
+          id: '满载而归',
+          name: '满载而归',
+          results: [{ type: 'endEvent' }],
+          displayPriority: 5,
+          isOneTime: false,
         },
       ],
     },
     {
-      id: 'moss_collected',
+      id: 'event_礁石区_采集_失败',
       order: 2,
-      text: '你获得了少量的发光苔藓。它们也许能在黑暗中提供照明。',
-      options: [
-        {
-          id: 'continue_cave',
-          name: '继续探索洞穴',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你继续在洞穴中探索',
-            },
-          ],
-          displayPriority: 1,
-        },
-      ],
-    },
-  ],
-  eventType: EventType.NORMAL,
-  isRepeatable: true,
-}
-
-// ============================================================
-// 发现研究日志
-// ============================================================
-
-const eventJournalFragment: GameEvent = {
-  id: 'event_journal_fragment',
-  name: '发现研究日志',
-  frames: [
-    {
-      id: 'find_journal',
-      order: 1,
-      text: '你在洞穴的角落发现了几页发黄的纸，上面密密麻麻地写着字。',
-      options: [
-        {
-          id: 'read_journal',
-          name: '阅读日志',
-          results: [
-            {
-              type: 'nextFrame',
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: 'journal_fragment',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 1,
-                  },
-                  probability: 1.0,
-                  description: '获得日志碎片',
-                },
-                {
-                  effect: {
-                    type: EffectType.FLAG,
-                    flagId: 'found_journal_fragment',
-                    operation: FlagOperation.SET,
-                    value: true,
-                  },
-                  probability: 1.0,
-                  description: '设置已找到日志碎片',
-                },
-              ],
-              targetFrameId: 'read_journal_content',
-            },
-          ],
-          displayPriority: 1,
-        },
-        {
-          id: 'ignore_journal',
-          name: '不理会',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你决定不去碰那些可疑的纸张',
-            },
-          ],
-          displayPriority: 2,
-        },
-      ],
-    },
-    {
-      id: 'read_journal_content',
-      order: 2,
-      text: '你翻开日志，上面的内容让你不寒而栗。\n日志记载着关于某种孢子的研究，内容令人不安。',
+      text: '锋利的藤壶划破了你的手掌和膝盖，海水浸入伤口，带来一阵刺痛。贻贝没采到几个，自己倒先挂了彩。',
       onEnterEffects: [
         {
           effect: {
             type: EffectType.ATTRIBUTE,
-            attribute: AttributeType.SAN,
+            attribute: AttributeType.HP,
             operation: AttributeOperation.SUBTRACT,
             value: 10,
           },
           probability: 1.0,
-          description: 'SAN-10',
+          description: '受伤了',
+        },
+        {
+          effect: {
+            type: EffectType.ITEM,
+            itemId: '贻贝',
+            changeType: ItemChangeType.ADD,
+            quantity: 1,
+          },
+          probability: 1.0,
+          description: '获得贻贝*1',
         },
       ],
       options: [
         {
-          id: 'close_journal',
-          name: '合上日志',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你合上了日志，但那些文字仍然在你脑海中回荡',
-            },
-          ],
-          displayPriority: 1,
+          id: '忍痛离开',
+          name: '忍痛离开',
+          results: [{ type: 'endEvent' }],
+          displayPriority: 5,
+          isOneTime: false,
         },
       ],
     },
   ],
   eventType: EventType.NORMAL,
-  isRepeatable: true,
-  triggeredFlag: 'triggered_journal_fragment',
 }
 
 // ============================================================
-// 奇怪的刻痕
+// 礁石区：探索潮汐池 (一个小型的资源点)
 // ============================================================
-
-const eventCaveMarkings: GameEvent = {
-  id: 'event_cave_markings',
-  name: '奇怪的刻痕',
+const event_礁石区_潮汐池: GameEvent = {
+  id: 'event_礁石区_潮汐池',
+  name: '探索潮汐池',
   frames: [
     {
-      id: 'examine_markings',
+      id: 'event_礁石区_潮汐池_1',
       order: 1,
-      text: '洞穴墙壁上有一些奇怪的刻痕，看起来不像是自然形成的。\n这些符号排列有序，似乎蕴含着某种意义。',
-      options: [
+      text: '礁石围成的浅水坑里，小魚在清澈的海水中游弋。寄居蟹拖着笨重的壳在水底爬行。\n\n你发现了一些有用的东西。',
+      onEnterEffects: [
         {
-          id: 'study_markings',
-          name: '仔细研究',
-          results: [
-            {
-              type: 'nextFrame',
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.ATTRIBUTE,
-                    attribute: AttributeType.SAN,
-                    operation: AttributeOperation.SUBTRACT,
-                    value: 5,
-                  },
-                  probability: 1.0,
-                  description: 'SAN-5',
-                },
-              ],
-              targetFrameId: 'markings_studied',
-              text: '你花了一些时间端详这些刻痕。它们似乎是在描述某种祭祀仪式。\n你的SAN值下降了。',
-            },
-          ],
-          displayPriority: 1,
+          effect: {
+            type: EffectType.ITEM,
+            itemId: '小螃蟹',
+            changeType: ItemChangeType.ADD,
+            quantity: 2,
+          },
+          probability: 0.8,
+          description: '抓到小螃蟹',
         },
         {
-          id: 'ignore_markings',
-          name: '不去理会',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你决定不去深究这些诡异的符号',
-            },
-          ],
-          displayPriority: 2,
+          effect: {
+            type: EffectType.ITEM,
+            itemId: '漂亮贝壳',
+            changeType: ItemChangeType.ADD,
+            quantity: 1,
+          },
+          probability: 0.5,
+          description: '捡到一个漂亮贝壳',
         },
       ],
-    },
-    {
-      id: 'markings_studied',
-      order: 2,
-      text: '那些符号深深刻在了你的脑海中。你预感这座岛屿的秘密远比你想象的要深。',
       options: [
         {
-          id: 'leave_cave_area',
-          name: '离开',
-          results: [
-            {
-              type: 'endEvent',
-              exitText: '你离开了那片刻有符号的墙壁',
-            },
-          ],
-          displayPriority: 1,
+          id: '离开',
+          name: '离开潮汐池',
+          results: [{ type: 'endEvent' }],
+          displayPriority: 5,
+          isOneTime: false,
         },
       ],
     },
   ],
   eventType: EventType.NORMAL,
 }
-
 // ============================================================
 // 事件注册表
 // ============================================================
@@ -1709,6 +1546,11 @@ export const eventRegistry: EventRegistry = {
   events: {
     event_beach_飞机残骸: event_beach_飞机残骸,
     event_beach_大螃蟹: event_beach_大螃蟹,
+    event_beach_大海的馈赠: event_beach_大海的馈赠,
+
+    // 礁石区事件
+    event_礁石区_采集: event_礁石区_采集,
+    event_礁石区_潮汐池: event_礁石区_潮汐池,
 
     event_飞机残骸_搜索座椅: event_飞机残骸_搜索座椅,
     event_飞机残骸_搜索夹缝: event_飞机残骸_搜索夹缝,
@@ -1721,12 +1563,5 @@ export const eventRegistry: EventRegistry = {
 
     event_椰树林_摘椰子: event_椰树林_摘椰子,
     event_椰树林_砍树: event_椰树林_砍树,
-
-    event_strange_trees: eventStrangeTrees,
-    event_gather_berries: eventGatherBerries,
-    event_gather_wood: eventGatherWood,
-    event_glowing_moss: eventGlowingMoss,
-    event_journal_fragment: eventJournalFragment,
-    event_cave_markings: eventCaveMarkings,
   },
 }

@@ -6,12 +6,17 @@
       <div class="weight-info">
         <span class="weight-label">负重</span>
         <span class="weight-value" :class="{ overloaded: isOverloaded }">
-          {{ playerState.survival.carryWeight.toFixed(1) }} / {{ playerState.survival.maxCarryWeight.toFixed(1) }} kg
+          {{ playerState.survival.carryWeight.toFixed(1) }} /
+          {{ playerState.survival.maxCarryWeight.toFixed(1) }} kg
         </span>
         <span v-if="isOverloaded" class="overloaded-warn">超载！</span>
       </div>
       <div class="weight-track">
-        <div class="weight-fill" :class="{ overloaded: isOverloaded }" :style="{ width: weightPercent + '%' }"></div>
+        <div
+          class="weight-fill"
+          :class="{ overloaded: isOverloaded }"
+          :style="{ width: weightPercent + '%' }"
+        ></div>
       </div>
     </div>
 
@@ -58,13 +63,9 @@
       <div class="equip-section">
         <div class="b-section-title">装备</div>
         <div class="equip-grid">
-          <div
-            v-for="slot in slotDefs"
-            :key="slot.key"
-            class="equip-cell"
-          >
+          <div v-for="slot in slotDefs" :key="slot.key" class="equip-cell">
             <span class="cell-icon">{{ slot.icon }}</span>
-            <span class="cell-label">{{ slot.label }}:</span>
+            <!-- <span class="cell-label">{{ slot.label }}:</span> -->
             <span class="cell-item" :class="{ empty: !getEquippedId(slot.key) }">
               {{ getEquippedId(slot.key) ? getItemName(getEquippedId(slot.key)!) : '空' }}
             </span>
@@ -72,7 +73,9 @@
               v-if="getEquippedId(slot.key)"
               class="cell-unequip"
               @click.stop="$emit('unequipItem', getEquippedId(slot.key)!)"
-            >卸</button>
+            >
+              卸
+            </button>
           </div>
         </div>
       </div>
@@ -82,7 +85,9 @@
         <div class="b-section-title">属性</div>
         <div class="stat-row">
           <span class="stat-label">近战伤害</span>
-          <span class="stat-value">{{ meleeDamage ? meleeDamage.min + ' - ' + meleeDamage.max : '无' }}</span>
+          <span class="stat-value">{{
+            meleeDamage ? meleeDamage.min + ' - ' + meleeDamage.max : '无'
+          }}</span>
           <span class="stat-sep">|</span>
           <span class="stat-label" v-for="(def, index) in defenseList" :key="def.key">
             {{ def.label }} <span class="stat-value">{{ def.value }}</span>
@@ -122,7 +127,9 @@
             </div>
             <div v-if="hasDurability(detailItem)" class="meta-row">
               <span class="meta-label">耐久</span>
-              <span class="meta-value">{{ detailItem.durability }}/{{ getMaxDurability(detailItem.itemId) }}</span>
+              <span class="meta-value"
+                >{{ detailItem.durability }}/{{ getMaxDurability(detailItem.itemId) }}</span
+              >
             </div>
           </div>
           <div class="modal-actions">
@@ -130,17 +137,23 @@
               v-if="isUsable(detailItem.itemId)"
               class="action-btn btn-use"
               @click="onUseFromDetail"
-            >{{ useActionLabel(detailItem.itemId) }}</button>
+            >
+              {{ useActionLabel(detailItem.itemId) }}
+            </button>
             <button
               v-if="isEquippable(detailItem.itemId) && !isEquipped(detailItem.itemId)"
               class="action-btn btn-equip"
               @click="onEquipFromDetail"
-            >装备</button>
+            >
+              装备
+            </button>
             <button
               v-if="isEquipped(detailItem.itemId)"
               class="action-btn btn-unequip"
               @click="onUnequipFromDetail"
-            >卸下</button>
+            >
+              卸下
+            </button>
           </div>
         </div>
       </div>
@@ -212,7 +225,10 @@ const isOverloaded = computed<boolean>(() => {
 })
 
 const weightPercent = computed<number>(() => {
-  return Math.min(100, (props.playerState.survival.carryWeight / props.playerState.survival.maxCarryWeight) * 100)
+  return Math.min(
+    100,
+    (props.playerState.survival.carryWeight / props.playerState.survival.maxCarryWeight) * 100,
+  )
 })
 
 // ═══════════════════════════════════════════
@@ -220,18 +236,18 @@ const weightPercent = computed<number>(() => {
 // ═══════════════════════════════════════════
 
 const emojiMap: Record<string, string> = {
-  '多功能战术刀': '🔪',
-  '薄外套': '👕',
-  '防水布': '🏕️',
-  '尼龙绳': '🪢',
-  '压缩饼干': '🍪',
-  '矿泉水': '💧',
-  '止痛药': '💊',
-  '消毒酒精': '🧴',
-  '绷带': '🩹',
-  '信号弹': '🚀',
-  '笔记本': '📓',
-  '镜子': '🪞',
+  多功能战术刀: '🔪',
+  薄外套: '👕',
+  防水布: '🏕️',
+  尼龙绳: '🪢',
+  压缩饼干: '🍪',
+  矿泉水: '💧',
+  止痛药: '💊',
+  消毒酒精: '🧴',
+  绷带: '🩹',
+  信号弹: '🚀',
+  笔记本: '📓',
+  镜子: '🪞',
 }
 
 const categoryEmoji: Record<ItemCategory, string> = {
@@ -350,7 +366,6 @@ interface SlotDef {
 
 const slotDefs: SlotDef[] = [
   { key: 'weapon', label: '武器', icon: '⚔️' },
-  { key: 'offHand', label: '副手', icon: '🛡️' },
   { key: 'head', label: '头部', icon: '🪖' },
   { key: 'body', label: '身体', icon: '👕' },
   { key: 'hands', label: '手部', icon: '🧤' },
@@ -358,7 +373,6 @@ const slotDefs: SlotDef[] = [
   { key: 'back', label: '背部', icon: '🎒' },
   { key: 'neck', label: '颈部', icon: '📿' },
   { key: 'finger', label: '戒指', icon: '💍' },
-  { key: 'tool', label: '工具', icon: '🔧' },
   { key: 'light', label: '光源', icon: '🔦' },
 ]
 
@@ -371,7 +385,11 @@ function getEquippedId(slotKey: string): string | null {
 // 属性汇总
 // ═══════════════════════════════════════════
 
-interface DefenseEntry { key: string; label: string; value: number }
+interface DefenseEntry {
+  key: string
+  label: string
+  value: number
+}
 
 const meleeDamage = computed<{ min: number; max: number } | null>(() => {
   const weaponId = props.playerState.equipment.weapon
@@ -471,13 +489,17 @@ function onUnequipFromDetail(): void {
   font-size: 12px;
 }
 
-.weight-label { color: #888; }
+.weight-label {
+  color: #888;
+}
 
 .weight-value {
   color: #d0d0d0;
   font-weight: 500;
 }
-.weight-value.overloaded { color: #ff6b6b; }
+.weight-value.overloaded {
+  color: #ff6b6b;
+}
 
 .overloaded-warn {
   color: #ff6b6b;
@@ -591,7 +613,10 @@ function onUnequipFromDetail(): void {
   margin-bottom: 6px;
   flex-shrink: 0;
 }
-.icon-emoji { font-size: 24px; line-height: 1; }
+.icon-emoji {
+  font-size: 24px;
+  line-height: 1;
+}
 .icon-qty {
   position: absolute;
   right: 2px;
@@ -664,8 +689,16 @@ function onUnequipFromDetail(): void {
   padding: 2px 0;
 }
 
-.cell-icon { font-size: 12px; width: 16px; text-align: center; flex-shrink: 0; }
-.cell-label { color: #888; flex-shrink: 0; }
+.cell-icon {
+  font-size: 12px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.cell-label {
+  color: #888;
+  flex-shrink: 0;
+}
 .cell-item {
   flex: 1;
   color: #ccc;
@@ -674,7 +707,10 @@ function onUnequipFromDetail(): void {
   white-space: nowrap;
   min-width: 0;
 }
-.cell-item.empty { color: #555; font-style: italic; }
+.cell-item.empty {
+  color: #555;
+  font-style: italic;
+}
 
 .cell-unequip {
   padding: 1px 5px;
@@ -708,9 +744,17 @@ function onUnequipFromDetail(): void {
   margin-top: 4px;
 }
 
-.stat-label { color: #999; }
-.stat-value { color: #d0d0d0; font-weight: 500; }
-.stat-sep { color: #444; font-size: 11px; }
+.stat-label {
+  color: #999;
+}
+.stat-value {
+  color: #d0d0d0;
+  font-weight: 500;
+}
+.stat-sep {
+  color: #444;
+  font-size: 11px;
+}
 
 /* 关闭按钮 */
 .bottom-close {
@@ -767,7 +811,9 @@ function onUnequipFromDetail(): void {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.modal-icon { font-size: 22px; }
+.modal-icon {
+  font-size: 22px;
+}
 .modal-title {
   flex: 1;
   font-size: 16px;
@@ -790,7 +836,9 @@ function onUnequipFromDetail(): void {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.modal-body { padding: 16px 18px; }
+.modal-body {
+  padding: 16px 18px;
+}
 
 .modal-desc {
   font-size: 14px;
@@ -815,8 +863,12 @@ function onUnequipFromDetail(): void {
   justify-content: space-between;
   font-size: 12px;
 }
-.meta-label { color: #888; }
-.meta-value { color: #d0d0d0; }
+.meta-label {
+  color: #888;
+}
+.meta-value {
+  color: #d0d0d0;
+}
 
 .modal-actions {
   display: flex;
@@ -834,7 +886,9 @@ function onUnequipFromDetail(): void {
   cursor: pointer;
   transition: all 0.15s;
 }
-.action-btn:hover { background: rgba(255, 255, 255, 0.08); }
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
 
 .btn-use {
   color: #81c784;

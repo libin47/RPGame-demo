@@ -90,7 +90,7 @@
 
     <!-- ═══════ 第三行：操作按钮（带图标+背景区分）+ 场景名称 ═══════ -->
     <div class="row toolbar-row">
-      <div class="toolbar-left">
+      <div class="toolbar-left" v-if="!hideToolbar">
         <button class="tool-btn" @click="$emit('openSettings')">
           <span class="tool-icon">⚙️</span>
           <span class="tool-label">设置</span>
@@ -123,6 +123,7 @@ const props = defineProps<{
   hasTimeItem: boolean
   hasSanItem: boolean
   backgroundColor: string
+  hideToolbar?: boolean
 }>()
 
 defineEmits<{

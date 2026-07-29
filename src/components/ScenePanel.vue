@@ -40,7 +40,7 @@
     <!-- 固定交互按钮 -->
     <div class="interactions">
       <button
-        v-for="interaction in interactions"
+        v-for="interaction in parsedInteractions"
         :key="interaction.id"
         class="interaction-btn"
         :class="interactionButtonClass(interaction)"
@@ -122,6 +122,34 @@ const props = defineProps<{
   // 玩家状态
   playerState: PlayerState
 }>()
+// ============================================================
+// 按钮条件解析
+// ============================================================
+
+/** 解析后的交互按钮列表 */
+const parsedInteractions = computed<SceneInteraction[]>(() => {
+  const currentInteractions = props.interactions
+  if (!currentInteractions) return []
+  const segments: SceneInteraction[] = []
+  currentInteractions.forEach((interaction) => {
+    if (interaction.nameVariations && interaction.nameVariations?.length > 0) {
+      interaction.nameVariations.forEach((variation) => {
+        if (
+          variation.displayFlag &&
+          variation.displayFlag?.length > 0 &&
+          variation.displayFlag.every(
+            (flag) => props.playerState.flags[flag] === true || props.playerState.flags[flag] === 1,
+          )
+        ) {
+          interaction.name = variation.content
+        }
+      })
+    }
+    segments.push(interaction)
+  })
+
+  return segments
+})
 
 // ============================================================
 // 事件

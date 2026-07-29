@@ -28,6 +28,15 @@ const blunt: DamageType = {
   defensePenetration: 0.0,
 }
 
+const ranged: DamageType = {
+  id: 'ranged',
+  name: '远程',
+  description: '由远程武器造成的远程伤害',
+  iconId: 'icon_damage_ranged',
+  textColor: '#5feaf4ff',
+  defensePenetration: 0.0,
+}
+
 const poison: DamageType = {
   id: 'poison',
   name: '毒素',
@@ -36,12 +45,31 @@ const poison: DamageType = {
   textColor: '#2ecc71',
   defensePenetration: 0.5,
 }
+const fire: DamageType = {
+  id: 'fire',
+  name: '火焰',
+  description: '由火焰等造成的火焰伤害',
+  iconId: 'icon_damage_fire',
+  textColor: '#f39c25',
+  defensePenetration: 0.5,
+}
+const realDamage: DamageType = {
+  id: 'realDamage',
+  name: '真实伤害',
+  description: '由不可描述的力量造成的伤害，无法被防御忽略',
+  iconId: 'icon_damage_real',
+  textColor: '#04ff00ff',
+  defensePenetration: 1,
+}
 
 export const damageTypeRegistry: DamageTypeRegistry = {
   damageTypes: {
     slash,
     pierce,
     blunt,
+    ranged,
     poison,
+    fire,
+    realDamage,
   },
 }
