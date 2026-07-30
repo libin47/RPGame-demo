@@ -753,17 +753,29 @@ function applyAccumulateParam(
   rule: TimeVaryingRule,
   elapsedMinutes: number,
 ): void {
-  const delta = (rule.deltaPerMinute ?? 0) * elapsedMinutes
+  let delta: number = 0
+  if (rule.deltaPerDay) {
+    delta = ((rule.deltaPerDay ?? 0) * elapsedMinutes) / 24 / 60
+  } else if (rule.recoveryPerDay) {
+    if (rule.recoveryBaseId) {
+      delta =
+        (rule.recoveryPerDay *
+          elapsedMinutes *
+          (player.params[rule.recoveryBaseId] ?? player.params[paramId] ?? 1)) /
+        24 /
+        60
+    } else {
+      delta = (rule.recoveryPerDay * elapsedMinutes * (player.params[paramId] ?? 1)) / 24 / 60
+    }
+  } else {
+    return
+  }
   if (delta === 0) return
 
-  const currentValue = player.params[paramId]
+  const currentValue = player.params[paramId] ?? 0
   let newValue: number
 
-  if (typeof currentValue === 'number') {
-    newValue = currentValue + delta
-  } else {
-    newValue = (typeof currentValue === 'boolean' ? (currentValue ? 1 : 0) : 0) + delta
-  }
+  newValue = currentValue + delta
 
   // 钳制范围
   if (rule.min !== undefined) {

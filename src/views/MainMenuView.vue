@@ -98,7 +98,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getRegistry } from '@/engine'
 import { startNewGame, restoreGame } from '@/runtime/gameInstance'
-import { hasSave, getAllSaveMeta, loadGame } from '@/runtime/saveManager'
+import { getAllSaveMeta, loadGame } from '@/runtime/saveManager'
 import type { CharacterClass } from '@/types/character'
 
 const router = useRouter()

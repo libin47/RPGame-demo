@@ -362,25 +362,23 @@ export function findFirstVisibleFrame(
  * @returns 可见选项列表（按 displayPriority 降序排列）
  */
 export function getVisibleOptions(frame: EventFrame, player: PlayerState): EventOption[] {
-  return frame.options
-    .filter((option) => {
-      // 检查 displayFlag
-      if (option.displayFlag && !option.displayFlag.every((flag) => player.flags[flag])) {
+  return frame.options.filter((option) => {
+    // 检查 displayFlag
+    if (option.displayFlag && !option.displayFlag.every((flag) => player.flags[flag])) {
+      return false
+    }
+    // 检查 displayCondition
+    if (!evaluateCondition(option.displayCondition, player)) {
+      return false
+    }
+    // 检查 isOneTime：若已选过则隐藏
+    if (option.isOneTime && option.usedFlag) {
+      if (player.flags[option.usedFlag]) {
         return false
       }
-      // 检查 displayCondition
-      if (!evaluateCondition(option.displayCondition, player)) {
-        return false
-      }
-      // 检查 isOneTime：若已选过则隐藏
-      if (option.isOneTime && option.usedFlag) {
-        if (player.flags[option.usedFlag]) {
-          return false
-        }
-      }
-      return true
-    })
-    .sort((a, b) => (b.displayPriority ?? 0) - (a.displayPriority ?? 0))
+    }
+    return true
+  })
 }
 
 /**
@@ -396,17 +394,11 @@ export function getVisibleVariations(frame: EventFrame, player: PlayerState): Ev
 
   return frame.textVariations.filter((v) => {
     // 检查 displayFlag
-    if (
-      v.displayFlag &&
-      !v.displayFlag.every((flag) => player.flags[flag] === true)
-    ) {
+    if (v.displayFlag && !v.displayFlag.every((flag) => player.flags[flag] === true)) {
       return false
     }
     // 检查 hideFlag
-    if (
-      v.hideFlag &&
-      v.hideFlag.some((flag) => player.flags[flag] === true)
-    ) {
+    if (v.hideFlag && v.hideFlag.some((flag) => player.flags[flag] === true)) {
       return false
     }
     // 检查 condition

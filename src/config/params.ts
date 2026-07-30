@@ -1,17 +1,76 @@
 // config/params.ts
 import type { Param, ParamRegistry } from '../types/param'
 
-
-
-const firstTimeOnBeach: Param = {
-  id: 'first_time_on_beach',
-  name: '首次到达海滩',
-  defaultValue: 0,
+const beach_螃蟹: Param = {
+  id: 'beach_螃蟹',
+  defaultValue: 20,
+  timeVarying: {
+    mode: 'accumulate',
+    recoveryPerDay: 1,
+    min: 0,
+    max: 20,
+  },
+}
+const beach_飞机残骸_残骸: Param = {
+  id: 'beach_飞机残骸_残骸',
+  defaultValue: 5,
+  timeVarying: {
+    mode: 'accumulate',
+    deltaPerDay: 2,
+    min: 0,
+    max: 10,
+  },
 }
 
+const beach_椰子: Param = {
+  id: 'beach_椰子',
+  defaultValue: 20,
+  timeVarying: {
+    mode: 'accumulate',
+    recoveryPerDay: 1,
+    recoveryBaseId: 'beach_椰子树',
+    min: 0,
+    max: 20,
+  },
+}
+const beach_椰子树: Param = {
+  id: 'beach_椰子树',
+  defaultValue: 20,
+  timeVarying: {
+    mode: 'accumulate',
+    recoveryPerDay: 1,
+    min: 0,
+    max: 20,
+  },
+}
+const beach_贻贝: Param = {
+  id: 'beach_贻贝',
+  defaultValue: 20,
+  timeVarying: {
+    mode: 'accumulate',
+    recoveryPerDay: 1,
+    min: 0,
+    max: 20,
+  },
+}
+const beach_潮汐池: Param = {
+  id: 'beach_潮汐池',
+  defaultValue: 20,
+  timeVarying: {
+    mode: 'accumulate',
+    recoveryPerDay: 1,
+    min: 0,
+    max: 20,
+  },
+}
 
 export const paramRegistry: ParamRegistry = {
   params: {
-    first_time_on_beach: firstTimeOnBeach,
+    beach_螃蟹: beach_螃蟹,
+    beach_飞机残骸_残骸: beach_飞机残骸_残骸,
+    beach_椰子: beach_椰子,
+    beach_椰子树: beach_椰子树,
+    beach_贻贝: beach_贻贝,
+    beach_潮汐池: beach_潮汐池,
   },
 }

@@ -4,6 +4,7 @@ import type { Condition } from './effect'
 import type { EffectResult } from './effect'
 import type { TimeOfDay, WeatherType, SeasonPhase } from './seasonWeather'
 import type { ButtonOption } from './option'
+import type { TraderConfig } from './trade'
 // ============================================================
 // 基础场景类型（Scene 和 SubScene 的公共字段）
 // ============================================================
@@ -29,15 +30,15 @@ export interface BaseScene {
   // 温度影响（-50到50，叠加到环境温度计算中）
   temperatureModifier: number
   // 资源
-  collects?: string[]
+  collects?: ResourceInteraction[]
   // 移动
-  moves?: string[]
+  moves?: MoveInteraction[]
   // 人物
-  characters?: string[]
+  characters?: CharacterInteraction[]
   // 探索
-  explore?: boolean
+  explore?: ButtonOption
   // 场景 固定交互按钮
-  interactions: SceneInteraction[]
+  interactions?: SceneInteraction[]
 
   // 是否为地牢场景
   isDungeon: boolean
@@ -259,56 +260,72 @@ export interface SceneInteraction extends ButtonOption {
 
   // ========== 交互行为参数 ==========
   behaviorParams?: InteractionBehaviorParams
-
-  // 交互冷却时间（游戏内分钟数，-1表示无冷却）
-  cooldownMinutes?: number
-  // 冷却标志位前缀（实际冷却标志位为 前缀+交互ID）
-  cooldownFlagPrefix?: string
 }
 
-// 交互按钮配置
-export interface InteractionBase {
-  // 显示名称
-  name: string
-  // 描述
-  description?: string
-  // 描述标题
-  descriptionTitle?: string
-  // 显示条件
-  displayCondition?: Condition
-  displayFlag?: string[]
-  hideFlag?: string[]
-  // 可用条件
-  availableCondition?: Condition
-  // 花费体力
-  costEnergy?: number
-  // 花费时间 分钟
-  costTime?: number
-  // 背景图片
-  backgroundImage?: string
-  // 前景图标
-  icon?: string
-}
 // 移动交互按钮配置
-export interface MoveInteraction extends InteractionBase {
+export interface MoveInteraction extends ButtonOption {
+  // 移动类型
+  moveType?: 'move' | 'exitSubScene' | 'enterSubScene'
   // 子场景ID
   subSceneId?: string
+  // 母场景ID
+  parentSceneId?: string
 }
 // 资源点按钮配置
-export interface ResourceInteraction extends InteractionBase {
-  // 资源点ID
-  resourceId?: string
+export interface ResourceInteraction extends ButtonOption {
+  // 资源点ID，关联数量及恢复情况
+  paramId?: string
+  // 资源点类型
+  resourceType?: 'enemy' | 'item'
+  // 资源点敌人配置
+  enemyConfig?: EnemyConfig[]
+  // 资源点物品配置
+  itemConfig?: ItemConfig[]
+  // 资源收获描述
+  text?: string
+  // 概率未命中描述
+  missText?: string
 }
+// 敌人配置
+export interface EnemyConfig {
+  enemyId: string
+  quantity: number
+  // 概率，默认1
+  probability?: number
+  // 条件
+  condition?: Condition
+}
+// 物品配置
+export interface ItemConfig {
+  itemId: string
+  quantity: number
+  // 概率，默认1
+  probability?: number
+  // 条件
+  condition?: Condition
+}
+
 // 人物交互按钮配置
-export interface CharacterInteraction extends InteractionBase {
-  // 人物ID
-  characterId?: string
-  // 是否可攻击
-  isAttackable?: boolean
-  // 是否可对话
-  isTalkable?: boolean
-  // 是否可交易
-  isTradeable?: boolean
+export interface CharacterInteraction extends ButtonOption {
+  // 敌人配置-是否可被攻击
+  enemyConfig?: EnemyConfig[]
+  // 交易配置-是否可交易
+  tradeConfig?: TraderConfig
+  // 对话配置-是否可对话
+  dialogConfig?: DialogConfig[]
+}
+// 对话配置
+export interface DialogConfig {
+  // 对话主题
+  dialogName: string
+  // 对话描述（长安）
+  dialogDescription?: string
+  // 关联事件ID
+  dialogEventId?: string
+  // 对话显示条件
+  dialogDisplayFlag?: string[]
+  dialogHideFlag?: string[]
+  dialogCondition?: Condition
 }
 
 /**

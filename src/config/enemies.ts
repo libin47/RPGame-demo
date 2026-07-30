@@ -1,11 +1,14 @@
 // config/enemies.ts
-import { AttributeOperation, AttributeType, ComparisonOperator, ConditionTargetType, EffectType, LogicOperator } from '@/types/effect'
-import type { Enemy, EnemyRegistry } from '../types/enemy'
 import {
-  EnemyType,
-  EnemySkillTargetType,
-} from '../types/enemy'
-import { FlagOperation } from '@/types/flag'
+  AttributeOperation,
+  AttributeType,
+  ComparisonOperator,
+  ConditionTargetType,
+  EffectType,
+  LogicOperator,
+} from '@/types/effect'
+import type { Enemy, EnemyRegistry } from '../types/enemy'
+import { EnemyType, EnemySkillTargetType } from '../types/enemy'
 
 const 大螃蟹: Enemy = {
   id: '大螃蟹',
@@ -91,7 +94,7 @@ const 大螃蟹: Enemy = {
       type: 'enrage',
       params: {
         damageMultiplier: 1.5,
-        },
+      },
       triggerText: '大螃蟹受到重创，变得更加狂暴',
     },
   },
@@ -246,7 +249,7 @@ const dreamStalker: Enemy = {
     logic: LogicOperator.AND,
     subConditions: [
       {
-        target: { type: ConditionTargetType.SAN_LEVEL },  
+        target: { type: ConditionTargetType.SAN_LEVEL },
         operator: ComparisonOperator.LESS_EQUAL,
         value: 60,
       },

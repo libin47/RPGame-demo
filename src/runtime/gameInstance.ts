@@ -12,7 +12,7 @@ import { PlayerActionType } from '@/engine'
 import type { CharacterClass } from '@/types/character'
 import type { PlayerState, NewGameConfig } from '@/types/player'
 import type { GameMode } from './useGame'
-import type { SceneInteraction } from '@/types/scene'
+import type { ResourceInteraction, MoveInteraction } from '@/types/scene'
 import type { EndingConfig } from '@/types/ending'
 import type { CraftResult } from '@/engine'
 
@@ -45,8 +45,12 @@ export interface GameInstance {
   selectEventOption: (optionId: string) => void
   /** 处理场景交互 */
   handleInteraction: (interactionId: string) => void
-  /** 获取当前场景的交互按钮列表 */
-  getCurrentInteractions: () => SceneInteraction[]
+  /** 探索周围 */
+  handleExplore: () => void
+  /** 资源采集/战斗 */
+  handleCollect: (collect: ResourceInteraction) => void
+  /** 场景移动 */
+  handleSceneMove: (moveAction: MoveInteraction) => void
   /** 获取当前场景中营地建筑基本信息列表 */
   getCampsiteBuildings: () => CampsiteBuildingInfo[]
   /** 进入建筑交互模式 */
@@ -135,7 +139,9 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     enterEvent: game.enterEvent,
     selectEventOption: game.selectEventOption,
     handleInteraction: game.handleInteraction,
-    getCurrentInteractions: game.getCurrentInteractions,
+    handleExplore: game.handleExplore,
+    handleCollect: game.handleCollect,
+    handleSceneMove: game.handleSceneMove,
     getCampsiteBuildings: game.getCampsiteBuildings,
     enterBuilding: game.enterBuilding,
     exitBuilding: game.exitBuilding,
@@ -183,7 +189,9 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     enterEvent: game.enterEvent,
     selectEventOption: game.selectEventOption,
     handleInteraction: game.handleInteraction,
-    getCurrentInteractions: game.getCurrentInteractions,
+    handleExplore: game.handleExplore,
+    handleCollect: game.handleCollect,
+    handleSceneMove: game.handleSceneMove,
     getCampsiteBuildings: game.getCampsiteBuildings,
     enterBuilding: game.enterBuilding,
     exitBuilding: game.exitBuilding,

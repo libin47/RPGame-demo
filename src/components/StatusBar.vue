@@ -93,14 +93,14 @@
       <div class="toolbar-left" v-if="!hideToolbar">
         <button class="tool-btn" @click="$emit('openSettings')">
           <span class="tool-icon">⚙️</span>
-          <span class="tool-label">设置</span>
+          <!-- <span class="tool-label">设置</span> -->
         </button>
         <button class="tool-btn btn-accent" @click="$emit('openInventory')">
-          <span class="tool-icon">🎒</span>
+          <!-- <span class="tool-icon">🎒</span> -->
           <span class="tool-label">背包</span>
         </button>
         <button class="tool-btn btn-info" @click="$emit('openAttributes')">
-          <span class="tool-icon">📊</span>
+          <!-- <span class="tool-icon">📊</span> -->
           <span class="tool-label">属性</span>
         </button>
       </div>

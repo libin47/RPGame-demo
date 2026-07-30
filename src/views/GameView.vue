@@ -22,15 +22,21 @@
       <ScenePanel
         v-if="game.state.mode === 'normal'"
         :description-config="game.state.currentDescriptionConfig"
-        :interactions="game.getCurrentInteractions()"
+        :scene="currentSceneForPanel"
         :campsite-buildings="game.getCampsiteBuildings()"
         :is-campsite="!!game.state.currentSubScene?.isCampsite"
         :scene-text-prefix="game.state.sceneTextPrefix"
         :scene-text-after="game.state.sceneTextAfter"
         :background-color="backgroundColor"
         :player-state="game.state.player"
+        :expanded-category="expandedCategory"
+        @update:expanded-category="expandedCategory = $event"
         @enter-event="onEnterEventFromEntry"
-        @interaction="game.handleInteraction"
+        @explore="onExplore"
+        @collect="onCollect"
+        @scene-interaction="onSceneInteraction"
+        @move="onMoveAction"
+        @character="onCharacter"
         @enter-building="onEnterBuilding"
       />
 
@@ -208,6 +214,19 @@ const currentSceneName = computed<string>(() => {
   return ''
 })
 
+/** 当前场景数据（子场景优先，用于 ScenePanel 的 scene prop） */
+const currentSceneForPanel = computed(() => {
+  return game.value.state.currentSubScene ?? game.value.state.currentScene
+})
+
+/** 二级菜单展开状态（GameView 管理，场景切换时重置，mode 切换时保持） */
+const expandedCategory = ref<string | null>(null)
+
+/** 切换场景时收起二级菜单 */
+watch(currentSceneForPanel, () => {
+  expandedCategory.value = null
+})
+
 // ============================================================
 // 条件显示道具检测
 // ============================================================
@@ -307,6 +326,35 @@ function onOpenAttributes(): void {
   toggleAttributes()
 }
 
+// ============================================================
+// 处理 ScenePanel 新事件
+// ============================================================
+
+/** 探索 */
+function onExplore(): void {
+  game.value.handleExplore()
+}
+
+/** 资源采集/战斗 */
+function onCollect(collect: import('@/types/scene').ResourceInteraction): void {
+  game.value.handleCollect(collect)
+}
+
+/** 场景交互（代替旧的 @interaction） */
+function onSceneInteraction(interactionId: string): void {
+  game.value.handleInteraction(interactionId)
+}
+
+/** 移动 */
+function onMoveAction(moveAction: import('@/types/scene').MoveInteraction): void {
+  game.value.handleSceneMove(moveAction)
+}
+
+/** 人物交互（暂未实现） */
+function onCharacter(char: import('@/types/scene').CharacterInteraction): void {
+  game.value.setLogMessage(`与 ${char.name} 交互 - 功能开发中`)
+}
+
 /** 当前交互的建筑数据（用于 BuildingDetail） */
 const currentBuildingData = computed<{
   build: import('@/types/build').Build
@@ -353,6 +401,7 @@ function onDismantleBuilding(buildId: string): void {
 /** 修理建筑（BuildingDetail 内部已完成消耗，这里仅处理日志） */
 function onRepairBuilding(_buildId: string): void {
   // 实际维修逻辑在 BuildingDetail 内部完成
+  console.log('修理建筑', _buildId)
 }
 
 /** 建筑交互日志 */

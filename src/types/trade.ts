@@ -16,8 +16,6 @@ export interface TraderConfig {
   id: string
   /** 商人名称（显示用） */
   name: string
-  /** 商人备注（开发者可见） */
-  notes?: string
 
   /** 商人描述（交易界面展示） */
   description: string

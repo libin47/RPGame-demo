@@ -42,7 +42,7 @@ const event_beach_飞机残骸: GameEvent = {
               enterText: '你从裂口钻进机舱。',
             },
           ],
-          displayPriority: 3,
+
           isOneTime: false,
         },
       ],
@@ -74,7 +74,7 @@ const event_beach_飞机残骸: GameEvent = {
               text: '座椅下方的衣物散落一地，大部分被海水浸过，湿重无用。\n\n你挑了几件干的，主要是袜子，还有一件薄外套。\n\n夜里会用得上。',
             },
           ],
-          displayPriority: 3,
+
           isOneTime: true,
           usedFlag: 'event_beach_飞机残骸_2_options_1',
         },
@@ -100,7 +100,7 @@ const event_beach_飞机残骸: GameEvent = {
               text: '头顶的行李架里，一只手提箱卡在角落。\n\n你用力拽出来，拉链已经锈住。撬开后里面是换洗衣物和一个洗漱包。洗漱包里有小剪刀、指甲刀、一面巴掌大的镜子。镜子完好，反射出帅的一批的脸。\n\n你把镜子用衣服包好，放进外套口袋。这东西能生火。',
             },
           ],
-          displayPriority: 2,
+
           isOneTime: true,
           usedFlag: 'event_beach_飞机残骸_2_options_2',
         },
@@ -129,7 +129,7 @@ const event_beach_飞机残骸: GameEvent = {
               text: '座椅夹缝里找到两本杂志和一个带笔的空白笔记本。\n\n 你把笔记本和笔放进外套口袋。',
             },
           ],
-          displayPriority: 1,
+
           isOneTime: true,
           usedFlag: 'event_beach_飞机残骸_2_options_3',
         },
@@ -158,7 +158,7 @@ const event_beach_飞机残骸: GameEvent = {
               text: '座椅夹缝里找到两本杂志和一个带笔的空白笔记本。\n\n 你把笔记本和笔放进外套口袋。',
             },
           ],
-          displayPriority: 1,
+
           isOneTime: true,
           usedFlag: 'event_beach_飞机残骸_2_options_3',
         },
@@ -201,7 +201,7 @@ const event_beach_飞机残骸: GameEvent = {
               },
             ],
           },
-          displayPriority: 1,
+
           isOneTime: true,
           usedFlag: 'event_beach_飞机残骸_2_options_4',
         },
@@ -221,7 +221,6 @@ const event_beach_飞机残骸: GameEvent = {
               exitText: '你离开了飞机残骸，回到了海滩上',
             },
           ],
-          displayPriority: 1,
         },
       ],
     },
@@ -239,7 +238,6 @@ const event_beach_飞机残骸: GameEvent = {
               exitText: '你离开了飞机残骸，回到了海滩上',
             },
           ],
-          displayPriority: 1,
         },
       ],
     },
@@ -278,7 +276,7 @@ const event_飞机残骸_搜索座椅: GameEvent = {
               exitText: '你继续搜索了',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -326,7 +324,7 @@ const event_飞机残骸_搜索行李架: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -364,7 +362,7 @@ const event_飞机残骸_搜索夹缝: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -422,7 +420,7 @@ const event_飞机残骸_搜索头等舱: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -449,7 +447,7 @@ const event_飞机残骸_驾驶舱: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -489,7 +487,7 @@ const event_飞机残骸_驾驶舱: GameEvent = {
               text: '舱门纹丝不动——\n\n你当然可以继续尝试，但以目前的情况来看，只是白费体力。',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
         {
@@ -500,7 +498,7 @@ const event_飞机残骸_驾驶舱: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
       ],
@@ -559,7 +557,7 @@ const event_飞机残骸_驾驶舱: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -593,7 +591,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
               text: '你忙活了许久，但是一无所获。\n\n而时间正在流逝。',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
         {
@@ -612,7 +610,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
               text: '你忙活了许久，但是一无所获。\n\n而时间正在流逝。',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
         {
@@ -631,7 +629,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
               text: '你忙活了许久，但是一无所获。\n\n而时间正在流逝。',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -662,7 +660,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
       ],
@@ -692,7 +690,7 @@ const event_飞机残骸_搜索残骸: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
       ],
@@ -736,7 +734,7 @@ const event_机翼营地_搭建营地: GameEvent = {
               exitText: '你将防水布铺在沙地了，你可以在这里休息了。',
             },
           ],
-          displayPriority: 10,
+
           isOneTime: true,
           usedFlag: 'event_机翼营地_铺地',
         },
@@ -748,7 +746,7 @@ const event_机翼营地_搭建营地: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -811,7 +809,7 @@ const event_椰树林_摘椰子: GameEvent = {
               weight: 1,
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
 
@@ -833,7 +831,7 @@ const event_椰树林_摘椰子: GameEvent = {
               weight: 1,
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
         {
@@ -844,7 +842,7 @@ const event_椰树林_摘椰子: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -875,7 +873,7 @@ const event_椰树林_摘椰子: GameEvent = {
               ],
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
       ],
@@ -906,7 +904,7 @@ const event_椰树林_摘椰子: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
       ],
@@ -938,7 +936,7 @@ const event_椰树林_摘椰子: GameEvent = {
               ],
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
       ],
@@ -965,7 +963,7 @@ const event_椰树林_砍树: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -1054,7 +1052,7 @@ const event_椰树林_砍树: GameEvent = {
               targetFrameId: 'event_椰树林_砍树_大成功',
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
       ],
@@ -1073,7 +1071,7 @@ const event_椰树林_砍树: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
       ],
@@ -1092,7 +1090,7 @@ const event_椰树林_砍树: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
       ],
@@ -1128,7 +1126,6 @@ const event_beach_大螃蟹: GameEvent = {
               firstEncounterBonus: true,
             },
           ],
-          displayPriority: 2,
         },
         {
           id: 'flee_crab',
@@ -1146,7 +1143,6 @@ const event_beach_大螃蟹: GameEvent = {
               exitText: '你决定不去打扰它们。',
             },
           ],
-          displayPriority: 1,
         },
       ],
     },
@@ -1176,7 +1172,6 @@ const event_beach_大螃蟹: GameEvent = {
               ],
             },
           ],
-          displayPriority: 1,
         },
       ],
     },
@@ -1194,7 +1189,6 @@ const event_beach_大螃蟹: GameEvent = {
               exitText: '你安全回到了海滩上',
             },
           ],
-          displayPriority: 1,
         },
       ],
     },
@@ -1211,7 +1205,6 @@ const event_beach_大螃蟹: GameEvent = {
               type: 'endEvent',
             },
           ],
-          displayPriority: 1,
         },
       ],
     },
@@ -1229,7 +1222,7 @@ const event_beach_大海的馈赠: GameEvent = {
     {
       id: 'event_beach_大海的馈赠_1',
       order: 1,
-      text: '潮水线像一条模糊的边界，把大海的垃圾和宝藏一并吐在沙滩上。海藻、碎木片、塑料瓶，还有一些看不出原貌的东西。\n\n你弯下腰，仔细翻找。',
+      text: '潮水线像一条模糊的边界，把大海的垃圾和宝藏一并吐在沙滩上。海藻、漂流木、塑料瓶，还有一些看不出原貌的东西。\n\n你弯下腰，仔细翻找。',
       options: [
         {
           id: '寻找漂浮物',
@@ -1248,14 +1241,14 @@ const event_beach_大海的馈赠: GameEvent = {
               text: '但这次，只是一堆无用的垃圾。',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
         {
           id: '离开',
           name: '不找了',
           results: [{ type: 'endEvent' }],
-          displayPriority: 1,
+
           isOneTime: false,
         },
       ],
@@ -1268,12 +1261,12 @@ const event_beach_大海的馈赠: GameEvent = {
         {
           effect: {
             type: EffectType.ITEM,
-            itemId: '塑料瓶',
+            itemId: '木头',
             changeType: ItemChangeType.ADD,
-            quantity: 1,
+            quantity: 10,
           },
           probability: 0.8,
-          description: '获得塑料瓶',
+          description: '获得10个木头',
         },
         {
           effect: {
@@ -1288,12 +1281,12 @@ const event_beach_大海的馈赠: GameEvent = {
         {
           effect: {
             type: EffectType.ITEM,
-            itemId: '生锈的铁片',
+            itemId: '金属碎片',
             changeType: ItemChangeType.ADD,
             quantity: 1,
           },
           probability: 0.3,
-          description: '获得生锈的铁片',
+          description: '获得金属碎片',
         },
       ],
       options: [
@@ -1301,7 +1294,7 @@ const event_beach_大海的馈赠: GameEvent = {
           id: '收好离开',
           name: '收好东西',
           results: [{ type: 'endEvent' }],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -1315,7 +1308,7 @@ const event_beach_大海的馈赠: GameEvent = {
           id: '失望离开',
           name: '离开',
           results: [{ type: 'endEvent' }],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -1360,7 +1353,7 @@ const event_礁石区_采集: GameEvent = {
               text: '脚下一滑，你的手按在了锋利的藤壶壳上。',
             },
           ],
-          displayPriority: 5,
+
           isOneTime: false,
         },
         {
@@ -1387,14 +1380,14 @@ const event_礁石区_采集: GameEvent = {
               text: '你贪婪地想一次多拿几个，一个浪头打来，你失去了平衡。',
             },
           ],
-          displayPriority: 4,
+
           isOneTime: false,
         },
         {
           id: '离开',
           name: '离开',
           results: [{ type: 'endEvent' }],
-          displayPriority: 1,
+
           isOneTime: false,
         },
       ],
@@ -1420,7 +1413,7 @@ const event_礁石区_采集: GameEvent = {
           id: '收好离开',
           name: '收好离开',
           results: [{ type: 'endEvent' }],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -1446,7 +1439,7 @@ const event_礁石区_采集: GameEvent = {
           id: '满载而归',
           name: '满载而归',
           results: [{ type: 'endEvent' }],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -1482,7 +1475,7 @@ const event_礁石区_采集: GameEvent = {
           id: '忍痛离开',
           name: '忍痛离开',
           results: [{ type: 'endEvent' }],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],
@@ -1529,7 +1522,7 @@ const event_礁石区_潮汐池: GameEvent = {
           id: '离开',
           name: '离开潮汐池',
           results: [{ type: 'endEvent' }],
-          displayPriority: 5,
+
           isOneTime: false,
         },
       ],

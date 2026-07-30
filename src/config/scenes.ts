@@ -11,8 +11,15 @@ import {
 } from '@/types/effect'
 import type { Scene, SubScene, SceneRegistry } from '../types/scene'
 import { InteractionType, Direction, FunctionType } from '../types/scene'
-import { OptionCostType, type OptionCost } from '../types/option'
+import { OptionCostType, type OptionCost, type ButtonOption } from '../types/option'
 
+const exploreButton: ButtonOption = {
+  id: 'explore',
+  name: '探索',
+  description: '探索环境，说不定能发现点儿新东西呢',
+  costTime: 30,
+  costEnergy: 10,
+}
 // ============================================================
 // 海滩
 // ============================================================
@@ -69,6 +76,8 @@ const beach: Scene = {
       ],
       isAutoTrigger: false,
       isOneTime: false,
+      hideFlag: ['beach_螃蟹'],
+      eventFlag: 'beach_螃蟹',
     },
     {
       id: 'beach_椰树林',
@@ -103,107 +112,78 @@ const beach: Scene = {
     },
   ],
   temperatureModifier: 5,
-  interactions: [
+  collects: [
     {
-      id: '探索海滩',
-      name: '探索海滩',
-      interactionType: InteractionType.EXPLORE,
-      costs: [
+      id: 'beach_螃蟹',
+      name: '狩猎',
+      description: '狩猎大螃蟹，可以获得蟹肉。',
+      descriptionTitle: '狩猎大螃蟹',
+      displayFlag: ['beach_螃蟹'],
+      costTime: 30,
+      costEnergy: 10,
+      paramId: 'beach_螃蟹',
+      resourceType: 'enemy',
+      enemyConfig: [
         {
-          costType: OptionCostType.STAMINA,
-          value: 10,
-          affectedByCoefficient: true,
+          enemyId: '大螃蟹',
+          quantity: 1,
         },
       ],
-      behaviorParams: {
-        interactionType: InteractionType.EXPLORE,
-      },
-      displayPriority: 10,
-      isOneTime: false,
-    },
-    {
-      id: '飞机残骸',
-      name: '飞机残骸',
-      displayFlag: ['beach_飞机残骸_搜索幸存者'],
-      interactionType: InteractionType.ENTER_SUB_SCENE,
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 10,
-          affectedByCoefficient: true,
-        },
-      ],
-      behaviorParams: {
-        interactionType: InteractionType.ENTER_SUB_SCENE,
-        subSceneId: 'beach_飞机残骸',
-      },
-      displayPriority: 5,
-      isOneTime: false,
-    },
-    {
-      id: '椰树林',
-      name: '椰树林',
-      displayFlag: ['beach_椰树林'],
-      interactionType: InteractionType.ENTER_SUB_SCENE,
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 10,
-          affectedByCoefficient: true,
-        },
-      ],
-      behaviorParams: {
-        interactionType: InteractionType.ENTER_SUB_SCENE,
-        subSceneId: 'beach_椰树林',
-      },
-      displayPriority: 4,
-      isOneTime: false,
-    },
-    {
-      id: '礁石区',
-      name: '礁石区',
-      displayFlag: ['beach_礁石区'],
-      interactionType: InteractionType.ENTER_SUB_SCENE,
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 10,
-          affectedByCoefficient: true,
-        },
-      ],
-      behaviorParams: {
-        interactionType: InteractionType.ENTER_SUB_SCENE,
-        subSceneId: 'beach_礁石区',
-      },
-      displayPriority: 4,
-      isOneTime: false,
-    },
-    {
-      id: '机翼营地',
-      name: '机翼营地',
-      nameVariations: [
-        {
-          content: '返回营地',
-          displayFlag: ['event_机翼营地_铺地'],
-        },
-      ],
-      displayFlag: ['beach_飞机残骸_搜索幸存者'],
-      interactionType: InteractionType.ENTER_SUB_SCENE,
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 10,
-          affectedByCoefficient: true,
-        },
-      ],
-      behaviorParams: {
-        interactionType: InteractionType.ENTER_SUB_SCENE,
-        subSceneId: 'beach_机翼营地',
-      },
-      displayPriority: 1,
-      isOneTime: false,
     },
   ],
+  moves: [
+    {
+      id: 'beach_前往沙滩',
+      name: '前往',
+      description: '或许能找到一些物品',
+      descriptionTitle: '飞机残骸',
+      costTime: 10,
+      costEnergy: 10,
+      displayFlag: ['beach_飞机残骸_搜索幸存者'],
+      moveType: 'enterSubScene',
+      subSceneId: 'beach_飞机残骸',
+    },
+    {
+      id: 'beach_前往椰树林',
+      name: '前往',
+      description: '椰子与椰木',
+      descriptionTitle: '椰树林',
+      costTime: 10,
+      costEnergy: 10,
+      displayFlag: ['beach_椰树林'],
+      moveType: 'enterSubScene',
+      subSceneId: 'beach_椰树林',
+    },
+    {
+      id: 'beach_前往礁石区',
+      name: '前往',
+      description: '礁石与',
+      descriptionTitle: '礁石区',
+      costTime: 10,
+      costEnergy: 10,
+      displayFlag: ['beach_礁石区'],
+      moveType: 'enterSubScene',
+      subSceneId: 'beach_礁石区',
+    },
+    {
+      id: 'beach_返回机翼营地',
+      name: '返回',
+      description: '机翼营地',
+      descriptionTitle: '机翼营地',
+      costTime: 10,
+      costEnergy: 10,
+      displayFlag: ['beach_飞机残骸_搜索幸存者'],
+      moveType: 'enterSubScene',
+      subSceneId: 'beach_机翼营地',
+    },
+    {
+      id: 'beach_移动',
+      name: '移动',
+      moveType: 'move',
+    },
+  ],
+  explore: exploreButton,
+  interactions: [],
   isDungeon: false,
   subSceneIds: ['beach_飞机残骸', 'beach_机翼营地', 'beach_椰树林', 'beach_礁石区'],
 }
@@ -248,9 +228,48 @@ const beach_飞机残骸: SubScene = {
     },
   ],
   temperatureModifier: 0,
+  explore: {
+    id: 'explore',
+    name: '探索',
+    description: '探索环境，说不定能发现点儿新东西呢',
+    costTime: 30,
+    costEnergy: 10,
+    displayFlag: ['beach_抵达机翼营地'],
+  },
+  moves: [
+    {
+      id: 'beach_飞机残骸_返回沙滩',
+      name: '回到沙滩',
+      description: '坠机海滩',
+      descriptionTitle: '坠机海滩',
+      costTime: 10,
+      costEnergy: 10,
+      displayFlag: ['beach_飞机残骸_搜索幸存者'],
+      moveType: 'exitSubScene',
+    },
+  ],
+  collects: [
+    {
+      id: 'beach_飞机残骸_残骸',
+      name: '残骸',
+      description: '搜索残骸',
+      descriptionTitle: '搜索残骸',
+      displayFlag: ['beach_抵达机翼营地'],
+      costTime: 10,
+      costEnergy: 10,
+      resourceType: 'item',
+      paramId: 'beach_飞机残骸_残骸',
+      itemConfig: [
+        {
+          itemId: '金属残片',
+          quantity: 2,
+        },
+      ],
+    },
+  ],
   interactions: [
     {
-      id: '搜索座椅',
+      id: 'beach_飞机残骸_搜索座椅',
       name: '搜索座椅',
       description: '搜索座椅',
       interactionType: InteractionType.EVENT,
@@ -258,19 +277,13 @@ const beach_飞机残骸: SubScene = {
         interactionType: InteractionType.EVENT,
         eventId: 'event_飞机残骸_搜索座椅',
       },
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 5,
-          affectedByCoefficient: false,
-        },
-      ],
-      displayPriority: 10,
+      costTime: 10,
+      costEnergy: 10,
       isOneTime: true,
       usedFlag: 'beach_飞机残骸_搜索座椅',
     },
     {
-      id: '搜索行李架',
+      id: 'beach_飞机残骸_搜索行李架',
       name: '搜索行李架',
       description: '搜索行李架',
       interactionType: InteractionType.EVENT,
@@ -278,19 +291,13 @@ const beach_飞机残骸: SubScene = {
         interactionType: InteractionType.EVENT,
         eventId: 'event_飞机残骸_搜索行李架',
       },
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 5,
-          affectedByCoefficient: false,
-        },
-      ],
-      displayPriority: 9,
+      costTime: 10,
+      costEnergy: 10,
       isOneTime: true,
       usedFlag: 'beach_飞机残骸_搜索行李架',
     },
     {
-      id: '搜索夹缝',
+      id: 'beach_飞机残骸_搜索夹缝',
       name: '搜索夹缝',
       description: '搜索夹缝',
       interactionType: InteractionType.EVENT,
@@ -298,19 +305,13 @@ const beach_飞机残骸: SubScene = {
         interactionType: InteractionType.EVENT,
         eventId: 'event_飞机残骸_搜索夹缝',
       },
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 5,
-          affectedByCoefficient: false,
-        },
-      ],
-      displayPriority: 9,
+      costTime: 10,
+      costEnergy: 10,
       isOneTime: true,
       usedFlag: 'beach_飞机残骸_搜索夹缝',
     },
     {
-      id: '搜索头等舱',
+      id: 'beach_飞机残骸_搜索头等舱',
       name: '搜索头等舱',
       description: '搜索头等舱',
       interactionType: InteractionType.EVENT,
@@ -318,19 +319,13 @@ const beach_飞机残骸: SubScene = {
         interactionType: InteractionType.EVENT,
         eventId: 'event_飞机残骸_搜索头等舱',
       },
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 5,
-          affectedByCoefficient: false,
-        },
-      ],
-      displayPriority: 9,
+      costTime: 10,
+      costEnergy: 10,
       isOneTime: true,
       usedFlag: 'beach_飞机残骸_搜索头等舱',
     },
     {
-      id: '驾驶舱',
+      id: 'beach_飞机残骸_驾驶舱',
       name: '驾驶舱',
       description: '驾驶舱',
       interactionType: InteractionType.EVENT,
@@ -338,60 +333,26 @@ const beach_飞机残骸: SubScene = {
         interactionType: InteractionType.EVENT,
         eventId: 'event_飞机残骸_驾驶舱',
       },
+      costTime: 10,
+      costEnergy: 10,
       displayFlag: ['beach_抵达机翼营地'],
-      displayPriority: 9,
-      isOneTime: false,
-    },
-    {
-      id: '搜索残骸',
-      name: '搜索残骸',
-      description: '搜索残骸',
-      interactionType: InteractionType.EVENT,
-      behaviorParams: {
-        interactionType: InteractionType.EVENT,
-        eventId: 'event_飞机残骸_搜索残骸',
-      },
-      displayFlag: ['beach_抵达机翼营地'],
-      displayPriority: 10,
       isOneTime: false,
     },
 
     {
-      id: '搜索幸存者',
+      id: 'beach_飞机残骸_搜索幸存者',
       name: '搜索幸存者',
       interactionType: InteractionType.EXPLORE,
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 10,
-          affectedByCoefficient: true,
-        },
-      ],
+      costTime: 10,
+      costEnergy: 10,
       displayFlag: [
         'beach_飞机残骸_搜索座椅',
         'beach_飞机残骸_搜索行李架',
         'beach_飞机残骸_搜索头等舱',
         'beach_飞机残骸_搜索夹缝',
       ],
-      displayPriority: 10,
       isOneTime: true,
       usedFlag: 'beach_飞机残骸_搜索幸存者',
-    },
-    {
-      id: '返回沙滩',
-      name: '返回沙滩',
-      description: '返回沙滩',
-      interactionType: InteractionType.EXIT_SUB_SCENE,
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 5,
-          affectedByCoefficient: false,
-        },
-      ],
-      displayPriority: 1,
-      isOneTime: false,
-      displayFlag: ['beach_飞机残骸_搜索幸存者'],
     },
   ],
   isDungeon: false,
@@ -436,9 +397,20 @@ const beach_机翼营地: SubScene = {
     },
   ],
   temperatureModifier: 0,
+  moves: [
+    {
+      id: 'beach_机翼营地_前往沙滩',
+      name: '前往沙滩',
+      description: '前往沙滩',
+      descriptionTitle: '坠机海滩',
+      costTime: 10,
+      costEnergy: 10,
+      moveType: 'exitSubScene',
+    },
+  ],
   interactions: [
     {
-      id: '搭建营地',
+      id: 'beach_机翼营地_搭建营地',
       name: '搭建营地',
       description: '搭建营地',
       interactionType: InteractionType.EVENT,
@@ -446,24 +418,12 @@ const beach_机翼营地: SubScene = {
         interactionType: InteractionType.EVENT,
         eventId: 'event_机翼营地_搭建营地',
       },
-      displayPriority: 10,
       isOneTime: false,
       hideFlag: ['event_机翼营地_铺地'],
     },
+
     {
-      id: '休息',
-      name: '休息',
-      description: '休息',
-      displayFlag: ['event_机翼营地_铺地'],
-      interactionType: InteractionType.REST,
-      behaviorParams: {
-        interactionType: InteractionType.REST,
-      },
-      displayPriority: 2,
-      isOneTime: false,
-    },
-    {
-      id: '建造',
+      id: 'beach_机翼营地_建造',
       name: '建造',
       description: '建造',
       displayFlag: ['event_机翼营地_铺地'],
@@ -472,22 +432,6 @@ const beach_机翼营地: SubScene = {
         interactionType: InteractionType.FUNCTION,
         functionType: FunctionType.BUILD,
       },
-      displayPriority: 2,
-      isOneTime: false,
-    },
-    {
-      id: '前往沙滩',
-      name: '前往沙滩',
-      description: '前往沙滩',
-      interactionType: InteractionType.EXIT_SUB_SCENE,
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 5,
-          affectedByCoefficient: false,
-        },
-      ],
-      displayPriority: 1,
       isOneTime: false,
     },
   ],
@@ -507,45 +451,64 @@ const beach_椰树林: SubScene = {
     },
   ],
   temperatureModifier: 0,
-  interactions: [
+  explore: exploreButton,
+  moves: [
     {
-      id: '摘椰子',
-      name: '摘椰子',
-      description: '摘椰子',
-      interactionType: InteractionType.EVENT,
-      behaviorParams: {
-        interactionType: InteractionType.EVENT,
-        eventId: 'event_椰树林_摘椰子',
-      },
-      displayPriority: 10,
-      isOneTime: false,
-    },
-    {
-      id: '砍树',
-      name: '砍树',
-      description: '砍树',
-      interactionType: InteractionType.EVENT,
-      behaviorParams: {
-        interactionType: InteractionType.EVENT,
-        eventId: 'event_椰树林_砍树',
-      },
-      displayPriority: 10,
-      isOneTime: false,
-    },
-    {
-      id: '前往沙滩',
+      id: 'beach_椰树林_前往沙滩',
       name: '前往沙滩',
       description: '前往沙滩',
-      interactionType: InteractionType.EXIT_SUB_SCENE,
-      costs: [
+      descriptionTitle: '坠机海滩',
+      costTime: 10,
+      costEnergy: 10,
+      moveType: 'exitSubScene',
+    },
+  ],
+  collects: [
+    {
+      id: 'beach_椰树林_搜索椰子',
+      name: '椰子',
+      description: '搜索椰子',
+      descriptionTitle: '搜索椰子',
+      costTime: 10,
+      costEnergy: 10,
+      resourceType: 'item',
+      paramId: 'beach_椰子',
+      itemConfig: [
         {
-          costType: OptionCostType.STAMINA,
-          value: 5,
-          affectedByCoefficient: false,
+          itemId: '椰子',
+          quantity: 2,
         },
       ],
-      displayPriority: 1,
-      isOneTime: false,
+      text: '你奋力爬上椰子树。',
+    },
+    {
+      id: 'beach_椰树林_砍伐',
+      name: '砍伐',
+      description: '砍椰子树，有概率获得椰子',
+      descriptionTitle: '砍椰子树',
+      costTime: 10,
+      costEnergy: 10,
+      availableCondition: {
+        target: {
+          type: ConditionTargetType.ITEM,
+          id: '石斧',
+        },
+        operator: ComparisonOperator.GREATER_EQUAL,
+        value: 1,
+      },
+      unavailableTooltip: '你需要一个斧子才能砍伐椰子树。',
+      resourceType: 'item',
+      paramId: 'beach_椰子树',
+      itemConfig: [
+        {
+          itemId: '椰子',
+          quantity: 2,
+        },
+        {
+          itemId: '木头',
+          quantity: 3,
+        },
+      ],
     },
   ],
   isDungeon: false,
@@ -564,59 +527,50 @@ const beach_礁石区: SubScene = {
     },
   ],
   temperatureModifier: -2, // 礁石区比较阴凉
-  interactions: [
+  explore: exploreButton,
+  moves: [
     {
-      id: '采集贻贝',
-      name: '采集贻贝',
-      description: '在礁石上寻找可以食用的贻贝',
-      interactionType: InteractionType.EVENT,
-      behaviorParams: {
-        interactionType: InteractionType.EVENT,
-        eventId: 'event_礁石区_采集',
-      },
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 15,
-          affectedByCoefficient: true,
-        },
-      ],
-      displayPriority: 10,
-      isOneTime: false,
-    },
-    {
-      id: '探索潮汐池',
-      name: '探索潮汐池',
-      description: '看看水坑里有什么',
-      interactionType: InteractionType.EVENT,
-      behaviorParams: {
-        interactionType: InteractionType.EVENT,
-        eventId: 'event_礁石区_潮汐池',
-      },
-      costs: [
-        {
-          costType: OptionCostType.STAMINA,
-          value: 10,
-          affectedByCoefficient: true,
-        },
-      ],
-      displayPriority: 9,
-      isOneTime: false,
-    },
-    {
-      id: '前往沙滩',
+      id: 'beach_礁石区_前往沙滩',
       name: '前往沙滩',
-      description: '返回坠机海滩',
-      interactionType: InteractionType.EXIT_SUB_SCENE,
-      costs: [
+      description: '前往沙滩',
+      descriptionTitle: '坠机海滩',
+      costTime: 10,
+      costEnergy: 10,
+      moveType: 'exitSubScene',
+    },
+  ],
+  collects: [
+    {
+      id: 'beach_礁石区_采集',
+      name: '采集',
+      description: '在礁石上寻找可以食用的贻贝',
+      descriptionTitle: '贻贝',
+      costTime: 10,
+      costEnergy: 10,
+      resourceType: 'item',
+      paramId: 'beach_贻贝',
+      itemConfig: [
         {
-          costType: OptionCostType.STAMINA,
-          value: 5,
-          affectedByCoefficient: false,
+          itemId: '贻贝',
+          quantity: 2,
         },
       ],
-      displayPriority: 1,
-      isOneTime: false,
+    },
+    {
+      id: 'beach_礁石区_探索',
+      name: '探索',
+      description: '看看水坑里有什么',
+      descriptionTitle: '潮汐池',
+      costTime: 10,
+      costEnergy: 10,
+      resourceType: 'item',
+      paramId: 'beach_潮汐池',
+      itemConfig: [
+        {
+          itemId: '贝壳',
+          quantity: 5,
+        },
+      ],
     },
   ],
   isDungeon: false,

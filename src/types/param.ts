@@ -47,10 +47,14 @@ export interface TimeVaryingRule {
 
   /**
    * accumulate 模式使用：
-   * 每经过一分钟值的变化量（正数增加，负数减少）
+   * 每经过一天的变化量（正数增加，负数减少）
    * 值会被钳制在 [min, max] 范围内
    */
-  deltaPerMinute?: number
+  deltaPerDay?: number
+  // 恢复系数（accumulate 模式使用）与现有值正比，用于计算每分钟变化量
+  recoveryPerDay?: number
+  // 关联的参数ID，用于计算恢复系数，没有则是自己
+  recoveryBaseId?: string
 
   /** 最小值（accumulate 模式钳制下限） */
   min?: number

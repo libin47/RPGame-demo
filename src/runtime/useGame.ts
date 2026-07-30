@@ -9,11 +9,13 @@ import type {
   SceneInteraction,
   InteractionType,
   InteractionBehaviorParams,
+  ResourceInteraction,
+  MoveInteraction,
 } from '@/types/scene'
 import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
 import type { EffectResult } from '@/types/effect'
 import type { EndingConfig } from '@/types/ending'
-import { getRegistry, getEffectResolver, advanceTime, evaluateCondition } from '@/engine'
+import { getRegistry, getEffectResolver, advanceTime, evaluateCondition, addItem } from '@/engine'
 import {
   selectSceneDescription,
   markDescriptionSeen,
@@ -525,6 +527,7 @@ export function useGame(initialPlayer: PlayerState) {
   function handleInteraction(interactionId: string): void {
     // 从当前场景或子场景中查找交互
     const target = state.currentSubScene || state.currentScene
+    if (!target.interactions) return
     const interaction = target.interactions.find((i) => i.id === interactionId)
     if (!interaction) return
 
@@ -672,6 +675,134 @@ export function useGame(initialPlayer: PlayerState) {
       } else if (currentVal === undefined) {
         state.player.flagsNum[interaction.usedCountFlag] = 1
       }
+    }
+  }
+
+  // ============================================================
+  // 新 ScenePanel 事件处理
+  // ============================================================
+
+  /**
+   * 探索：推进时间、刷新描述
+   */
+  function handleExplore(): void {
+    state.sceneTextAfter = ''
+    advanceGameTime(10)
+    refreshSceneDescription()
+    state.logMessage = '你在周围仔细探索了一番'
+  }
+
+  /**
+   * 资源采集/战斗
+   */
+  function handleCollect(collect: ResourceInteraction): void {
+    // 检查可用条件
+    if (!evaluateCondition(collect.availableCondition, state.player)) {
+      state.sceneTextAfter += collect.unavailableTooltip + '\n' || '该操作当前不可用'
+      return
+    }
+    // ── 前置校验 ──
+    // 1. 采集点数量是否为0
+    if (
+      collect.paramId &&
+      state.player.params[collect.paramId] != null &&
+      state.player.params[collect.paramId]! <= 0
+    ) {
+      state.sceneTextAfter += '\n' + '该资源点已经没有可采集的资源了'
+      return
+    }
+    // 2. 体力是否充足
+    const costEnergy = collect.costEnergy ?? 0
+    if (costEnergy > 0 && state.player.survival.stamina < costEnergy) {
+      state.sceneTextAfter += '\n' + '体力不足，无法进行采集'
+      return
+    }
+
+    // 扣除时间和体力
+    advanceGameTime(collect.costTime ?? 10)
+
+    // 显示资源文本（使用 sceneTextAfter 追加到主文字区域下方）
+    if (collect.text) {
+      if (state.sceneTextAfter) {
+        state.sceneTextAfter += '\n'
+      }
+      state.sceneTextAfter = state.sceneTextAfter + collect.text
+    }
+
+    // 如果是敌人类型 → 进入战斗
+    if (collect.resourceType === 'enemy' && collect.enemyConfig && collect.enemyConfig.length > 0) {
+      const enemyIds = collect.enemyConfig.map((e) => e.enemyId)
+      const battle = createBattle(state.player, enemyIds)
+      startBattle(battle)
+      state.currentBattle = battle
+      state.mode = 'battle'
+    } else if (collect.resourceType === 'item' && collect.itemConfig) {
+      // 物品类型 → 直接获得
+      for (const itemCfg of collect.itemConfig) {
+        const prob = itemCfg.probability ?? 1
+        if (Math.random() < prob) {
+          const added = addItem(state.player, itemCfg.itemId, itemCfg.quantity)
+          if (added > 0) {
+            const gainText = `你获得了【${registry.getItemName(itemCfg.itemId)}】×${added}`
+            state.logMessage = `采集到 ${registry.getItemName(itemCfg.itemId)} ×${added}`
+            state.sceneTextAfter = state.sceneTextAfter
+              ? state.sceneTextAfter + '\n' + gainText
+              : gainText
+          }
+        }
+      }
+    }
+
+    // 扣除 param（如果有）
+    if (collect.paramId && state.player.params[collect.paramId] !== undefined) {
+      const current = state.player.params[collect.paramId]
+      if (current !== undefined && current > 0) {
+        state.player.params[collect.paramId] = Math.max(0, current - 1)
+      }
+    }
+  }
+
+  /**
+   * 场景移动（enterSubScene / exitSubScene / move）
+   */
+  function handleSceneMove(moveAction: MoveInteraction): void {
+    const moveType = moveAction.moveType ?? 'move'
+    state.sceneTextAfter = ''
+
+    // 前置校验：体力是否充足
+    const costEnergy = moveAction.costEnergy ?? 0
+    if (costEnergy > 0 && state.player.survival.stamina < costEnergy) {
+      state.sceneTextAfter = '体力不足，无法行动'
+      return
+    }
+
+    if (moveType === 'enterSubScene' && moveAction.subSceneId) {
+      advanceGameTime(moveAction.costTime ?? 5)
+      const subScene = registry.getSubScene(moveAction.subSceneId)
+      if (subScene) {
+        state.currentSubScene = subScene
+        state.player.currentLocation.subSceneId = moveAction.subSceneId
+        const selectedDesc = selectSceneDescription(subScene, state.player)
+        state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
+        state.currentDescriptionConfig = selectedDesc || null
+        if (selectedDesc) {
+          markDescriptionSeen(selectedDesc, state.player)
+        }
+      }
+    } else if (moveType === 'exitSubScene') {
+      advanceGameTime(moveAction.costTime ?? 5)
+      state.currentSubScene = null
+      state.player.currentLocation.subSceneId = null
+      const selectedDesc = selectSceneDescription(state.currentScene, state.player)
+      state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
+      state.currentDescriptionConfig = selectedDesc || null
+      if (selectedDesc) {
+        markDescriptionSeen(selectedDesc, state.player)
+      }
+    } else {
+      // 普通 move 类型（地牢方向移动）
+      advanceGameTime(moveAction.costTime ?? 10)
+      state.logMessage = '你向目标移动'
     }
   }
 
@@ -824,41 +955,6 @@ export function useGame(initialPlayer: PlayerState) {
    */
   function setLogMessage(message: string): void {
     state.logMessage = message
-  }
-
-  /**
-   * 获取当前有效的交互按钮列表
-   * 子场景优先，没有则使用母场景的交互按钮
-   */
-  function getCurrentInteractions() {
-    const target = state.currentSubScene || state.currentScene
-    return target.interactions.filter((i) => {
-      // isOneTime 且已使用 → 隐藏
-      if (i.isOneTime && i.usedFlag && state.player.flags[i.usedFlag]) {
-        return false
-      }
-      // hideFlag 检查
-      if (
-        i.hideFlag &&
-        i.hideFlag.some(
-          (flag) => state.player.flags[flag] === true,
-        )
-      ) {
-        return false
-      }
-
-      // displayFlag 检查
-      if (
-        i.displayFlag &&
-        !i.displayFlag.every(
-          (flag) => state.player.flags[flag] === true,
-        )
-      ) {
-        return false
-      }
-
-      return true
-    })
   }
 
   /**
@@ -1176,7 +1272,9 @@ export function useGame(initialPlayer: PlayerState) {
     enterEvent,
     selectEventOption,
     handleInteraction,
-    getCurrentInteractions,
+    handleExplore,
+    handleCollect,
+    handleSceneMove,
     getCampsiteBuildings,
     enterBuilding,
     exitBuilding,

@@ -13,6 +13,7 @@ import type {
   PlayerStatistics,
 } from '@/types/player'
 import type { CharacterClass } from '@/types/character'
+import { paramRegistry } from '@/config/params'
 import { AttributeType } from '@/types/effect'
 import { Season, SeasonPhase } from '@/types/seasonWeather'
 
@@ -334,7 +335,15 @@ export function createNewPlayerState(
     },
     currentLocation,
     progress,
-    flags,
+    flags: {},
+    flagsNum: {},
+    params: (() => {
+      const p: Record<string, number> = {}
+      for (const [id, param] of Object.entries(paramRegistry.params)) {
+        p[id] = param.defaultValue
+      }
+      return p
+    })(),
     gold: 0,
     statistics,
   }
