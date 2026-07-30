@@ -15,6 +15,7 @@ import type { GameMode } from './useGame'
 import type { ResourceInteraction, MoveInteraction } from '@/types/scene'
 import type { EndingConfig } from '@/types/ending'
 import type { CraftResult } from '@/engine'
+import type { ButtonOption } from '@/types/option'
 
 /** 游戏运行时实例的接口定义 */
 export interface GameInstance {
@@ -46,7 +47,9 @@ export interface GameInstance {
   /** 处理场景交互 */
   handleInteraction: (interactionId: string) => void
   /** 探索周围 */
-  handleExplore: () => void
+  handleExplore: (explore: ButtonOption) => void
+  /** 建造 */
+  handleBuild: () => void
   /** 资源采集/战斗 */
   handleCollect: (collect: ResourceInteraction) => void
   /** 场景移动 */
@@ -140,6 +143,7 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     selectEventOption: game.selectEventOption,
     handleInteraction: game.handleInteraction,
     handleExplore: game.handleExplore,
+    handleBuild: game.handleBuild,
     handleCollect: game.handleCollect,
     handleSceneMove: game.handleSceneMove,
     getCampsiteBuildings: game.getCampsiteBuildings,
@@ -190,6 +194,7 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     selectEventOption: game.selectEventOption,
     handleInteraction: game.handleInteraction,
     handleExplore: game.handleExplore,
+    handleBuild: game.handleBuild,
     handleCollect: game.handleCollect,
     handleSceneMove: game.handleSceneMove,
     getCampsiteBuildings: game.getCampsiteBuildings,

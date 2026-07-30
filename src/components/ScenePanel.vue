@@ -133,9 +133,13 @@
     <!-- ═══════ 四个分类按钮（固定位置） ═══════ -->
     <div class="category-bar">
       <div class="cat-cell">
-        <button v-if="sceneExplore" class="cat-btn" @click="onExplore">
+        <button v-if="sceneExplore" class="cat-btn" @click="onExplore(sceneExplore)">
           <span class="cat-icon">🔍</span>
           <span class="cat-label">探索</span>
+        </button>
+        <button v-if="sceneBuild" class="cat-btn" @click="onBuild">
+          <span class="cat-icon">🛠️</span>
+          <span class="cat-label">建造</span>
         </button>
       </div>
       <div class="cat-cell">
@@ -200,6 +204,7 @@ import type {
   ResourceInteraction,
   MoveInteraction,
   CharacterInteraction,
+  SubScene,
 } from '@/types/scene'
 import type { ButtonOption } from '@/types/option'
 import { getResolvedDescriptionText } from '@/engine'
@@ -242,6 +247,8 @@ const props = defineProps<{
   playerState: PlayerState
   /** 当前展开的分类（由 GameView 管理，场景切换时自动重置） */
   expandedCategory: string | null
+  // 描述中事件是否点击
+  isEventClicked: boolean
 }>()
 
 const narrativeRef = ref<HTMLElement | null>(null)
@@ -328,6 +335,13 @@ const sceneExplore = computed<ButtonOption | null>(() => {
   return null
 })
 
+/** 场景建造按钮配置 */
+const sceneBuild = computed<ButtonOption | null>(() => {
+  const target = props.scene as SubScene & { build?: ButtonOption }
+  if (target.isCampsite && target.build && isInteractionVisible(target.build)) return target.build
+  return null
+})
+
 /** 可见的资源列表 */
 const visibleCollects = computed<ResourceInteraction[]>(() => {
   const target = props.scene as BaseScene & { collects?: ResourceInteraction[] }
@@ -370,7 +384,9 @@ const hasMoves = computed(() => visibleMoves.value.length > 0)
 const emit = defineEmits<{
   (e: 'enterEvent', eventId: string): void
   /** 点击探索按钮 */
-  (e: 'explore'): void
+  (e: 'explore', explore: ButtonOption): void
+  /** 点击建造按钮 */
+  (e: 'build'): void
   /** 执行资源采集/战斗 */
   (e: 'collect', collect: ResourceInteraction): void
   /** 点击场景交互按钮 */
@@ -386,7 +402,7 @@ const emit = defineEmits<{
 }>()
 
 // ============================================================
-// 文本解析
+// 文本解析isEventClicked
 // ============================================================
 
 const parsedSegments = computed<TextSegment[]>(() => {
@@ -420,13 +436,23 @@ const parsedSegments = computed<TextSegment[]>(() => {
 
     const entry = entries.find((e) => e.key === key)
     if (entry) {
-      segments.push({
-        type: 'entry',
-        content: entry.displayText,
-        segmentKey: `entry-${entry.key}`,
-        eventId: entry.eventId,
-        displayText: entry.displayText,
-      })
+      if (props.isEventClicked) {
+        segments.push({
+          type: 'text',
+          content: entry.displayText,
+          segmentKey: `entry-${entry.key}`,
+          eventId: entry.eventId,
+          displayText: entry.displayText,
+        })
+      } else {
+        segments.push({
+          type: 'entry',
+          content: entry.displayText,
+          segmentKey: `entry-${entry.key}`,
+          eventId: entry.eventId,
+          displayText: entry.displayText,
+        })
+      }
     } else {
       segments.push({
         type: 'text',
@@ -455,9 +481,13 @@ function onEntryClick(eventId: string | undefined): void {
   emit('enterEvent', eventId)
 }
 
-function onExplore(): void {
+function onExplore(explore: ButtonOption): void {
   emit('update:expandedCategory', null)
-  emit('explore')
+  emit('explore', explore)
+}
+
+function onBuild(): void {
+  emit('build')
 }
 
 function onCollect(collect: ResourceInteraction): void {
@@ -870,9 +900,11 @@ function interactionBtnClass(inter: SceneInteraction): string {
 .rc-sufficient {
   color: #4caf50;
 }
+
 .rc-low {
   color: #ffc107;
 }
+
 .rc-critical {
   color: #f44336;
 }

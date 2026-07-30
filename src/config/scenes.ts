@@ -20,6 +20,14 @@ const exploreButton: ButtonOption = {
   costTime: 30,
   costEnergy: 10,
 }
+
+const buildButton: ButtonOption = {
+  id: 'build',
+  name: '建造',
+  description: '建造建筑',
+  costTime: 0,
+  costEnergy: 0,
+}
 // ============================================================
 // 海滩
 // ============================================================
@@ -421,20 +429,8 @@ const beach_机翼营地: SubScene = {
       isOneTime: false,
       hideFlag: ['event_机翼营地_铺地'],
     },
-
-    {
-      id: 'beach_机翼营地_建造',
-      name: '建造',
-      description: '建造',
-      displayFlag: ['event_机翼营地_铺地'],
-      interactionType: InteractionType.FUNCTION,
-      behaviorParams: {
-        interactionType: InteractionType.FUNCTION,
-        functionType: FunctionType.BUILD,
-      },
-      isOneTime: false,
-    },
   ],
+  build: buildButton,
   isDungeon: false,
 }
 const beach_椰树林: SubScene = {

@@ -97,6 +97,8 @@ export interface SubScene extends BaseScene {
   buildingList?: string[]
   // 营地允许的初始化建筑
   buildingInit?: string[]
+  // 建造按钮
+  build?: ButtonOption
 }
 
 // ============================================================

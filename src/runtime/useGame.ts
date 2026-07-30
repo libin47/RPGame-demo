@@ -40,6 +40,7 @@ import {
   executeCook as engineExecuteCook,
 } from '@/engine'
 import type { CraftResult } from '@/engine'
+import type { ButtonOption } from '@/types/option'
 
 /**
  * 游戏界面模式
@@ -650,8 +651,7 @@ export function useGame(initialPlayer: PlayerState) {
       case 'function': {
         if (params?.interactionType === 'function') {
           if (params.functionType === 'build') {
-            // 进入建造模式
-            state.mode = 'build'
+            handleBuild()
           } else {
             state.logMessage = `功能 "${params.functionType}" 尚未实现`
           }
@@ -663,19 +663,7 @@ export function useGame(initialPlayer: PlayerState) {
         state.logMessage = '未知交互类型'
     }
 
-    // usedFlag点击后标记为已使用
-    if (interaction.usedFlag) {
-      state.player.flags[interaction.usedFlag] = true
-    }
-    // usedCountFlag点击后标记+1
-    if (interaction.usedCountFlag) {
-      const currentVal = state.player.flags[interaction.usedCountFlag]
-      if (typeof currentVal === 'number') {
-        state.player.flagsNum[interaction.usedCountFlag] = (currentVal + 1) % 1000000000
-      } else if (currentVal === undefined) {
-        state.player.flagsNum[interaction.usedCountFlag] = 1
-      }
-    }
+    handleFlag(interaction)
   }
 
   // ============================================================
@@ -685,11 +673,21 @@ export function useGame(initialPlayer: PlayerState) {
   /**
    * 探索：推进时间、刷新描述
    */
-  function handleExplore(): void {
+  function handleExplore(explore: ButtonOption): void {
     state.sceneTextAfter = ''
     advanceGameTime(10)
     refreshSceneDescription()
     state.logMessage = '你在周围仔细探索了一番'
+    handleFlag(explore)
+  }
+  /**
+   * 建造：推进时间、刷新描述
+   */
+  function handleBuild(): void {
+    state.sceneTextAfter = ''
+    refreshSceneDescription()
+    state.logMessage = '进入建造模式'
+    state.mode = 'build'
   }
 
   /**
@@ -760,6 +758,7 @@ export function useGame(initialPlayer: PlayerState) {
         state.player.params[collect.paramId] = Math.max(0, current - 1)
       }
     }
+    handleFlag(collect)
   }
 
   /**
@@ -804,6 +803,7 @@ export function useGame(initialPlayer: PlayerState) {
       advanceGameTime(moveAction.costTime ?? 10)
       state.logMessage = '你向目标移动'
     }
+    handleFlag(moveAction)
   }
 
   /**
@@ -1150,6 +1150,20 @@ export function useGame(initialPlayer: PlayerState) {
       }
     }
   }
+  // 处理标志位
+  function handleFlag(option: ButtonOption): void {
+    if (option.usedFlag) {
+      state.player.flags[option.usedFlag] = true
+    }
+    if (option.usedCountFlag) {
+      const currentVal = state.player.flagsNum[option.usedCountFlag]
+      if (typeof currentVal === 'number') {
+        state.player.flagsNum[option.usedCountFlag] = (currentVal + 1) % 1000000000
+      } else if (currentVal === undefined) {
+        state.player.flagsNum[option.usedCountFlag] = 1
+      }
+    }
+  }
 
   /**
    * 触发结局
@@ -1273,6 +1287,7 @@ export function useGame(initialPlayer: PlayerState) {
     selectEventOption,
     handleInteraction,
     handleExplore,
+    handleBuild,
     handleCollect,
     handleSceneMove,
     getCampsiteBuildings,

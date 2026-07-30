@@ -377,7 +377,7 @@ const slotDefs: SlotDef[] = [
 ]
 
 function getEquippedId(slotKey: string): string | null {
-  const equipment = props.playerState.equipment as Record<string, string | null>
+  const equipment = props.playerState.equipment as unknown as Record<string, string | null>
   return equipment[slotKey] ?? null
 }
 
