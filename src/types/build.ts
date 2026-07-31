@@ -25,6 +25,8 @@ export interface Build {
   subBuild: SubBuild[]
   // 默认子建筑ID
   defaultBuild: string
+  // 默认是否需要锁起
+  defaultLock?: boolean
   // 默认建造材料
   defaultItems: RepairMaterial[]
   // 默认建造花费

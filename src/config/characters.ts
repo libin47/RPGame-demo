@@ -1,5 +1,20 @@
 // config/characters.ts
 import type { CharacterClass, CharacterRegistry } from '../types/character'
+import { cookRecipeRegistry } from './cookRecipes'
+import { buildRegistry } from './builds'
+import { craftRecipeRegistry } from './craftRecipes'
+
+// cookRecipeRegistry.recipes获取所有id（如果defaultLock为false或不存在）
+
+const cookRecipeRegistryIds: string[] = Object.keys(cookRecipeRegistry.recipes).filter(
+  (id) => cookRecipeRegistry.recipes[id]!.defaultLock !== true,
+)
+const buildRegistryIds: string[] = Object.keys(buildRegistry.builds).filter(
+  (id) => buildRegistry.builds[id]!.defaultLock !== true,
+)
+const craftRecipeRegistryIds: string[] = Object.keys(craftRecipeRegistry.recipes).filter(
+  (id) => craftRecipeRegistry.recipes[id]!.defaultLock !== true,
+)
 
 const survivor: CharacterClass = {
   id: 'survivor',
@@ -28,9 +43,9 @@ const survivor: CharacterClass = {
   initialPassiveSkillIds: [],
   initialSurvivalSkillLevels: [{ skillId: 'exploration', level: 1 }],
   initialWeaponProficiency: [],
-  initialCraftRecipeIds: ['craft_bandage'],
-  initialCookRecipeIds: ['cook_crab_meat'],
-  initialBuildRecipeIds: ['木墙'],
+  initialCraftRecipeIds: craftRecipeRegistryIds,
+  initialCookRecipeIds: cookRecipeRegistryIds,
+  initialBuildRecipeIds: buildRegistryIds,
   classBonuses: [
     {
       id: 'survivor_adaptability',
@@ -39,10 +54,7 @@ const survivor: CharacterClass = {
       effects: [],
     },
   ],
-  initialFlags: {
-    current_quest_stage: 'woke_up_on_beach',
-    first_time_on_beach: true,
-  },
+  initialFlags: {},
 }
 
 const doctor: CharacterClass = {
@@ -75,9 +87,9 @@ const doctor: CharacterClass = {
   initialPassiveSkillIds: ['iron_stomach'],
   initialSurvivalSkillLevels: [{ skillId: 'exploration', level: 1 }],
   initialWeaponProficiency: [],
-  initialCraftRecipeIds: ['craft_bandage'],
-  initialCookRecipeIds: ['cook_crab_meat'],
-  initialBuildRecipeIds: ['营火', '木墙'],
+  initialCraftRecipeIds: craftRecipeRegistryIds,
+  initialCookRecipeIds: cookRecipeRegistryIds,
+  initialBuildRecipeIds: buildRegistryIds,
   classBonuses: [
     {
       id: 'doctor_medical_training',
@@ -92,10 +104,7 @@ const doctor: CharacterClass = {
       effects: [],
     },
   ],
-  initialFlags: {
-    current_quest_stage: 'woke_up_on_beach',
-    first_time_on_beach: true,
-  },
+  initialFlags: {},
 }
 
 const hunter: CharacterClass = {
@@ -133,9 +142,9 @@ const hunter: CharacterClass = {
   ],
   initialWeaponProficiency: [{ weaponTypeId: 'bow', level: 1 }],
   initialBattleSkillIds: ['quick_shot'],
-  initialCraftRecipeIds: ['craft_bandage'],
-  initialCookRecipeIds: ['cook_crab_meat'],
-  initialBuildRecipeIds: ['营火'],
+  initialCraftRecipeIds: craftRecipeRegistryIds,
+  initialCookRecipeIds: cookRecipeRegistryIds,
+  initialBuildRecipeIds: buildRegistryIds,
   classBonuses: [
     {
       id: 'hunter_tracking',
@@ -150,10 +159,7 @@ const hunter: CharacterClass = {
       effects: [],
     },
   ],
-  initialFlags: {
-    current_quest_stage: 'woke_up_on_beach',
-    first_time_on_beach: true,
-  },
+  initialFlags: {},
 }
 
 export const characterRegistry: CharacterRegistry = {

@@ -136,6 +136,8 @@ export interface BaseRecipe {
 
   /** 配方类型 */
   recipeType: RecipeType
+  // 默认解锁
+  defaultLock?: boolean
 
   /** 配方图标资源ID（通常使用产物的图标） */
   iconId?: string

@@ -291,7 +291,6 @@ export function createNewPlayerState(
   // 初始装备
   const equipment = {
     weapon: null as string | null,
-    offHand: null as string | null,
     head: null as string | null,
     body: null as string | null,
     hands: null as string | null,
@@ -299,7 +298,6 @@ export function createNewPlayerState(
     back: null as string | null,
     neck: null as string | null,
     finger: null as string | null,
-    tool: null as string | null,
     light: null as string | null,
   }
 
@@ -317,6 +315,7 @@ export function createNewPlayerState(
       })
     }
   }
+  console.log(classConfig.initialBuildRecipeIds)
 
   return {
     id: `player_${Date.now()}`,

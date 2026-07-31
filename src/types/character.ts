@@ -2,7 +2,6 @@
 
 import type { EffectResult } from './effect'
 import type { AttributeType } from './effect'
-import type { FlagValue } from './flag'
 
 // ============================================================
 // 职业定义
@@ -99,7 +98,7 @@ export interface CharacterClass {
   // ============================================================
 
   /** 初始标志位（开局时设置的标志位，用于引导不同职业的初始剧情） */
-  initialFlags: Record<string, FlagValue>
+  initialFlags: Record<string, boolean>
 }
 
 // ============================================================
