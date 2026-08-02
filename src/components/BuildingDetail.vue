@@ -28,22 +28,6 @@
         </div>
       </div>
 
-      <!-- 固定操作按钮 -->
-      <div class="action-bar">
-        <button class="action-btn btn-back" @click="onExit">退出</button>
-        <button
-          v-if="subBuild.isDeconstructable"
-          class="action-btn btn-danger"
-          @click="onDismantle"
-        >
-          拆除
-        </button>
-        <button v-if="hasUpgrades" class="action-btn btn-upgrade" @click="subView = 'upgrade'">
-          升级
-        </button>
-        <button v-if="needsRepair" class="action-btn btn-repair" @click="onRepair">维修</button>
-      </div>
-
       <!-- 自定义交互按钮 -->
       <div v-if="customActions.length > 0" class="interactions">
         <button
@@ -53,8 +37,29 @@
           :class="interactionClass(act.interactionType)"
           @click="onCustomAction(act)"
         >
-          {{ act.name }}
+          <span class="btn-icon">{{ interactionIcon(act.interactionType) }}</span>
+          <span class="btn-label">{{ act.name }}</span>
         </button>
+      </div>
+
+      <!-- 固定操作按钮 -->
+      <div class="action-bar">
+        <button class="action-btn btn-back" @click="onExit">
+          ← 返回场景
+        </button>
+        <div class="action-bar-right">
+          <button
+            v-if="subBuild.isDeconstructable"
+            class="action-btn btn-danger"
+            @click="onDismantle"
+          >
+            拆除
+          </button>
+          <button v-if="hasUpgrades" class="action-btn btn-upgrade" @click="subView = 'upgrade'">
+            升级
+          </button>
+          <button v-if="needsRepair" class="action-btn btn-repair" @click="onRepair">维修</button>
+        </div>
       </div>
     </template>
 
@@ -168,6 +173,8 @@ const emit = defineEmits<{
   (e: 'repair', buildId: string): void
   (e: 'log', message: string): void
   (e: 'enterRecipe', payload: { mode: 'craft' | 'cook'; deviceLevel: number }): void
+  (e: 'enterRest', act: buildOption): void
+  (e: 'enterStore'): void
 }>()
 
 const registry = getRegistry()
@@ -350,6 +357,17 @@ const customActions = computed<
   })[]
 })
 
+function interactionIcon(type: string): string {
+  if (type === 'craft') return '🔨'
+  if (type === 'cook') return '🍳'
+  if (type === 'store') return '📦'
+  if (type === 'collect') return '🌿'
+  if (type === 'repair') return '🔧'
+  if (type === 'rest') return '🛏'
+  if (type === 'event') return '📜'
+  return '⚡'
+}
+
 function interactionClass(type: string): string {
   if (type === 'craft' || type === 'cook') return 'btn-craft'
   if (type === 'store') return 'btn-store'
@@ -369,8 +387,7 @@ function onCustomAction(act: buildOption): void {
       executeCook(act)
       break
     case 'store':
-      subView.value = 'upgrade'
-      emit('log', '储藏功能开发中')
+      emit('enterStore')
       break
     case 'collect':
       emit('log', '采集功能开发中')
@@ -379,7 +396,8 @@ function onCustomAction(act: buildOption): void {
       onRepair()
       break
     case 'rest':
-      executeRest(act)
+      // 打开休息子界面（由 GameView 渲染 RestPanel）
+      emit('enterRest', act)
       break
     case 'event':
       if (act.eventId) {
@@ -445,16 +463,6 @@ function executeCook(act: buildOption): void {
   emit('enterRecipe', { mode: 'cook', deviceLevel: act.buildLevel ?? 0 })
 }
 
-function executeRest(act: buildOption): void {
-  const restTime = act.restTime ?? 60
-  // 恢复体力
-  props.playerState.survival.stamina = Math.min(
-    props.playerState.survival.maxStamina,
-    props.playerState.survival.stamina + Math.round(restTime / 10),
-  )
-  emit('log', `在 ${props.subBuild.buildName} 休息了 ${restTime} 分钟，体力恢复`)
-}
-
 // ============================================================
 // 辅助
 // ============================================================
@@ -495,13 +503,16 @@ function getStaminaCoeff(): number {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
+  position: relative;
 }
 
-/* ---- 文本区（和 ScenePanel 统一） ---- */
+/* ============================================================
+   文本区
+   ============================================================ */
 .detail-text {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 1.2rem 1.5rem;
+  padding: 1.2rem 1.4rem 1rem;
   line-height: 1.75;
   font-size: var(--font-lg);
   position: relative;
@@ -527,68 +538,236 @@ function getStaminaCoeff(): number {
   z-index: 2;
 }
 
-/* 耐久度条 */
+/* ---- 耐久度条 ---- */
 .durability-bar {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.6rem;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
   font-size: var(--font-xs);
 }
 .durability-label {
   color: var(--text-muted);
   min-width: 3em;
+  letter-spacing: 0.05em;
 }
 .durability-track {
   flex: 1;
   height: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 4px;
   overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .durability-fill {
   height: 100%;
   border-radius: 4px;
-  transition: width 0.3s ease;
+  transition: width 0.4s ease;
+  position: relative;
+}
+.durability-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
 }
 .durability-fill.durable {
-  background: #4ecdc4;
+  background: linear-gradient(90deg, #2ecc71, #4ecdc4);
 }
 .durability-fill.worn {
-  background: #ffd54f;
+  background: linear-gradient(90deg, #f39c12, #ffd54f);
 }
 .durability-fill.broken {
-  background: #ff6b6b;
+  background: linear-gradient(90deg, #e74c3c, #ff6b6b);
 }
 .durability-num {
   color: var(--text-muted);
-  min-width: 4em;
+  min-width: 4.2em;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .building-title {
-  margin: 0 0 0.4rem 0;
+  margin: 0 0 0.5rem 0;
   color: var(--accent);
   font-size: var(--font-lg);
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 20px rgba(78, 205, 196, 0.15);
 }
 .building-desc {
   margin: 0;
   color: var(--text-secondary);
   white-space: pre-wrap;
+  line-height: 1.8;
 }
 
-/* ---- 固定操作按钮条 ---- */
-.action-bar {
+/* ============================================================
+   自定义交互按钮
+   ============================================================ */
+.interactions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  padding: 0.5rem 1.2rem;
+  align-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.7rem 1.2rem;
   border-top: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.interaction-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 110px;
+  min-width: 110px;
+  height: 42px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  user-select: none;
+  overflow: hidden;
+  position: relative;
+}
+.interaction-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.interaction-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 255, 255, 0.03);
+}
+.interaction-btn:hover::before {
+  opacity: 1;
+}
+.interaction-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.btn-icon {
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.btn-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 各类型交互按钮配色 */
+.btn-craft {
+  border-color: rgba(78, 205, 196, 0.35);
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.06), rgba(78, 205, 196, 0.02));
+  color: var(--accent);
+}
+.btn-craft:hover {
+  border-color: rgba(78, 205, 196, 0.6);
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(78, 205, 196, 0.05));
+  box-shadow: 0 3px 12px rgba(78, 205, 196, 0.15);
+}
+
+.btn-store {
+  border-color: rgba(100, 181, 246, 0.35);
+  background: linear-gradient(135deg, rgba(100, 181, 246, 0.06), rgba(100, 181, 246, 0.02));
+  color: #64b5f6;
+}
+.btn-store:hover {
+  border-color: rgba(100, 181, 246, 0.6);
+  background: linear-gradient(135deg, rgba(100, 181, 246, 0.15), rgba(100, 181, 246, 0.05));
+  box-shadow: 0 3px 12px rgba(100, 181, 246, 0.15);
+}
+
+.btn-collect {
+  border-color: rgba(255, 213, 79, 0.35);
+  background: linear-gradient(135deg, rgba(255, 213, 79, 0.06), rgba(255, 213, 79, 0.02));
+  color: #ffd54f;
+}
+.btn-collect:hover {
+  border-color: rgba(255, 213, 79, 0.6);
+  background: linear-gradient(135deg, rgba(255, 213, 79, 0.15), rgba(255, 213, 79, 0.05));
+  box-shadow: 0 3px 12px rgba(255, 213, 79, 0.15);
+}
+
+.btn-rest {
+  border-color: rgba(165, 214, 167, 0.35);
+  background: linear-gradient(135deg, rgba(165, 214, 167, 0.06), rgba(165, 214, 167, 0.02));
+  color: #a5d6a7;
+}
+.btn-rest:hover {
+  border-color: rgba(165, 214, 167, 0.6);
+  background: linear-gradient(135deg, rgba(165, 214, 167, 0.15), rgba(165, 214, 167, 0.05));
+  box-shadow: 0 3px 12px rgba(165, 214, 167, 0.15);
+}
+
+.btn-event {
+  border-color: rgba(206, 147, 216, 0.35);
+  background: linear-gradient(135deg, rgba(206, 147, 216, 0.06), rgba(206, 147, 216, 0.02));
+  color: #ce93d8;
+}
+.btn-event:hover {
+  border-color: rgba(206, 147, 216, 0.6);
+  background: linear-gradient(135deg, rgba(206, 147, 216, 0.15), rgba(206, 147, 216, 0.05));
+  box-shadow: 0 3px 12px rgba(206, 147, 216, 0.15);
+}
+
+.btn-default {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+}
+.btn-default:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================================
+   固定操作栏
+   ============================================================ */
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.35) 100%);
+  backdrop-filter: blur(8px);
+  position: relative;
+  flex-shrink: 0;
+}
+.action-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1.2rem;
+  right: 1.2rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+}
+
+.action-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .action-btn {
-  padding: 0.35rem 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 1rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.04);
@@ -596,99 +775,66 @@ function getStaminaCoeff(): number {
   font-size: var(--font-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
+  white-space: nowrap;
+  user-select: none;
 }
 .action-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
 }
+.action-btn:active {
+  transform: scale(0.97);
+}
+
 .btn-back {
   color: var(--text-muted);
+  border-color: transparent;
+  background: transparent;
+  letter-spacing: 0.02em;
 }
+.btn-back:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-mid);
+}
+
 .btn-danger {
-  border-color: rgba(255, 107, 107, 0.5);
+  border-color: rgba(255, 107, 107, 0.35);
   color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.04);
 }
 .btn-danger:hover {
-  background: rgba(255, 107, 107, 0.1);
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.55);
+  box-shadow: 0 0 10px rgba(255, 107, 107, 0.1);
 }
+
 .btn-upgrade {
-  border-color: rgba(255, 213, 79, 0.5);
+  border-color: rgba(255, 213, 79, 0.35);
   color: #ffd54f;
+  background: rgba(255, 213, 79, 0.04);
 }
 .btn-upgrade:hover {
-  background: rgba(255, 213, 79, 0.1);
+  background: rgba(255, 213, 79, 0.12);
+  border-color: rgba(255, 213, 79, 0.55);
+  box-shadow: 0 0 10px rgba(255, 213, 79, 0.1);
 }
+
 .btn-repair {
-  border-color: rgba(78, 205, 196, 0.5);
+  border-color: rgba(78, 205, 196, 0.35);
   color: var(--accent);
+  background: rgba(78, 205, 196, 0.04);
 }
 .btn-repair:hover {
-  background: rgba(78, 205, 196, 0.1);
-}
-
-/* ---- 自定义交互按钮 ---- */
-.interactions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.7rem 1.2rem;
-  border-top: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.interaction-btn {
-  padding: 0.45rem 1.1rem;
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
-  font-size: var(--font-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-.interaction-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: var(--text-primary);
-}
-.btn-craft {
-  border-color: rgba(78, 205, 196, 0.4);
-  color: var(--accent);
-}
-.btn-craft:hover {
   background: rgba(78, 205, 196, 0.12);
-}
-.btn-store {
-  border-color: rgba(100, 181, 246, 0.4);
-  color: #64b5f6;
-}
-.btn-store:hover {
-  background: rgba(100, 181, 246, 0.12);
-}
-.btn-collect {
-  border-color: rgba(255, 213, 79, 0.4);
-  color: #ffd54f;
-}
-.btn-collect:hover {
-  background: rgba(255, 213, 79, 0.12);
-}
-.btn-rest {
-  border-color: rgba(165, 214, 167, 0.4);
-  color: #a5d6a7;
-}
-.btn-rest:hover {
-  background: rgba(165, 214, 167, 0.12);
-}
-.btn-event {
-  border-color: rgba(206, 147, 216, 0.4);
-  color: #ce93d8;
-}
-.btn-event:hover {
-  background: rgba(206, 147, 216, 0.12);
+  border-color: rgba(78, 205, 196, 0.55);
+  box-shadow: 0 0 10px rgba(78, 205, 196, 0.1);
 }
 
-/* ---- 升级视窗 ---- */
+/* ============================================================
+   升级视窗
+   ============================================================ */
 .subview-header {
   display: flex;
   align-items: center;
@@ -718,8 +864,12 @@ function getStaminaCoeff(): number {
   gap: 0.6rem;
   padding: 0.7rem;
   border: 1px solid var(--border-mid);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.2s;
+}
+.upgrade-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
 }
 .upgrade-card.upg-disabled {
   opacity: 0.55;
@@ -734,15 +884,16 @@ function getStaminaCoeff(): number {
 .upg-name {
   color: #ffd54f;
   font-weight: bold;
+  font-size: var(--font-md);
 }
 .upg-costs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .cost-chip {
-  padding: 0.1rem 0.35rem;
+  padding: 0.1rem 0.4rem;
   border-radius: 3px;
   font-size: var(--font-xs);
 }
@@ -754,7 +905,7 @@ function getStaminaCoeff(): number {
   color: #ff6b6b;
 }
 
-.btn-upgrade {
+.upgrade-card .btn-upgrade {
   padding: 0.35rem 0.9rem;
   border: 1px solid rgba(255, 213, 79, 0.4);
   border-radius: var(--radius-md);
@@ -763,11 +914,13 @@ function getStaminaCoeff(): number {
   font-size: var(--font-xs);
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.15s;
 }
-.btn-upgrade:hover:not(:disabled) {
-  background: rgba(255, 213, 79, 0.15);
+.upgrade-card .btn-upgrade:hover:not(:disabled) {
+  background: rgba(255, 213, 79, 0.18);
+  box-shadow: 0 0 8px rgba(255, 213, 79, 0.1);
 }
-.btn-upgrade:disabled {
+.upgrade-card .btn-upgrade:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
@@ -778,7 +931,9 @@ function getStaminaCoeff(): number {
   color: #ff6b6b;
 }
 
-/* ---- 拆除确认弹窗 ---- */
+/* ============================================================
+   拆除确认弹窗
+   ============================================================ */
 .dismantle-overlay {
   position: fixed;
   inset: 0;
@@ -787,7 +942,7 @@ function getStaminaCoeff(): number {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(4px);
 }
 
 .dismantle-dialog {
@@ -795,11 +950,17 @@ function getStaminaCoeff(): number {
   max-width: 380px;
   max-height: 80%;
   overflow-y: auto;
-  padding: 1.2rem;
+  padding: 1.4rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-lg);
-  background: rgba(20, 20, 25, 0.95);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, rgba(25, 25, 30, 0.98), rgba(20, 20, 25, 0.98));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .dialog-title {

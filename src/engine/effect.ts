@@ -5,6 +5,7 @@ import type { EffectResult, Effect } from '@/types/effect'
 import { EffectType, AttributeType, AttributeOperation, ItemChangeType } from '@/types/effect'
 import { getRegistry } from './registry'
 import { applyStatus, removeStatus } from './status'
+import { addItem, removeItem, equipItemById, unequipByItemId } from './inventory'
 
 /**
  * 效果解析执行器
@@ -612,121 +613,41 @@ export class EffectResolver {
 
     switch (changeType) {
       case ItemChangeType.ADD: {
-        // 查找背包中是否已有此物品（可堆叠）
-        const existingItem = player.inventory.find(
-          (i) => i.itemId === itemId && !this.isEquipped(player, i.instanceId),
-        )
-
-        if (existingItem && itemConfig.maxStackSize > 1) {
-          // 可堆叠，增加数量
-          existingItem.quantity += count
-        } else {
-          // 新增物品实例
-          player.inventory.push({
-            instanceId: `item_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            itemId,
-            quantity: count,
-            durability: -1,
-            acquiredTime: player.progress.day * 1440 + player.progress.timeMinutes,
-          })
-        }
-
-        // 更新负重
-        player.survival.carryWeight += itemConfig.weight * count
-
-        return `获得 ${itemName} ×${count}`
+        // 通过引擎 addItem 添加（自动处理堆叠/新实例，叠加时跳过已装备实例）
+        const added = addItem(player, itemId, count)
+        return `获得 ${itemName} ×${added}`
       }
 
       case ItemChangeType.REMOVE: {
-        // 从背包中移除
-        const index = player.inventory.findIndex((i) => i.itemId === itemId)
-        if (index === -1) {
+        // 通过引擎 removeItem 移除（已装备的实例会被先卸下再移除）
+        const removed = removeItem(player, itemId, count)
+        if (removed <= 0) {
           return `背包中没有 ${itemName}`
         }
-
-        const targetItem = player.inventory[index]
-        if (targetItem!.quantity <= count) {
-          // 全部移除
-          player.survival.carryWeight -= itemConfig.weight * targetItem!.quantity
-          player.inventory.splice(index, 1)
-        } else {
-          // 减少数量
-          targetItem!.quantity -= count
-          player.survival.carryWeight -= itemConfig.weight * count
-        }
-
-        return `失去 ${itemName} ×${count}`
+        return `失去 ${itemName} ×${removed}`
       }
 
       case ItemChangeType.EQUIP: {
-        // 装备物品（根据物品类别自动选择装备槽位）
-        const slot = this.getEquipmentSlotForItem(itemConfig)
-        if (!slot) {
+        // 通过引擎装备函数（优先装备背包中已有实例；背包中没有时自动加入再装备）
+        const ok = equipItemById(player, itemId)
+        if (!ok) {
           return `${itemName} 无法装备`
         }
-
-        // 如果该槽位已有装备，先卸下
-        if (player.equipment[slot]) {
-          player.equipment[slot] = null
-        }
-
-        player.equipment[slot] = itemId
         return `装备了 ${itemName}`
       }
 
       case ItemChangeType.UNEQUIP: {
-        // 卸下物品
-        for (const slot of Object.keys(player.equipment) as Array<keyof typeof player.equipment>) {
-          if (player.equipment[slot] === itemId) {
-            player.equipment[slot] = null
-            return `卸下了 ${itemName}`
-          }
+        // 通过引擎卸下函数（物品留在背包，仅清除装备标记）
+        const ok = unequipByItemId(player, itemId)
+        if (!ok) {
+          return `${itemName} 并未装备`
         }
-        return `${itemName} 并未装备`
+        return `卸下了 ${itemName}`
       }
 
       default:
         return `未知物品操作: ${changeType}`
     }
-  }
-
-  /**
-   * 判断物品实例是否已装备
-   */
-  private isEquipped(player: PlayerState, instanceId: string): boolean {
-    // 简单判断：检查装备栏中是否有对应物品ID
-    // 完整实现需要匹配 instanceId，此处先简化处理
-    return false
-  }
-
-  /**
-   * 根据物品配置获取对应的装备槽位
-   */
-  private getEquipmentSlotForItem(
-    itemConfig: ReturnType<typeof this.registry.getItem>,
-  ): keyof PlayerState['equipment'] | null {
-    if (!itemConfig) return null
-
-    // 通过检查物品类别来判断槽位
-    const category = itemConfig.category
-
-    // 武器
-    if (category === 'weapon') return 'weapon'
-
-
-    // 防具：通过 equipmentSlot 字段判断
-    if (category === 'armor' && 'equipmentSlot' in itemConfig) {
-      const slot = (itemConfig as { equipmentSlot: string }).equipmentSlot
-      if (slot === 'body') return 'body'
-      if (slot === 'head') return 'head'
-      if (slot === 'hands') return 'hands'
-      if (slot === 'feet') return 'feet'
-      if (slot === 'back') return 'back'
-      if (slot === 'neck') return 'neck'
-      if (slot === 'finger') return 'finger'
-    }
-
-    return null
   }
 
   // ============================================================

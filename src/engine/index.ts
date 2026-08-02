@@ -46,12 +46,16 @@ export {
 // 背包系统
 export {
   addItem,
+  onItemAdded,
   removeItem,
   getItemCount,
   hasItem,
   equipItem,
+  equipItemById,
   unequipSlot,
+  unequipByItemId,
   unequipAll,
+  isEquippedInstance,
   recalculateCarryWeight,
   getCarryWeightRate,
   isOverloaded,
@@ -114,6 +118,16 @@ export {
 } from './trade'
 export type { TradeResult } from './trade'
 
-// CG系统
+// 仓库存储系统
+export {
+  getStorageItems,
+  getStorageUsedSlots,
+  getStorageMaxSlots,
+  addToStorage,
+  removeFromStorage,
+  clearStorage,
+} from './storage'
+
+// 场景系统CG系统
 export { canTriggerCG, startCG, nextCGFrame } from './cg'
 export type { CGPlayState } from './cg'

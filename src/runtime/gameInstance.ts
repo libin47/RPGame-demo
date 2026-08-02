@@ -16,6 +16,7 @@ import type { ResourceInteraction, MoveInteraction } from '@/types/scene'
 import type { EndingConfig } from '@/types/ending'
 import type { CraftResult } from '@/engine'
 import type { ButtonOption } from '@/types/option'
+import type { buildOption } from '@/types/build'
 
 /** 游戏运行时实例的接口定义 */
 export interface GameInstance {
@@ -50,6 +51,8 @@ export interface GameInstance {
   handleExplore: (explore: ButtonOption) => void
   /** 建造 */
   handleBuild: () => void
+  /** 休息 */
+  handleRest: (timeHours: number, option: buildOption | undefined) => void
   /** 资源采集/战斗 */
   handleCollect: (collect: ResourceInteraction) => void
   /** 场景移动 */
@@ -78,6 +81,8 @@ export interface GameInstance {
   openInventory: () => void
   /** 关闭背包 */
   closeInventory: () => void
+  /** 设置场景文本后缀 */
+  setSceneTextAfter: (text: string) => void
   /** 替换文本中的占位符 */
   resolveText: (text: string) => string
   /** 推进游戏时间（分钟），自动处理跨天、天气、被动效果等 */
@@ -144,6 +149,7 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     handleInteraction: game.handleInteraction,
     handleExplore: game.handleExplore,
     handleBuild: game.handleBuild,
+    handleRest: game.handleRest,
     handleCollect: game.handleCollect,
     handleSceneMove: game.handleSceneMove,
     getCampsiteBuildings: game.getCampsiteBuildings,
@@ -158,6 +164,7 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     exitBuildMode: game.exitBuildMode,
     openInventory: game.openInventory,
     closeInventory: game.closeInventory,
+    setSceneTextAfter: game.setSceneTextAfter,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
     executeBattleAction: game.executeBattleAction,
@@ -195,6 +202,7 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     handleInteraction: game.handleInteraction,
     handleExplore: game.handleExplore,
     handleBuild: game.handleBuild,
+    handleRest: game.handleRest,
     handleCollect: game.handleCollect,
     handleSceneMove: game.handleSceneMove,
     getCampsiteBuildings: game.getCampsiteBuildings,
@@ -209,6 +217,7 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     exitBuildMode: game.exitBuildMode,
     openInventory: game.openInventory,
     closeInventory: game.closeInventory,
+    setSceneTextAfter: game.setSceneTextAfter,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
     executeBattleAction: game.executeBattleAction,

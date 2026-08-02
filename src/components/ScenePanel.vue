@@ -53,6 +53,26 @@
       </div>
     </div>
 
+    <!--═══════ 营地建筑入口 ═══════-->
+    <div
+      v-if="props.isCampsite && (props.campsiteBuildings?.length ?? 0) > 0"
+      class="building-interactions"
+    >
+      <div class="building-section-label">🏕 营地设施</div>
+      <div class="building-grid">
+        <div
+          v-for="bld in props.campsiteBuildings"
+          :key="bld.buildId"
+          class="building-entry-card"
+          @click="onEnterBuilding(bld.buildId)"
+        >
+          <span class="entry-icon">{{ bld.emoji }}</span>
+          <span class="entry-name">{{ bld.buildName }}</span>
+          <span class="entry-desc">{{ bld.description }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══════ 次级选项面板（资源／人物／移动） ═══════ -->
     <div v-if="expandedCategory && expandedCategory !== 'interactions'" class="sub-panel">
       <!-- ── 资源：每个 collect 一行 ── -->
@@ -176,22 +196,6 @@
         </button>
       </div>
     </div>
-
-    <!-- 营地建筑入口 -->
-    <div
-      v-if="props.isCampsite && (props.campsiteBuildings?.length ?? 0) > 0"
-      class="building-interactions"
-    >
-      <div class="building-section-label">营地设施</div>
-      <button
-        v-for="bld in props.campsiteBuildings"
-        :key="bld.buildId"
-        class="interaction-btn btn-building"
-        @click="onEnterBuilding(bld.buildId)"
-      >
-        {{ bld.buildName }}
-      </button>
-    </div>
   </div>
 </template>
 
@@ -217,6 +221,8 @@ import { paramRegistry } from '@/config/params'
 interface CampsiteBuildingInfo {
   buildId: string
   buildName: string
+  description: string
+  emoji: string
 }
 
 // ============================================================
@@ -331,7 +337,6 @@ function getResourceCountClass(paramId: string): string {
 const sceneExplore = computed<ButtonOption | null>(() => {
   const target = props.scene as BaseScene & { explore?: ButtonOption }
   if (target.explore && isInteractionVisible(target.explore)) return target.explore
-  console.log(target.explore && isInteractionVisible(target.explore))
   return null
 })
 
@@ -634,6 +639,17 @@ function interactionBtnClass(inter: SceneInteraction): string {
   background: #90caf9;
   height: 3px;
   box-shadow: 0 0 8px rgba(100, 181, 246, 0.4);
+}
+/* ═══════════════════════════════════════════
+   固定建筑按钮栏（固定网格）
+   ═══════════════════════════════════════════ */
+.building-category-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  padding: 0.5rem 1.2rem;
+  border-top: 1px solid var(--border-weak);
+  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════════
@@ -967,9 +983,6 @@ function interactionBtnClass(inter: SceneInteraction): string {
 
 /* ---- 营地建筑交互 ---- */
 .building-interactions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
   padding: 0.5rem 1.2rem 0.7rem;
   border-top: 1px solid var(--border-weak);
   background: rgba(78, 205, 196, 0.04);
@@ -977,39 +990,62 @@ function interactionBtnClass(inter: SceneInteraction): string {
 }
 
 .building-section-label {
-  width: 100%;
   font-size: var(--font-xs);
   color: var(--accent);
   opacity: 0.7;
-  margin-bottom: -0.2rem;
+  margin-bottom: 0.5rem;
 }
 
-.interaction-btn {
-  padding: 0.45rem 1.1rem;
-  border: 1px solid var(--border-mid);
+/* 建筑卡片网格 */
+.building-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+.building-entry-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.6rem 0.4rem;
+  border: 1px solid rgba(78, 205, 196, 0.3);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
-  font-size: var(--font-md);
+  background: rgba(78, 205, 196, 0.06);
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-.interaction-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: var(--text-primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.btn-building {
-  border-color: rgba(78, 205, 196, 0.4);
-  color: var(--accent);
-}
-
-.btn-building:hover {
-  background: rgba(78, 205, 196, 0.12);
+.building-entry-card:hover {
+  background: rgba(78, 205, 196, 0.14);
   border-color: var(--accent);
+  box-shadow: 0 3px 8px rgba(78, 205, 196, 0.2);
+  transform: translateY(-1px);
+}
+
+.entry-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.entry-name {
+  font-weight: bold;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.entry-desc {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>

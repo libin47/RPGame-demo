@@ -14,6 +14,37 @@ import type { Effect } from '@/types/effect'
 // 物品操作
 // ============================================================
 
+// ============================================================
+// 物品获得监听（供 runtime 层订阅：获得物品时追加场景文本等）
+// ============================================================
+
+/** 物品获得监听器回调（参数：物品ID、实际添加数量） */
+export type ItemAddedListener = (itemId: string, quantity: number) => void
+
+const itemAddedListeners = new Set<ItemAddedListener>()
+
+/**
+ * 注册物品获得监听器
+ * addItem 成功添加物品（实际添加数量 > 0）后触发
+ *
+ * @param listener - 回调，参数为物品ID与实际添加数量
+ * @returns 注销函数
+ */
+export function onItemAdded(listener: ItemAddedListener): () => void {
+  itemAddedListeners.add(listener)
+  return () => {
+    itemAddedListeners.delete(listener)
+  }
+}
+
+/** 触发物品获得监听器 */
+function notifyItemAdded(itemId: string, quantity: number): void {
+  if (quantity <= 0) return
+  for (const listener of itemAddedListeners) {
+    listener(itemId, quantity)
+  }
+}
+
 /**
  * 向背包添加物品
  * 自动处理堆叠和新实例创建
@@ -34,9 +65,9 @@ export function addItem(player: PlayerState, itemId: string, quantity: number = 
   const maxStack = itemConfig.maxStackSize
 
   if (maxStack > 1) {
-    // 可堆叠物品：先尝试叠加到已有物品
+    // 可堆叠物品：先尝试叠加到已有物品（跳过已装备的实例，新获得的物品保持未装备状态）
     for (const invItem of player.inventory) {
-      if (invItem.itemId === itemId && invItem.quantity < maxStack) {
+      if (invItem.itemId === itemId && !invItem.equippedSlot && invItem.quantity < maxStack) {
         const space = maxStack - invItem.quantity
         const toAdd = Math.min(remaining, space)
         invItem.quantity += toAdd
@@ -62,7 +93,11 @@ export function addItem(player: PlayerState, itemId: string, quantity: number = 
   // 更新负重
   recalculateCarryWeight(player)
 
-  return quantity - remaining
+  // 通知物品获得监听器（供 runtime 层追加场景文本等）
+  const added = quantity - remaining
+  notifyItemAdded(itemId, added)
+
+  return added
 }
 
 /**
@@ -83,6 +118,11 @@ export function removeItem(player: PlayerState, itemId: string, quantity: number
     const invItem = player.inventory[i]
     if (!invItem) continue
     if (invItem.itemId !== itemId) continue
+
+    // 若该实例已装备，先卸下对应槽位（避免"穿着中的装备被直接移除"）
+    if (invItem.equippedSlot) {
+      unequipSlot(player, invItem.equippedSlot as keyof PlayerState['equipment'])
+    }
 
     if (invItem.quantity <= remaining) {
       remaining -= invItem.quantity
@@ -143,10 +183,7 @@ export function getItemsByCategory(
  * @returns 是否装备成功
  */
 export function equipItem(player: PlayerState, instanceId: string): boolean {
-  const invIndex = player.inventory.findIndex((i) => i.instanceId === instanceId)
-  if (invIndex === -1) return false
-
-  const invItem = player.inventory[invIndex]
+  const invItem = player.inventory.find((i) => i.instanceId === instanceId)
   if (!invItem) return false
 
   const registry = getRegistry()
@@ -157,28 +194,64 @@ export function equipItem(player: PlayerState, instanceId: string): boolean {
   const slot = getSlotForItem(itemConfig)
   if (!slot) return false
 
-  // 卸下当前装备
-  const oldEquipped = player.equipment[slot]
-  if (oldEquipped) {
+  // 若该实例已装备到其他槽位，先卸下（避免同一实例重复装备）
+  if (invItem.equippedSlot && invItem.equippedSlot !== slot) {
+    unequipSlot(player, invItem.equippedSlot as keyof PlayerState['equipment'])
+  }
+
+  // 若当前槽位已装备的是另一个实例，先卸下旧装备（物品留在背包，仅清除标记）
+  if (player.equipment[slot] && !isEquippedInstance(player, instanceId)) {
     unequipSlot(player, slot)
   }
 
-  // 设置新装备
+  // 装备：装备栏存物品ID，背包实例标记槽位（物品仍留在背包，不互斥）
   player.equipment[slot] = invItem.itemId
+  invItem.equippedSlot = slot
 
-  // 从背包中移除已装备的物品
-  if (invItem.quantity <= 1) {
-    player.inventory.splice(invIndex, 1)
-  } else {
-    invItem.quantity -= 1
-  }
-
-  recalculateCarryWeight(player)
   return true
 }
 
 /**
+ * 按物品ID装备（供效果层使用，如事件效果指定装备某件物品）
+ * 优先装备背包中已有的未装备实例；背包中没有时先加入背包再装备（保持"效果凭空给予装备"的语义）
+ *
+ * @param player - 玩家状态（会被直接修改）
+ * @param itemId - 物品配置ID
+ * @returns 是否装备成功
+ */
+export function equipItemById(player: PlayerState, itemId: string): boolean {
+  const registry = getRegistry()
+  const itemConfig = registry.getItem(itemId)
+  if (!itemConfig) return false
+
+  const slot = getSlotForItem(itemConfig)
+  if (!slot) return false
+
+  // 优先装备背包中已有的未装备实例
+  const target = player.inventory.find((i) => i.itemId === itemId && !i.equippedSlot)
+  if (target) {
+    return equipItem(player, target.instanceId)
+  }
+
+  // 背包中没有该物品：先加入背包再装备
+  const added = addItem(player, itemId, 1)
+  if (added <= 0) return false
+  const newInst = player.inventory.find((i) => i.itemId === itemId && !i.equippedSlot)
+  if (!newInst) return false
+  return equipItem(player, newInst.instanceId)
+}
+
+/**
+ * 判断物品实例是否已装备
+ */
+export function isEquippedInstance(player: PlayerState, instanceId: string): boolean {
+  const invItem = player.inventory.find((i) => i.instanceId === instanceId)
+  return !!invItem?.equippedSlot
+}
+
+/**
  * 卸下指定槽位的装备
+ * 物品仍留在背包，仅清除背包实例的装备标记
  *
  * @param player - 玩家状态（会被直接修改）
  * @param slot - 装备槽位
@@ -188,11 +261,33 @@ export function unequipSlot(player: PlayerState, slot: keyof PlayerState['equipm
   const itemId = player.equipment[slot]
   if (!itemId) return false
 
-  // 将装备放回背包
+  // 清除背包中对应实例的装备标记（装备栏存 itemId，通过 itemId+槽位反查实例）
+  const equippedInst = player.inventory.find((i) => i.itemId === itemId && i.equippedSlot === slot)
+  if (equippedInst) {
+    equippedInst.equippedSlot = null
+  }
+
   player.equipment[slot] = null
-  addItem(player, itemId, 1)
 
   return true
+}
+
+/**
+ * 按物品ID卸下所有匹配槽位的装备（供效果层使用）
+ *
+ * @param player - 玩家状态（会被直接修改）
+ * @param itemId - 物品配置ID
+ * @returns 是否卸下了至少一件
+ */
+export function unequipByItemId(player: PlayerState, itemId: string): boolean {
+  let removed = false
+  for (const slot of Object.keys(player.equipment) as Array<keyof PlayerState['equipment']>) {
+    if (player.equipment[slot] === itemId) {
+      unequipSlot(player, slot)
+      removed = true
+    }
+  }
+  return removed
 }
 
 /**
@@ -317,7 +412,6 @@ function getSlotForItem(itemConfig: Item): keyof PlayerState['equipment'] | null
   const category = itemConfig.category
 
   if (category === ItemCategory.WEAPON) return 'weapon'
-  if (category === ItemCategory.TOOL) return 'tool'
 
   if (category === ItemCategory.ARMOR && 'equipmentSlot' in itemConfig) {
     const slot = (itemConfig as { equipmentSlot: string }).equipmentSlot

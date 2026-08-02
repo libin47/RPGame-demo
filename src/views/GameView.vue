@@ -92,6 +92,25 @@
         @execute="onRecipeExecute"
       />
 
+      <!-- 建筑交互模式 - 休息子模式 -->
+      <RestPanel
+        v-else-if="game.state.mode === 'building' && restMode"
+        @rest="onRestExecute"
+        @back="onRestBack"
+        :reset-button="resetButton"
+      />
+
+      <!-- 建筑交互模式 - 仓库子模式 -->
+      <StorePanel
+        v-else-if="game.state.mode === 'building' && storeMode && currentBuildingData"
+        :player-state="game.state.player"
+        :sub-build="currentBuildingData.subBuild"
+        :sub-scene-id="game.state.currentSubScene?.id ?? null"
+        :build-id="currentBuildingData.build.buildId"
+        @close="onExitStore"
+        @log="onBuildingLog"
+      />
+
       <!-- 建筑交互模式 -->
       <BuildingDetail
         v-else-if="game.state.mode === 'building' && currentBuildingData"
@@ -106,6 +125,8 @@
         @repair="onRepairBuilding"
         @log="onBuildingLog"
         @enter-recipe="onEnterRecipe"
+        @enter-rest="onEnterRest"
+        @enter-store="onEnterStore"
       />
 
       <!-- 其他模式（占位提示） -->
@@ -142,12 +163,15 @@ import AttributesPanel from '@/components/AttributesPanel.vue'
 import BuildPanel from '@/components/BuildPanel.vue'
 import BuildingDetail from '@/components/BuildingDetail.vue'
 import RecipePanel from '@/components/RecipePanel.vue'
+import RestPanel from '@/components/RestPanel.vue'
+import StorePanel from '@/components/StorePanel.vue'
 import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
 import { getVisibleOptions, getVisibleVariations, isOptionAvailable } from '@/engine'
 import { getGameInstance } from '@/runtime/gameInstance'
 import type { GameInstance } from '@/runtime/gameInstance'
 import { useUI } from '@/runtime/useUI'
 import type { ButtonOption } from '@/types/option'
+import type { buildOption } from '@/types/build'
 
 const router = useRouter()
 const { uiState, toggleSettings, toggleAttributes } = useUI()
@@ -174,6 +198,46 @@ function onRecipeExecute(result: import('@/engine').CraftResult): void {
     game.value.advanceGameTime(result.timeUsed)
   }
   game.value.setLogMessage(result.message)
+}
+
+// ============================================================
+// 休息面板状态（由 BuildingDetail 进入）
+// ============================================================
+
+const restMode = ref(false)
+const resetButton = ref<buildOption>()
+
+/** 打开休息子界面 */
+function onEnterRest(act: buildOption): void {
+  restMode.value = true
+  resetButton.value = act
+}
+
+/** 关闭休息子界面，返回建筑详情 */
+function onRestBack(): void {
+  restMode.value = false
+}
+
+/** 执行休息：推进时间、恢复体力、移除休息状态，完成后返回场景 */
+function onRestExecute(hours: number, option: buildOption | undefined): void {
+
+  game.value.handleRest(hours, option)
+  // 5. 返回场景界面（退出建筑交互模式）
+  restMode.value = false
+}
+
+// ============================================================
+// 仓库面板状态（由 BuildingDetail 进入）
+// ============================================================
+
+const storeMode = ref(false)
+
+function onEnterStore(): void {
+  storeMode.value = true
+}
+
+function onExitStore(): void {
+  storeMode.value = false
 }
 
 // ============================================================
@@ -401,11 +465,18 @@ function onUpgradeBuild(buildId: string, targetSubBuildId: string): void {
 
 /** 进入建筑交互模式 */
 function onEnterBuilding(buildId: string): void {
+  // 重置建筑内的子模式状态
+  restMode.value = false
+  recipeMode.value = null
+  storeMode.value = false
   game.value.enterBuilding(buildId)
 }
 
 /** 退出建筑交互模式 */
 function onExitBuilding(): void {
+  restMode.value = false
+  recipeMode.value = null
+  storeMode.value = false
   game.value.exitBuilding()
 }
 

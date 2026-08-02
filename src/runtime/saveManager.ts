@@ -69,6 +69,10 @@ export function loadGame(slot: number): PlayerState | null {
     if (!data) return null
 
     const player = JSON.parse(data) as PlayerState
+    // 旧存档兼容：补齐新增的进度字段，避免运行时访问 undefined 崩溃
+    if (!player.progress.campStorage) {
+      player.progress.campStorage = {}
+    }
     return player
   } catch (e) {
     console.error('读档失败:', e)

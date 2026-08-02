@@ -370,7 +370,7 @@ const beach_机翼营地: SubScene = {
   name: '机翼营地',
   parentSceneId: 'beach',
   isCampsite: true,
-  buildingList: ['营火', '木墙'],
+  buildingList: ['营火', '木墙', '工作台',  '储物箱'],
   buildingInit: [],
   descriptions: [
     {

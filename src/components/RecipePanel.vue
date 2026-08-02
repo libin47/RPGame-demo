@@ -4,29 +4,48 @@
      视觉风格与 BuildPanel 保持一致 -->
 <template>
   <div class="recipe-panel">
-    <!-- 头部（只保留标题） -->
+    <!-- 头部 -->
     <div class="rp-header">
       <h2 class="rp-title">{{ mode === 'craft' ? '制作' : '烹饪' }}</h2>
+    </div>
+
+    <!-- 分类筛选标签（仅在有可用配方时显示） -->
+    <div v-if="filterTabs.length > 0" class="rp-filter-bar">
+      <button
+        v-for="tab in filterTabs"
+        :key="tab.key"
+        class="rp-filter-tab"
+        :class="{ active: currentFilter === tab.key }"
+        @click="currentFilter = tab.key"
+      >
+        {{ tab.label }}
+      </button>
     </div>
 
     <div class="rp-body">
       <!-- 配方列表 -->
       <div class="rp-list">
         <div
-          v-for="item in availableRecipes"
+          v-for="item in filteredRecipes"
           :key="item.recipe.id"
           class="rp-card"
           :class="{ 'rp-disabled': !item.canExecute }"
         >
           <!-- 左侧内容区 -->
           <div class="rp-card-main">
-            <!-- 名称 + 分类 -->
+            <!-- 名称行：名称 + 分类 + 体力 + 时间 -->
             <div class="rp-name-row">
               <span class="rp-name">{{ item.recipe.name }}</span>
               <span class="rp-category">{{ item.categoryLabel }}</span>
+              <span v-if="item.staminaCost > 0" class="rp-cost-badge stamina-badge" title="体力消耗">
+                ⚡{{ item.staminaCost }}
+              </span>
+              <span class="rp-cost-badge time-badge" title="所需时间">
+                ⏱{{ item.timeStr }}
+              </span>
             </div>
 
-            <!-- 材料需求（直接显示，无 section 标题 → 与 BuildPanel 一致） -->
+            <!-- 材料需求 -->
             <div class="rp-chips">
               <span
                 v-for="mat in item.materials"
@@ -37,22 +56,19 @@
               >
             </div>
 
-            <!-- 消耗（体力等） -->
-            <div v-if="item.costs.length > 0" class="rp-chips">
+            <!-- 其他消耗（非体力，如饱食度/理智/生命值等） -->
+            <div v-if="item.otherCosts.length > 0" class="rp-chips">
               <span
-                v-for="c in item.costs"
+                v-for="c in item.otherCosts"
                 :key="c.type"
                 class="cost-item"
                 :class="c.hasEnough ? 'cost-ok' : 'cost-miss'"
                 >{{ c.label }}: {{ c.current }}/{{ c.required }}</span
               >
             </div>
-
-            <!-- 耗时 -->
-            <div class="rp-time">{{ item.timeStr }}</div>
           </div>
 
-          <!-- 操作区（右侧，与 BuildPanel 的 .build-action 一致） -->
+          <!-- 操作区（右侧） -->
           <div class="rp-card-action">
             <!-- 制作模式：批量数量调节 -->
             <div v-if="mode === 'craft'" class="rp-qty-row">
@@ -90,12 +106,12 @@
         </div>
 
         <!-- 无可用配方 -->
-        <div v-if="availableRecipes.length === 0" class="rp-empty">
+        <div v-if="filteredRecipes.length === 0" class="rp-empty">
           当前没有可用的{{ mode === 'craft' ? '制作' : '烹饪' }}配方
         </div>
       </div>
 
-      <!-- 返回按钮（加大，与 BuildPanel 一致） -->
+      <!-- 返回按钮 -->
       <button class="btn-return" @click="$emit('close')">返回</button>
     </div>
   </div>
@@ -162,6 +178,7 @@ function getStaminaCoeff(): number {
 interface RecipeDisplayItem {
   recipe: CraftRecipe | CookRecipe
   categoryLabel: string
+  categoryKey: string
   materials: Array<{
     itemId: string
     itemName: string
@@ -176,6 +193,15 @@ interface RecipeDisplayItem {
     current: number
     hasEnough: boolean
   }>
+  /** 非体力消耗（用于显示在材料下方） */
+  otherCosts: Array<{
+    type: string
+    label: string
+    required: number
+    current: number
+    hasEnough: boolean
+  }>
+  staminaCost: number
   timeStr: string
   canExecute: boolean
   qualityName: string
@@ -189,6 +215,35 @@ const availableRecipes = computed<RecipeDisplayItem[]>(() => {
   } else {
     return buildCookList()
   }
+})
+
+// ============================================================
+// 分类筛选
+// ============================================================
+
+/** 当前选中的筛选标签 */
+const currentFilter = ref<string>('')
+
+/** 筛选标签列表（从实际配方中提取不重复的类别） */
+const filterTabs = computed<Array<{ key: string; label: string }>>(() => {
+  const cats = new Map<string, string>()
+  for (const item of availableRecipes.value) {
+    if (item.categoryKey && !cats.has(item.categoryKey)) {
+      cats.set(item.categoryKey, item.categoryLabel)
+    }
+  }
+  const tabs = Array.from(cats.entries()).map(([key, label]) => ({ key, label }))
+  // 默认选中第一个标签
+  if (currentFilter.value === '' && tabs.length > 0) {
+    currentFilter.value = tabs[0].key
+  }
+  return tabs
+})
+
+/** 按筛选标签过滤后的配方列表 */
+const filteredRecipes = computed<RecipeDisplayItem[]>(() => {
+  if (!currentFilter.value) return availableRecipes.value
+  return availableRecipes.value.filter((item) => item.categoryKey === currentFilter.value)
 })
 
 const categoryLabels: Partial<Record<CraftCategory, string>> = {
@@ -235,14 +290,27 @@ function buildCraftList(): RecipeDisplayItem[] {
       }
     })
 
+    // 体力消耗（用于标题行显示）
+    const staminaCost = recipe.costs
+      .filter((c) => c.costType === 'stamina')
+      .reduce((sum, c) => {
+        return sum + (c.affectedByCoefficient ? Math.round(c.value * getStaminaCoeff()) : c.value)
+      }, 0)
+
+    // 非体力消耗（显示在材料下方）
+    const otherCosts = costs.filter((c) => c.type !== 'stamina')
+
     const timeStr = formatTime(recipe.requirements.timeMinutes)
     const canExecute = materials.every((m) => m.hasEnough) && costs.every((c) => c.hasEnough)
 
     list.push({
       recipe,
       categoryLabel: categoryLabels[recipe.craftCategory] ?? '',
+      categoryKey: recipe.craftCategory,
       materials,
       costs,
+      otherCosts,
+      staminaCost,
       timeStr,
       canExecute,
       qualityName: '',
@@ -281,6 +349,16 @@ function buildCookList(): RecipeDisplayItem[] {
       }
     })
 
+    // 体力消耗（用于标题行显示）
+    const staminaCost = recipe.costs
+      .filter((c) => c.costType === 'stamina')
+      .reduce((sum, c) => {
+        return sum + (c.affectedByCoefficient ? Math.round(c.value * getStaminaCoeff()) : c.value)
+      }, 0)
+
+    // 非体力消耗（显示在材料下方）
+    const otherCosts = costs.filter((c) => c.type !== 'stamina')
+
     const timeStr = formatTime(recipe.cookTimeMinutes)
     const canExecute = materials.every((m) => m.hasEnough) && costs.every((c) => c.hasEnough)
 
@@ -290,8 +368,11 @@ function buildCookList(): RecipeDisplayItem[] {
     list.push({
       recipe,
       categoryLabel: '烹饪',
+      categoryKey: 'cook',
       materials,
       costs,
+      otherCosts,
+      staminaCost,
       timeStr,
       canExecute,
       qualityName,
@@ -370,6 +451,41 @@ function onExecute(item: RecipeDisplayItem): void {
   color: var(--text-primary);
 }
 
+/* ---- 筛选标签栏 ---- */
+.rp-filter-bar {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.5rem 1.2rem;
+  border-bottom: 1px solid var(--border-weak);
+  background: rgba(0, 0, 0, 0.15);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.rp-filter-tab {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.rp-filter-tab:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-secondary);
+  border-color: var(--border-strong);
+}
+
+.rp-filter-tab.active {
+  border-color: var(--accent);
+  background: rgba(78, 205, 196, 0.12);
+  color: var(--accent);
+}
+
 /* ---- 内容区 ---- */
 .rp-body {
   flex: 1;
@@ -429,6 +545,25 @@ function onExecute(item: RecipeDisplayItem): void {
 .rp-category {
   font-size: var(--font-xs);
   color: var(--text-muted);
+}
+
+/* 名称行中的体力/时间标记 */
+.rp-cost-badge {
+  font-size: var(--font-xs);
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.stamina-badge {
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.time-badge {
+  color: #90caf9;
+  background: rgba(144, 202, 249, 0.1);
 }
 
 /* 材料/消耗 chips（复用 BuildPanel 的命名） */

@@ -293,6 +293,8 @@ export interface PlayerInventoryItem {
   durability: number
   /** 获得时间（游戏内分钟数，用于新鲜度等计算） */
   acquiredTime: number
+  /** 已装备时标记占用的槽位（未装备为 null/undefined；装备后物品仍留在背包） */
+  equippedSlot?: string | null
 }
 
 // ============================================================
@@ -388,6 +390,9 @@ export interface PlayerProgress {
 
   /** 营地建筑等级记录（subSceneId -> { buildId: currentSubBuildId }），追踪每个建筑当前子建筑等级 */
   campBuildingLevels: Record<string, Record<string, string>>
+
+  /** 营地建筑仓库存储（subSceneId -> { buildId: storageItems[] }），每个储物箱独立的物品列表 */
+  campStorage: Record<string, Record<string, PlayerInventoryItem[]>>
 }
 
 // ============================================================

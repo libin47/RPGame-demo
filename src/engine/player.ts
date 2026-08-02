@@ -245,6 +245,7 @@ export function createNewPlayerState(
     baseLocation: null,
     campBuildings: {},
     campBuildingLevels: {},
+    campStorage: {},
   }
 
   // 统计
@@ -274,6 +275,7 @@ export function createNewPlayerState(
     quantity: number
     durability: number
     acquiredTime: number
+    equippedSlot?: string | null
   }> = []
   let instanceCounter = 0
 
@@ -305,13 +307,14 @@ export function createNewPlayerState(
     const slotKey = equip.slot as keyof typeof equipment
     if (slotKey in equipment) {
       equipment[slotKey] = equip.itemId
-      // 装备也加入背包记录（标记为已装备）
+      // 装备也加入背包记录（标记为已装备，装备后物品仍留在背包）
       inventory.push({
         instanceId: `init_${instanceCounter++}`,
         itemId: equip.itemId,
         quantity: 1,
         durability: equip.initialDurability ?? -1,
         acquiredTime: 0,
+        equippedSlot: slotKey,
       })
     }
   }

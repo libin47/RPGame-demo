@@ -51,6 +51,8 @@ const 营火: Build = {
           id: 'rest',
           name: '休息',
           interactionType: 'rest',
+          restDescription: '蜷缩在火堆旁并不舒服，但这燃烧的火焰能给予你微弱的安全感—里。',
+          description: '你蜷缩在火堆旁休息了{time}个小时，醒来浑身都是沙子。',
         },
       ],
       visualConfig: {
@@ -381,6 +383,7 @@ const 储物箱: Build = {
         },
       ],
       isDecorativeOnly: false,
+      maxStorageSlots: 20,
       upgrade: [
         {
           targetBuildId: '中型储物箱',
@@ -422,6 +425,7 @@ const 储物箱: Build = {
         },
       ],
       isDecorativeOnly: false,
+      maxStorageSlots: 40,
       upgrade: [
         {
           targetBuildId: '大型加固储物箱',
@@ -466,6 +470,7 @@ const 储物箱: Build = {
         },
       ],
       isDecorativeOnly: false,
+      maxStorageSlots: 60,
       isDeconstructable: true,
       deconstructionReturnItems: [
         { itemId: '木头', quantity: 20 },

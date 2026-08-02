@@ -69,6 +69,8 @@ export interface SubBuild {
   interactions?: buildOption[]
   /** 建筑外观（在地图/场景中显示的图标） */
   visualConfig?: BuildVisualConfig
+  /** 建筑最大存储格数（仅store类型建筑有效，默认20） */
+  maxStorageSlots?: number
 }
 
 export interface buildUpgrade {
@@ -92,8 +94,12 @@ export interface buildOption extends ButtonOption {
   interactionType: 'craft' | 'cook' | 'rest' | 'store' | 'collect' | 'repair' | 'special' | 'event'
   /** 交互参数 */
   buildLevel?: number
+  /** 事件：事件ID */
   eventId?: string
-  restTime?: number
+  /** 休息：休息场所的描述 */
+  restDescription?: string
+  /** 交互的最终描述 */
+  description?: string
 }
 
 // 建筑描述配置

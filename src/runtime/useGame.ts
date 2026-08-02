@@ -1,6 +1,6 @@
 // src/runtime/useGame.ts
 
-import { reactive, readonly } from 'vue'
+import { reactive, shallowReadonly } from 'vue'
 import type { PlayerState } from '@/types/player'
 import type {
   Scene,
@@ -15,8 +15,13 @@ import type {
 import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
 import type { EffectResult } from '@/types/effect'
 import type { EndingConfig } from '@/types/ending'
-import { getRegistry, getEffectResolver, advanceTime, evaluateCondition, addItem } from '@/engine'
 import {
+  getRegistry,
+  getEffectResolver,
+  advanceTime,
+  evaluateCondition,
+  addItem,
+  onItemAdded,
   selectSceneDescription,
   markDescriptionSeen,
   checkAutoTrigger,
@@ -41,15 +46,16 @@ import {
 } from '@/engine'
 import type { CraftResult } from '@/engine'
 import type { ButtonOption } from '@/types/option'
+import type { buildOption } from '@/types/build'
 
 /**
  * 游戏界面模式
  */
 export type GameMode =
-  | 'normal' // 常态界面：场景描述 + 交互按钮
-  | 'event' // 事件界面：事件文本 + 选项按钮
+  | 'normal' // 常态界面
+  | 'event' // 事件界面
   | 'battle' // 战斗界面
-  | 'inventory' // 背包界面（后续实现）
+  | 'inventory' // 背包界面
   | 'build' // 建造界面
   | 'building' // 建筑交互界面
   | 'craft' // 制作界面（后续实现）
@@ -132,6 +138,8 @@ interface GameRuntimeState {
 export interface CampsiteBuildingInfo {
   buildId: string
   buildName: string
+  description: string
+  emoji: string
 }
 
 /**
@@ -189,6 +197,9 @@ function createGameState(initialPlayer: PlayerState) {
 // ============================================================
 // 组合式函数
 // ============================================================
+
+/** 上一个 useGame 实例注册的物品获得监听器注销函数（新实例创建时先注销旧的，避免重复触发） */
+let disposeItemAddedListener: (() => void) | null = null
 
 /**
  * 使用游戏状态
@@ -385,8 +396,9 @@ export function useGame(initialPlayer: PlayerState) {
         state.currentEvent = null
         state.currentFrame = null
         if (result.exitText) {
-          state.sceneTextAfter = result.exitText
+          setSceneTextAfter(result.exitText)
         }
+        console.log(state.sceneTextAfter)
         break
       }
 
@@ -667,6 +679,42 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   // ============================================================
+  // 建筑相关操作
+  // ============================================================
+
+  function handleRest(timeHours: number, option: buildOption | undefined): void {
+    // 1. 推进游戏时间
+    advanceGameTime(timeHours * 60)
+
+    // 2. 恢复体力（沿用原休息公式：每休息 10 分钟恢复 1 点体力）
+    state.player.survival.stamina = Math.min(
+      state.player.survival.maxStamina,
+      state.player.survival.stamina + Math.round((timeHours * 60) / 10) * (option?.buildLevel || 1),
+    )
+    // 回复HP
+    state.player.survival.hp = Math.min(
+      state.player.survival.maxHp,
+      state.player.survival.hp + Math.round((timeHours * 60) / 10) * (option?.buildLevel || 1),
+    )
+    // 回复san
+    state.player.survival.san = Math.min(
+      state.player.survival.maxSan,
+      state.player.survival.san + Math.round((timeHours * 60) / 10) * ((option?.buildLevel || 1)-1),
+    )
+
+
+    // 3. 移除休息时应移除的状态
+    removeRestStatuses(state.player)
+
+    // 4、记录日志
+    setSceneTextAfter((option?.description || '').replace(/\{time\}/g, timeHours.toString()) )
+    setLogMessage(`你休息了 ${timeHours} 小时，恢复了一些体力`)
+
+    // 5. 返回场景界面（退出建筑交互模式）
+    exitBuilding()
+  }
+
+  // ============================================================
   // 新 ScenePanel 事件处理
   // ============================================================
 
@@ -684,7 +732,6 @@ export function useGame(initialPlayer: PlayerState) {
    * 建造：推进时间、刷新描述
    */
   function handleBuild(): void {
-    state.sceneTextAfter = ''
     refreshSceneDescription()
     state.logMessage = '进入建造模式'
     state.mode = 'build'
@@ -696,7 +743,7 @@ export function useGame(initialPlayer: PlayerState) {
   function handleCollect(collect: ResourceInteraction): void {
     // 检查可用条件
     if (!evaluateCondition(collect.availableCondition, state.player)) {
-      state.sceneTextAfter += collect.unavailableTooltip + '\n' || '该操作当前不可用'
+      setSceneTextAfter(collect.unavailableTooltip || '该操作当前不可用')
       return
     }
     // ── 前置校验 ──
@@ -706,13 +753,13 @@ export function useGame(initialPlayer: PlayerState) {
       state.player.params[collect.paramId] != null &&
       state.player.params[collect.paramId]! <= 0
     ) {
-      state.sceneTextAfter += '\n' + '该资源点已经没有可采集的资源了'
+      setSceneTextAfter('该资源点已经没有可采集的资源了')
       return
     }
     // 2. 体力是否充足
     const costEnergy = collect.costEnergy ?? 0
     if (costEnergy > 0 && state.player.survival.stamina < costEnergy) {
-      state.sceneTextAfter += '\n' + '体力不足，无法进行采集'
+      setSceneTextAfter('体力不足，无法进行采集')
       return
     }
 
@@ -721,10 +768,7 @@ export function useGame(initialPlayer: PlayerState) {
 
     // 显示资源文本（使用 sceneTextAfter 追加到主文字区域下方）
     if (collect.text) {
-      if (state.sceneTextAfter) {
-        state.sceneTextAfter += '\n'
-      }
-      state.sceneTextAfter = state.sceneTextAfter + collect.text
+      setSceneTextAfter(collect.text)
     }
 
     // 如果是敌人类型 → 进入战斗
@@ -741,11 +785,8 @@ export function useGame(initialPlayer: PlayerState) {
         if (Math.random() < prob) {
           const added = addItem(state.player, itemCfg.itemId, itemCfg.quantity)
           if (added > 0) {
-            const gainText = `你获得了【${registry.getItemName(itemCfg.itemId)}】×${added}`
+            // 场景文本追加由物品获得监听器统一处理，这里只更新底部日志
             state.logMessage = `采集到 ${registry.getItemName(itemCfg.itemId)} ×${added}`
-            state.sceneTextAfter = state.sceneTextAfter
-              ? state.sceneTextAfter + '\n' + gainText
-              : gainText
           }
         }
       }
@@ -771,7 +812,7 @@ export function useGame(initialPlayer: PlayerState) {
     // 前置校验：体力是否充足
     const costEnergy = moveAction.costEnergy ?? 0
     if (costEnergy > 0 && state.player.survival.stamina < costEnergy) {
-      state.sceneTextAfter = '体力不足，无法行动'
+      setSceneTextAfter('体力不足，无法行动')
       return
     }
 
@@ -896,6 +937,16 @@ export function useGame(initialPlayer: PlayerState) {
 
     const result: CampsiteBuildingInfo[] = []
 
+    // 建筑 emoji 映射
+    const buildingEmojiMap: Record<string, string> = {
+      '营火': '🔥', '加固营火': '🔥', '大型营火': '🔥',
+      '木墙': '🧱', '石墙': '🧱', '金属墙': '🧱',
+      '工作台': '🔨', '简易工作台': '🔨', '高级工作台': '🔨',
+      '储物箱': '📦', '大型储物箱': '📦',
+      '床铺': '🛏️', '简易床铺': '🛏️', '舒适床铺': '🛏️',
+      '篝火': '🔥', '围栏': '🪵', '水井': '🪣',
+    }
+
     for (const bldId of allIds) {
       const build = registry.getBuilding(bldId)
       if (!build) continue
@@ -908,6 +959,18 @@ export function useGame(initialPlayer: PlayerState) {
       result.push({
         buildId: bldId,
         buildName: currentSub.buildName,
+        description: currentSub.descriptionConfig.description,
+        emoji: buildingEmojiMap[bldId] ?? buildingEmojiMap[currentSub.buildName] ?? '🏗️',
+      })
+    }
+
+    // 按 buildingList 顺序排序（未在列表中的排在后面）
+    if (subScene.buildingList && subScene.buildingList.length > 0) {
+      const orderMap = new Map(subScene.buildingList.map((id, i) => [id, i]))
+      result.sort((a, b) => {
+        const ia = orderMap.get(a.buildId) ?? 999
+        const ib = orderMap.get(b.buildId) ?? 999
+        return ia - ib
       })
     }
 
@@ -956,6 +1019,22 @@ export function useGame(initialPlayer: PlayerState) {
   function setLogMessage(message: string): void {
     state.logMessage = message
   }
+
+  // 设置场景文本下部描述
+  function setSceneTextAfter(description: string): void {
+    if(state.sceneTextAfter) {
+      state.sceneTextAfter += '\n' 
+    }
+    state.sceneTextAfter += description
+  }
+
+  // 注册物品获得监听：每次获得物品时在场景文本后追加提示
+  disposeItemAddedListener?.()
+  disposeItemAddedListener = onItemAdded((itemId, quantity) => {
+    const itemName = registry.getItemName(itemId)
+    console.log(`你获得了【${itemName}】×${quantity}`)
+    setSceneTextAfter(`你获得了【${itemName}】×${quantity}`)
+  })
 
   /**
    * 替换文本中的占位符
@@ -1282,12 +1361,13 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   return {
-    state: readonly(state) as GameRuntimeState,
+    state: shallowReadonly(state) as GameRuntimeState,
     enterEvent,
     selectEventOption,
     handleInteraction,
     handleExplore,
     handleBuild,
+    handleRest,
     handleCollect,
     handleSceneMove,
     getCampsiteBuildings,
@@ -1302,6 +1382,7 @@ export function useGame(initialPlayer: PlayerState) {
     exitBuildMode,
     openInventory,
     closeInventory,
+    setSceneTextAfter,
     resolveText,
     advanceGameTime,
     executeBattleAction,

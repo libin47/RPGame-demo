@@ -47,6 +47,7 @@
           <!-- 图标区 -->
           <div class="item-icon">
             <span class="icon-emoji">{{ getItemEmoji(item.itemId) }}</span>
+            <span v-if="isEquipped(item.itemId)" class="icon-equipped">🔒</span>
             <span v-if="item.quantity > 1" class="icon-qty">×{{ item.quantity }}</span>
             <span class="icon-weight">{{ getItemStackWeight(item).toFixed(1) }}</span>
           </div>
@@ -616,6 +617,15 @@ function onUnequipFromDetail(): void {
 .icon-emoji {
   font-size: 24px;
   line-height: 1;
+}
+.icon-equipped {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 10px;
+  line-height: 1;
+  color: #4ecdc4;
+  text-shadow: 0 0 4px rgba(78, 205, 196, 0.8);
 }
 .icon-qty {
   position: absolute;
