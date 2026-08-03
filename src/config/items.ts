@@ -4,9 +4,7 @@ import type {
   ArmorItem,
   ConsumableItem,
   MaterialItem,
-  ValuableItem,
   DocumentItem,
-  RecipeItem,
   MiscItem,
   ItemRegistry,
 } from '../types/item'
@@ -18,7 +16,8 @@ import { EffectType, AttributeType, AttributeOperation } from '../types/effect'
 import * as armorItems from './items/防具'
 import * as materialItems from './items/材料'
 import * as consumableItems from './items/消耗品'
-import * as toolItems from './items/工具'
+import * as weaponItems from './items/武器'
+import * as itemItems from './items/物品'
 import * as documentItems from './items/文档'
 
 export const itemRegistry: ItemRegistry = {
@@ -27,7 +26,8 @@ export const itemRegistry: ItemRegistry = {
     ...armorItems,
     ...materialItems,
     ...consumableItems,
-    ...toolItems,
+    ...weaponItems,
+    ...itemItems,
     ...documentItems,
   },
 }

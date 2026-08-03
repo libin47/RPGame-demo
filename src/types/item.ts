@@ -69,6 +69,12 @@ export interface BaseItem {
   category: ItemCategory
   /** 物品稀有度 */
   // rarity: ItemRarity
+  /** 工具能力（可选：仅具备工具功能的物品定义，如斧/镐/鱼竿等） */
+  toolCapabilities?: {
+    toolTypeId: string
+    /** 工具等级（影响采集效率/可采集资源等级） */
+    toolLevel: number
+  }
 
   /** 物品图标资源ID */
   iconId: string
@@ -82,6 +88,7 @@ export interface BaseItem {
   isSellable: boolean
   /** 基础售价（货币单位） */
   basePrice: number
+  priceMultiplier?: number
 
   /** 使用/装备条件 */
   useCondition?: Condition
@@ -227,26 +234,6 @@ export interface ArmorItem extends BaseItem {
 }
 
 // ============================================================
-// 工具
-// ============================================================
-
-/**
- * 工具配置（斧、镐、火把、钓鱼竿等非武器功能装备）
- */
-export interface ToolItem extends BaseItem {
-  category: ItemCategory.TOOL
-
-  /** 耐久度配置（火把等消耗品可选填，无耐久则省略） */
-  durability?: DurabilityConfig
-
-  /** 工具类型ID（如'axe'、'pickaxe'、'torch'、'fishingRod'等） */
-  toolTypeId: string
-
-  /** 工具等级（影响采集效率、可采集资源等级等） */
-  toolLevel: number
-}
-
-// ============================================================
 // 消耗品
 // ============================================================
 
@@ -323,20 +310,6 @@ export interface MaterialItem extends BaseItem {
 }
 
 // ============================================================
-// 贵重物品
-// ============================================================
-
-/**
- * 贵重物品配置（金币、宝石、艺术品等交易用物品）
- */
-export interface ValuableItem extends BaseItem {
-  category: ItemCategory.VALUABLE
-
-  /** 实际售价倍率（最终售价 = basePrice * priceMultiplier） */
-  priceMultiplier: number
-}
-
-// ============================================================
 // 文档
 // ============================================================
 
@@ -371,21 +344,6 @@ export interface DocumentContentVariation {
 }
 
 // ============================================================
-// 蓝图/配方
-// ============================================================
-
-/**
- * 蓝图/配方配置
- */
-export interface RecipeItem extends BaseItem {
-  category: ItemCategory.RECIPE
-  /** 配方类型 */
-  recipeType: RecipeType
-  /** 解锁的配方ID（关联制作表/建造表/烹饪表的配方ID） */
-  unlocksRecipeId: string[]
-}
-
-// ============================================================
 // 杂项
 // ============================================================
 
@@ -406,19 +364,17 @@ export interface MiscItem extends BaseItem {
 export type Item =
   | WeaponItem
   | ArmorItem
-  | ToolItem
   | ConsumableItem
   | MaterialItem
-  | ValuableItem
   | DocumentItem
-  | RecipeItem
   | MiscItem
+  | BaseItem
 
 /** 可装备物品类型 */
 export type EquippableItem = WeaponItem | ArmorItem
 
 /** 可堆叠物品类型（排除装备和不可堆叠的消耗品） */
-export type StackableItem = MaterialItem | ConsumableItem | ValuableItem | MiscItem
+export type StackableItem = MaterialItem | ConsumableItem | MiscItem
 
 // ============================================================
 // 装备槽位

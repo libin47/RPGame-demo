@@ -44,9 +44,7 @@
 
       <!-- 固定操作按钮 -->
       <div class="action-bar">
-        <button class="action-btn btn-back" @click="onExit">
-          ← 返回场景
-        </button>
+        <button class="action-btn btn-back" @click="onExit">← 返回场景</button>
         <div class="action-bar-right">
           <button
             v-if="subBuild.isDeconstructable"
@@ -55,10 +53,10 @@
           >
             拆除
           </button>
+          <button v-if="canRepair" class="action-btn btn-repair" @click="onRepair">修复</button>
           <button v-if="hasUpgrades" class="action-btn btn-upgrade" @click="subView = 'upgrade'">
             升级
           </button>
-          <button v-if="needsRepair" class="action-btn btn-repair" @click="onRepair">维修</button>
         </div>
       </div>
     </template>
@@ -155,8 +153,7 @@
 import { ref, computed } from 'vue'
 import type { Build, SubBuild, buildOption } from '@/types/build'
 import type { PlayerState } from '@/types/player'
-import { getRegistry } from '@/engine'
-import { removeItem } from '@/engine'
+import { getRegistry, getSubSceneStorageItemCount } from '@/engine'
 
 const props = defineProps<{
   build: Build
@@ -175,6 +172,7 @@ const emit = defineEmits<{
   (e: 'enterRecipe', payload: { mode: 'craft' | 'cook'; deviceLevel: number }): void
   (e: 'enterRest', act: buildOption): void
   (e: 'enterStore'): void
+  (e: 'enterRepair'): void
 }>()
 
 const registry = getRegistry()
@@ -194,11 +192,10 @@ const durabilityConfig = computed<{ current: number; max: number } | null>(() =>
   return { current: props.subBuild.durability, max: props.subBuild.durability }
 })
 
-const needsRepair = computed(() => {
-  if (!props.subBuild.durability || !props.subBuild.repairMaterials) return false
-  const dc = durabilityConfig.value
-  if (!dc) return false
-  return dc.current < dc.max
+/** 是否可修复（建筑配置了耐久度且有修复材料） */
+const canRepair = computed(() => {
+  if (!props.subBuild.durability) return false
+  return (props.subBuild.repairMaterials?.length ?? 0) > 0
 })
 
 const durabilityPercent = computed(() => {
@@ -393,7 +390,8 @@ function onCustomAction(act: buildOption): void {
       emit('log', '采集功能开发中')
       break
     case 'repair':
-      onRepair()
+      // 进入物品维修子界面（建筑本身维修在操作栏的"修复"按钮）
+      emit('enterRepair')
       break
     case 'rest':
       // 打开休息子界面（由 GameView 渲染 RestPanel）
@@ -437,22 +435,7 @@ function onDoUpgrade(targetSubBuildId: string): void {
 
 function onRepair(): void {
   if (!props.subBuild.repairMaterials || props.subBuild.repairMaterials.length === 0) return
-
-  // 检查材料
-  for (const mat of props.subBuild.repairMaterials) {
-    const count = countItem(mat.itemId)
-    if (count < mat.quantity) {
-      emit('log', `维修材料不足：${registry.getItemName(mat.itemId)}`)
-      return
-    }
-  }
-
-  // 消耗材料
-  for (const mat of props.subBuild.repairMaterials) {
-    removeItem(props.playerState, mat.itemId, mat.quantity)
-  }
-
-  emit('log', `${props.subBuild.buildName} 已修复`)
+  emit('repair', props.build.buildId)
 }
 
 function executeCraft(act: buildOption): void {
@@ -468,13 +451,18 @@ function executeCook(act: buildOption): void {
 // ============================================================
 
 function countItem(itemId: string): number {
-  return props.playerState.inventory.reduce((sum, inv) => {
+  const backpack = props.playerState.inventory.reduce((sum, inv) => {
     if (inv.itemId === itemId) {
       const isEquipped = Object.values(props.playerState.equipment).includes(itemId)
       return sum + (isEquipped ? 0 : inv.quantity)
     }
     return sum
   }, 0)
+  // 营地升级材料可合并统计仓库
+  const storage = props.subSceneId
+    ? getSubSceneStorageItemCount(props.playerState, props.subSceneId, itemId)
+    : 0
+  return backpack + storage
 }
 
 function getSurvivalValue(costType: string): number {
@@ -569,7 +557,12 @@ function getStaminaCoeff(): number {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 100%
+  );
 }
 .durability-fill.durable {
   background: linear-gradient(90deg, #2ecc71, #4ecdc4);
@@ -645,7 +638,9 @@ function getStaminaCoeff(): number {
 }
 .interaction-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 255, 255, 0.03);
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(255, 255, 255, 0.03);
 }
 .interaction-btn:hover::before {
   opacity: 1;
@@ -720,6 +715,17 @@ function getStaminaCoeff(): number {
   border-color: rgba(206, 147, 216, 0.6);
   background: linear-gradient(135deg, rgba(206, 147, 216, 0.15), rgba(206, 147, 216, 0.05));
   box-shadow: 0 3px 12px rgba(206, 147, 216, 0.15);
+}
+
+.btn-repair {
+  border-color: rgba(78, 205, 196, 0.35);
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.06), rgba(78, 205, 196, 0.02));
+  color: var(--accent);
+}
+.btn-repair:hover {
+  border-color: rgba(78, 205, 196, 0.6);
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(78, 205, 196, 0.05));
+  box-shadow: 0 3px 12px rgba(78, 205, 196, 0.15);
 }
 
 .btn-default {
@@ -959,8 +965,14 @@ function getStaminaCoeff(): number {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dialog-title {

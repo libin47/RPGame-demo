@@ -3,7 +3,6 @@
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
 import type { AttributeType } from './effect'
-import type { FlagValue } from './flag'
 
 // ============================================================
 // 公共基础

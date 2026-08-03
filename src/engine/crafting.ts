@@ -11,6 +11,7 @@ import type {
   AttributeRequirement,
 } from '@/types/recipe'
 import type { CookRecipe, CookQualityLevel } from '@/types/cook'
+import type { DurabilityConfig } from '@/types/item'
 import { RecipeCostType } from '@/types/recipe'
 import { GainExpTarget } from '@/types/effect'
 import type { GainExpEffect } from '@/types/effect'
@@ -44,15 +45,31 @@ export interface CraftResult {
 // ============================================================
 
 /**
+ * 外部材料来源（如营地仓库）
+ * 供营地建造/制作/烹饪等在检查与消耗材料时合并统计
+ */
+export interface ItemSource {
+  /** 获取外部来源中某物品的总数量 */
+  countOf: (itemId: string) => number
+  /** 从外部来源扣除指定数量（背包不足时由引擎调用） */
+  remove: (itemId: string, quantity: number) => number
+}
+
+/**
  * 检查玩家是否满足材料需求
  * @param player - 当前玩家
  * @param materials - 所需材料列表
+ * @param source - 可选的外部材料来源（如仓库），检查时合并统计
  * @returns 若满足返回 null，否则返回缺失原因
  */
-function checkMaterials(player: PlayerState, materials: RequiredMaterial[]): string | null {
+function checkMaterials(
+  player: PlayerState,
+  materials: RequiredMaterial[],
+  source?: ItemSource,
+): string | null {
   for (const mat of materials) {
     if (!mat.isConsumed) continue // 非消耗材料只要求存在（如工具）
-    const count = player.inventory.reduce((sum, inv) => {
+    const backpackCount = player.inventory.reduce((sum, inv) => {
       if (inv.itemId === mat.itemId) {
         // 检查是否已装备（装备中的物品不可用作材料）
         const isEquipped = Object.values(player.equipment).includes(mat.itemId)
@@ -60,6 +77,8 @@ function checkMaterials(player: PlayerState, materials: RequiredMaterial[]): str
       }
       return sum
     }, 0)
+    const externalCount = source ? source.countOf(mat.itemId) : 0
+    const count = backpackCount + externalCount
     if (count < mat.quantity) {
       const registry = getRegistry()
       const itemName = registry.getItemName(mat.itemId)
@@ -169,12 +188,20 @@ function applyCosts(player: PlayerState, costs: RecipeCost[]): void {
 }
 
 /**
- * 从背包中扣除材料
+ * 扣除材料（优先扣背包，不足时从外部来源如仓库补充）
  */
-function consumeMaterials(player: PlayerState, materials: RequiredMaterial[]): void {
+function consumeMaterials(
+  player: PlayerState,
+  materials: RequiredMaterial[],
+  source?: ItemSource,
+): void {
   for (const mat of materials) {
     if (!mat.isConsumed) continue
-    removeItem(player, mat.itemId, mat.quantity)
+    let remaining = mat.quantity
+    remaining -= removeItem(player, mat.itemId, remaining)
+    if (remaining > 0 && source) {
+      source.remove(mat.itemId, remaining)
+    }
   }
 }
 
@@ -204,11 +231,16 @@ function produceItems(
  *
  * @param player - 当前玩家
  * @param recipe - 配方配置
+ * @param source - 可选的外部材料来源（如仓库）
  * @returns 可以执行返回 null，否则返回原因字符串
  */
-export function canCraftRecipe(player: PlayerState, recipe: BaseRecipe): string | null {
+export function canCraftRecipe(
+  player: PlayerState,
+  recipe: BaseRecipe,
+  source?: ItemSource,
+): string | null {
   // 检查材料
-  const materialCheck = checkMaterials(player, recipe.materials)
+  const materialCheck = checkMaterials(player, recipe.materials, source)
   if (materialCheck) return materialCheck
 
   // 检查技能/属性要求
@@ -238,6 +270,7 @@ export function executeCraft(
   player: PlayerState,
   recipeId: string,
   quantity: number = 1,
+  source?: ItemSource,
 ): CraftResult {
   const registry = getRegistry()
   const recipe = registry.getCraftRecipe(recipeId)
@@ -267,14 +300,18 @@ export function executeCraft(
     value: c.value * actualQty,
   }))
 
-  const canDo = canCraftRecipe(player, { ...recipe, materials: batchMaterials, costs: batchCosts })
+  const canDo = canCraftRecipe(
+    player,
+    { ...recipe, materials: batchMaterials, costs: batchCosts },
+    source,
+  )
   if (canDo) {
     return { success: false, message: canDo, timeUsed: 0 }
   }
 
-  // 执行消耗
+  // 执行消耗（批量材料需按数量扣减）
   applyCosts(player, batchCosts)
-  consumeMaterials(player, recipe.materials)
+  consumeMaterials(player, batchMaterials, source)
 
   // 计算总耗时
   const totalTime = recipe.requirements.timeMinutes + (actualQty - 1) * recipe.additionalTimePerItem
@@ -370,7 +407,11 @@ export function calculateCookQuality(player: PlayerState, recipe: CookRecipe): C
  * @param recipeId - 烹饪配方ID
  * @returns 执行结果
  */
-export function executeCook(player: PlayerState, recipeId: string): CraftResult {
+export function executeCook(
+  player: PlayerState,
+  recipeId: string,
+  source?: ItemSource,
+): CraftResult {
   const registry = getRegistry()
   const recipe = registry.getCookRecipe(recipeId)
 
@@ -384,14 +425,14 @@ export function executeCook(player: PlayerState, recipeId: string): CraftResult 
   }
 
   // 检查条件
-  const canDo = canCraftRecipe(player, recipe as BaseRecipe)
+  const canDo = canCraftRecipe(player, recipe as BaseRecipe, source)
   if (canDo) {
     return { success: false, message: canDo, timeUsed: 0 }
   }
 
   // 执行消耗（烹饪通常只消耗材料，不消耗体力等）
   applyCosts(player, recipe.costs)
-  consumeMaterials(player, recipe.materials)
+  consumeMaterials(player, recipe.materials, source)
 
   // 计算烹饪品质
   const qualityLevel = calculateCookQuality(player, recipe)
@@ -444,12 +485,14 @@ export function executeCook(player: PlayerState, recipeId: string): CraftResult 
  * @param player - 当前玩家（会被直接修改）
  * @param buildId - 建筑Build ID
  * @param subSceneId - 当前子场景ID（用于追踪营地建筑）
+ * @param source - 可选的外部材料来源（如仓库）
  * @returns 执行结果
  */
 export function executeBuild(
   player: PlayerState,
   buildId: string,
   subSceneId?: string,
+  source?: ItemSource,
 ): CraftResult {
   const registry = getRegistry()
   const build = registry.getBuilding(buildId)
@@ -491,7 +534,7 @@ export function executeBuild(
     quantity: m.quantity,
     isConsumed: true,
   }))
-  const materialCheck = checkMaterials(player, materials)
+  const materialCheck = checkMaterials(player, materials, source)
   if (materialCheck) return { success: false, message: materialCheck, timeUsed: 0 }
 
   // 检查消耗（使用 defaultCost）
@@ -506,7 +549,7 @@ export function executeBuild(
 
   // 执行消耗
   applyCosts(player, build.defaultCost)
-  consumeMaterials(player, materials)
+  consumeMaterials(player, materials, source)
 
   // 记录建筑
   if (!player.progress.campBuildings[subSceneId]) {
@@ -541,6 +584,7 @@ export function executeBuild(
  * @param buildId - 建筑Build ID
  * @param targetSubBuildId - 目标子建筑ID
  * @param subSceneId - 当前子场景ID
+ * @param source - 可选的外部材料来源（如仓库）
  * @returns 执行结果
  */
 export function executeUpgradeBuild(
@@ -548,6 +592,7 @@ export function executeUpgradeBuild(
   buildId: string,
   targetSubBuildId: string,
   subSceneId: string,
+  source?: ItemSource,
 ): CraftResult {
   const registry = getRegistry()
   const build = registry.getBuilding(buildId)
@@ -585,7 +630,7 @@ export function executeUpgradeBuild(
     quantity: m.quantity,
     isConsumed: true,
   }))
-  const materialCheck = checkMaterials(player, upgradeMaterials)
+  const materialCheck = checkMaterials(player, upgradeMaterials, source)
   if (materialCheck) return { success: false, message: materialCheck, timeUsed: 0 }
 
   // 检查升级消耗
@@ -611,7 +656,7 @@ export function executeUpgradeBuild(
 
   // 执行消耗
   applyCosts(player, upgradeConfig.upgradeCost)
-  consumeMaterials(player, upgradeMaterials)
+  consumeMaterials(player, upgradeMaterials, source)
 
   // 更新建筑等级
   if (!player.progress.campBuildingLevels[subSceneId]) {
@@ -719,15 +764,40 @@ export function executeDeconstruct(
 // ============================================================
 
 /**
+ * 获取物品的修复配置信息（耐久上限、是否可修理、修复材料等）
+ * 从物品配置的 durability 字段中读取
+ *
+ * @param itemId - 物品配置ID
+ * @returns 修复信息；物品无耐久配置或不可修理时返回 null
+ */
+export function getItemRepairInfo(itemId: string): {
+  maxDurability: number
+  isRepairable: boolean
+  repairWorkbenchLevel: number
+  repairMaterials: Array<{ itemId: string; quantity: number }>
+} | null {
+  const registry = getRegistry()
+  const itemConfig = registry.getItem(itemId)
+  if (!itemConfig || !('durability' in itemConfig)) return null
+  const durConfig = (itemConfig as { durability?: DurabilityConfig }).durability
+  if (!durConfig || !durConfig.isRepairable) return null
+  const repairMaterials = durConfig.repairMaterials ?? []
+  if (repairMaterials.length === 0) return null
+  return {
+    maxDurability: durConfig.maxDurability,
+    isRepairable: durConfig.isRepairable,
+    repairWorkbenchLevel: durConfig.repairWorkbenchLevel ?? 0,
+    repairMaterials,
+  }
+}
+
+/**
  * 获取物品的耐久度上限
  * 从物品配置中读取 durability 字段
  */
 function getItemMaxDurability(itemId: string): number {
-  const registry = getRegistry()
-  const itemConfig = registry.getItem(itemId)
-  if (!itemConfig || !('durability' in itemConfig)) return -1
-  const durConfig = (itemConfig as { durability?: { maxDurability?: number } }).durability
-  return durConfig?.maxDurability ?? -1
+  const info = getItemRepairInfo(itemId)
+  return info ? info.maxDurability : -1
 }
 
 /**
@@ -736,13 +806,8 @@ function getItemMaxDurability(itemId: string): number {
 function getItemRepairMaterials(
   itemId: string,
 ): Array<{ itemId: string; quantity: number }> | null {
-  const registry = getRegistry()
-  const itemConfig = registry.getItem(itemId)
-  if (!itemConfig || !('repairMaterials' in itemConfig)) return null
-  return (
-    (itemConfig as { repairMaterials?: Array<{ itemId: string; quantity: number }> })
-      .repairMaterials ?? null
-  )
+  const info = getItemRepairInfo(itemId)
+  return info ? info.repairMaterials : null
 }
 
 /**
@@ -750,9 +815,14 @@ function getItemRepairMaterials(
  *
  * @param player - 当前玩家（会被直接修改）
  * @param instanceId - 要修复的物品实例ID
+ * @param source - 可选的外部材料来源（如仓库）
  * @returns 执行结果
  */
-export function executeRepair(player: PlayerState, instanceId: string): CraftResult {
+export function executeRepair(
+  player: PlayerState,
+  instanceId: string,
+  source?: ItemSource,
+): CraftResult {
   // 查找背包中的物品
   const invIndex = player.inventory.findIndex((i) => i.instanceId === instanceId)
   if (invIndex === -1) {
@@ -780,30 +850,21 @@ export function executeRepair(player: PlayerState, instanceId: string): CraftRes
     return { success: false, message: '该物品无法修复（无修复材料配置）', timeUsed: 0 }
   }
 
-  // 检查材料
-  for (const mat of repairMaterials) {
-    const count = player.inventory.reduce((sum, item) => {
-      if (item.itemId === mat.itemId) {
-        const isEquipped = Object.values(player.equipment).includes(mat.itemId)
-        return sum + (isEquipped ? 0 : item.quantity)
-      }
-      return sum
-    }, 0)
-    if (count < mat.quantity) {
-      const registry = getRegistry()
-      const itemName = registry.getItemName(mat.itemId)
-      return {
-        success: false,
-        message: `修复材料不足：需要 ${itemName} ×${mat.quantity}（当前 ${count}）`,
-        timeUsed: 0,
-      }
+  // 检查/消耗材料（优先背包，不足时从仓库补充）
+  const mats: RequiredMaterial[] = repairMaterials.map((m) => ({
+    itemId: m.itemId,
+    quantity: m.quantity,
+    isConsumed: true,
+  }))
+  const matCheck = checkMaterials(player, mats, source)
+  if (matCheck) {
+    return {
+      success: false,
+      message: `修复${matCheck}`,
+      timeUsed: 0,
     }
   }
-
-  // 消耗材料
-  for (const mat of repairMaterials) {
-    removeItem(player, mat.itemId, mat.quantity)
-  }
+  consumeMaterials(player, mats, source)
 
   // 恢复耐久度
   invItem.durability = maxDurability

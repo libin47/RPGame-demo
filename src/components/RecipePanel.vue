@@ -37,12 +37,14 @@
             <div class="rp-name-row">
               <span class="rp-name">{{ item.recipe.name }}</span>
               <span class="rp-category">{{ item.categoryLabel }}</span>
-              <span v-if="item.staminaCost > 0" class="rp-cost-badge stamina-badge" title="体力消耗">
+              <span
+                v-if="item.staminaCost > 0"
+                class="rp-cost-badge stamina-badge"
+                title="体力消耗"
+              >
                 ⚡{{ item.staminaCost }}
               </span>
-              <span class="rp-cost-badge time-badge" title="所需时间">
-                ⏱{{ item.timeStr }}
-              </span>
+              <span class="rp-cost-badge time-badge" title="所需时间"> ⏱{{ item.timeStr }} </span>
             </div>
 
             <!-- 材料需求 -->
@@ -126,11 +128,9 @@ import type { CookRecipe } from '@/types/cook'
 import {
   getRegistry,
   getItemCount,
-  executeCraft,
-  executeCook,
+  getSubSceneStorageItemCount,
   calculateCookQuality,
 } from '@/engine'
-import type { CraftResult } from '@/engine'
 
 const props = defineProps<{
   mode: 'craft' | 'cook'
@@ -138,11 +138,13 @@ const props = defineProps<{
   deviceLevel: number
   /** 当前玩家状态（用于计算材料/属性检查） */
   playerState: PlayerState
+  /** 当前子场景ID（用于合并统计仓库材料，null 表示不在营地） */
+  subSceneId: string | null
 }>()
 
 const emit = defineEmits<{
   close: []
-  execute: [result: CraftResult]
+  execute: [recipeId: string, quantity: number]
 }>()
 
 const registry = getRegistry()
@@ -169,6 +171,15 @@ function getSurvivalValue(costType: string): number {
 function getStaminaCoeff(): number {
   // 体力消耗系数 = 1 - maxSat 修正
   return Math.max(0.3, 1 - props.playerState.survival.satiety / 100)
+}
+
+/** 材料数量 = 背包 + 当前子场景仓库（营地制作/烹饪可合并使用仓库材料） */
+function countMaterial(itemId: string): number {
+  const backpack = getItemCount(props.playerState, itemId)
+  const storage = props.subSceneId
+    ? getSubSceneStorageItemCount(props.playerState, props.subSceneId, itemId)
+    : 0
+  return backpack + storage
 }
 
 // ============================================================
@@ -234,8 +245,9 @@ const filterTabs = computed<Array<{ key: string; label: string }>>(() => {
   }
   const tabs = Array.from(cats.entries()).map(([key, label]) => ({ key, label }))
   // 默认选中第一个标签
-  if (currentFilter.value === '' && tabs.length > 0) {
-    currentFilter.value = tabs[0].key
+  const firstTab = tabs[0]
+  if (currentFilter.value === '' && firstTab) {
+    currentFilter.value = firstTab.key
   }
   return tabs
 })
@@ -268,7 +280,7 @@ function buildCraftList(): RecipeDisplayItem[] {
     if (!props.playerState.unlockedRecipes.craftRecipes.includes(id)) continue
 
     const materials = recipe.materials.map((m) => {
-      const current = getItemCount(props.playerState, m.itemId)
+      const current = countMaterial(m.itemId)
       return {
         itemId: m.itemId,
         itemName: registry.getItemName(m.itemId),
@@ -327,7 +339,7 @@ function buildCookList(): RecipeDisplayItem[] {
     if (!props.playerState.unlockedRecipes.cookRecipes.includes(id)) continue
 
     const materials = recipe.materials.map((m) => {
-      const current = getItemCount(props.playerState, m.itemId)
+      const current = countMaterial(m.itemId)
       return {
         itemId: m.itemId,
         itemName: registry.getItemName(m.itemId),
@@ -388,7 +400,7 @@ function maxQty(item: RecipeDisplayItem): number {
   if (r.maxCraftQuantity === -1) {
     let maxByMat = 99
     for (const m of r.materials) {
-      const count = getItemCount(props.playerState, m.itemId)
+      const count = countMaterial(m.itemId)
       const possible = Math.floor(count / m.quantity)
       maxByMat = Math.min(maxByMat, possible)
     }
@@ -416,13 +428,7 @@ function formatTime(minutes: number): string {
 // ============================================================
 
 function onExecute(item: RecipeDisplayItem): void {
-  let result: CraftResult
-  if (props.mode === 'craft') {
-    result = executeCraft(props.playerState, item.recipe.id, item.qty)
-  } else {
-    result = executeCook(props.playerState, item.recipe.id)
-  }
-  emit('execute', result)
+  emit('execute', item.recipe.id, item.qty)
 }
 </script>
 

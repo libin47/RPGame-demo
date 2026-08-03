@@ -190,31 +190,72 @@ interface FilterTab {
   key: string
   label: string
   category?: ItemCategory
+  /** 自定义匹配（用于"其他"等非单一类别分组） */
+  match?: (config: Item) => boolean
 }
 
 const filterTabs: FilterTab[] = [
   { key: 'all', label: '全部' },
-  { key: 'weapon', label: '武器', category: ItemCategory.WEAPON },
-  { key: 'armor', label: '防具', category: ItemCategory.ARMOR },
+  { key: 'equipment', label: '装备', match: isEquipmentType },
   { key: 'consumable', label: '消耗品', category: ItemCategory.CONSUMABLE },
-  { key: 'material', label: '材料', category: ItemCategory.MATERIAL },
-  { key: 'tool', label: '工具', category: ItemCategory.TOOL },
-  { key: 'valuable', label: '贵重品', category: ItemCategory.VALUABLE },
+  { key: 'item', label: '物品', match: isItemGroupType },
   { key: 'document', label: '文档', category: ItemCategory.DOCUMENT },
+  { key: 'misc', label: '杂项', category: ItemCategory.MISC },
 ]
+
+/** 装备组：武器 + 防具 */
+function isEquipmentType(config: Item): boolean {
+  return config.category === ItemCategory.WEAPON || config.category === ItemCategory.ARMOR
+}
+
+/** 物品组：材料 + 纯 BaseItem */
+function isItemGroupType(config: Item): boolean {
+  return config.category === ItemCategory.MATERIAL || isBaseItemType(config)
+}
+
+/** 判断物品是否为纯 BaseItem（不属于武器/防具/消耗品/材料/文档/杂项的其他物品） */
+function isBaseItemType(config: Item): boolean {
+  // 武器有 weaponStats 字段
+  if ('weaponStats' in config) return false
+  return !(
+    config.category === ItemCategory.ARMOR ||
+    config.category === ItemCategory.CONSUMABLE ||
+    config.category === ItemCategory.MATERIAL ||
+    config.category === ItemCategory.DOCUMENT ||
+    config.category === ItemCategory.MISC
+  )
+}
 
 const currentFilter = ref<string>('all')
 
 const filteredItems = computed<PlayerInventoryItem[]>(() => {
   const tab = filterTabs.find((t) => t.key === currentFilter.value)
-  if (!tab || !tab.category) {
-    return props.playerState.inventory.filter((i) => i)
-  }
-  return props.playerState.inventory.filter((i) => {
+  if (!tab) return props.playerState.inventory.filter((i) => i)
+  const list = props.playerState.inventory.filter((i) => {
     if (!i) return false
     const config = registry.getItem(i.itemId)
-    return config && config.category === tab.category
+    if (!config) return false
+    if (tab.match) return tab.match(config)
+    if (tab.category) return config.category === tab.category
+    return true
   })
+  // 合并分组内的展示顺序：装备组武器在前、物品组材料在前
+  const primary =
+    tab.key === 'equipment'
+      ? ItemCategory.WEAPON
+      : tab.key === 'item'
+        ? ItemCategory.MATERIAL
+        : null
+  if (primary) {
+    return [...list].sort((a, b) => {
+      const aCfg = registry.getItem(a.itemId)
+      const bCfg = registry.getItem(b.itemId)
+      const aRank = aCfg?.category === primary ? 0 : 1
+      const bRank = bCfg?.category === primary ? 0 : 1
+      return aRank - bRank
+    })
+  }
+  return list
 })
 
 // ═══════════════════════════════════════════
@@ -341,11 +382,7 @@ function isUsable(itemId: string): boolean {
 function isEquippable(itemId: string): boolean {
   const config = getItemConfig(itemId)
   if (!config) return false
-  return (
-    config.category === ItemCategory.WEAPON ||
-    config.category === ItemCategory.ARMOR ||
-    config.category === ItemCategory.TOOL
-  )
+  return config.category === ItemCategory.WEAPON || config.category === ItemCategory.ARMOR
 }
 
 function useActionLabel(itemId: string): string {

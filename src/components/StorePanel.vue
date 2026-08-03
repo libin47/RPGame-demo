@@ -1,5 +1,5 @@
 <!-- StorePanel.vue - 储物箱仓库界面
-     左右分栏：左侧背包 → 右侧仓库，点击物品转移 -->
+     上下分栏：上方仓库 → 下方背包，点击物品转移（每行4个） -->
 <template>
   <div class="store-panel">
     <!-- 头部 -->
@@ -13,35 +13,10 @@
     </div>
 
     <div class="sp-body">
-      <!-- 左侧：背包 -->
-      <div class="sp-column">
-        <div class="sp-col-header">背包（{{ playerInventory.length }}）</div>
-        <div class="sp-col-list">
-          <div
-            v-for="item in playerInventory"
-            :key="item.instanceId"
-            class="sp-item-card"
-            @click="onTransferToStorage(item)"
-          >
-            <span class="sp-item-icon">{{ getItemEmoji(item.itemId) }}</span>
-            <div class="sp-item-info">
-              <span class="sp-item-name">{{ getItemName(item.itemId) }}</span>
-              <span class="sp-item-meta">
-                ×{{ item.quantity }}
-                <span v-if="getItemWeight(item.itemId) > 0" class="sp-item-weight">
-                  {{ (getItemWeight(item.itemId) * item.quantity).toFixed(1) }}kg
-                </span>
-              </span>
-            </div>
-          </div>
-          <div v-if="playerInventory.length === 0" class="sp-empty">背包为空</div>
-        </div>
-      </div>
-
-      <!-- 右侧：仓库 -->
-      <div class="sp-column">
+      <!-- 上方：仓库 -->
+      <section class="sp-section">
         <div class="sp-col-header">仓库（{{ usedSlots }}/{{ maxSlots }}）</div>
-        <div class="sp-col-list">
+        <div class="sp-grid">
           <div
             v-for="item in storageItems"
             :key="item.instanceId"
@@ -50,14 +25,40 @@
             @click="onTransferToInventory(item)"
           >
             <span class="sp-item-icon">{{ getItemEmoji(item.itemId) }}</span>
-            <div class="sp-item-info">
-              <span class="sp-item-name">{{ getItemName(item.itemId) }}</span>
-              <span class="sp-item-meta">×{{ item.quantity }}</span>
-            </div>
+            <span class="sp-item-name">{{ getItemName(item.itemId) }}</span>
+            <span class="sp-item-meta">×{{ item.quantity }}</span>
           </div>
           <div v-if="storageItems.length === 0" class="sp-empty">仓库为空</div>
         </div>
-      </div>
+      </section>
+
+      <!-- 下方：背包（不显示杂项类别） -->
+      <section class="sp-section">
+        <div class="sp-col-header">
+          背包（{{ playerState.survival.carryWeight.toFixed(1) }}/{{
+            playerState.survival.maxCarryWeight.toFixed(1)
+          }}
+          kg）
+        </div>
+        <div class="sp-grid">
+          <div
+            v-for="item in playerInventory"
+            :key="item.instanceId"
+            class="sp-item-card"
+            @click="onTransferToStorage(item)"
+          >
+            <span class="sp-item-icon">{{ getItemEmoji(item.itemId) }}</span>
+            <span class="sp-item-name">{{ getItemName(item.itemId) }}</span>
+            <span class="sp-item-meta">
+              ×{{ item.quantity }}
+              <span v-if="getItemWeight(item.itemId) > 0" class="sp-item-weight">
+                {{ (getItemWeight(item.itemId) * item.quantity).toFixed(1) }}kg
+              </span>
+            </span>
+          </div>
+          <div v-if="playerInventory.length === 0" class="sp-empty">背包为空</div>
+        </div>
+      </section>
     </div>
 
     <!-- 底部 -->
@@ -72,13 +73,7 @@ import { ref, computed } from 'vue'
 import type { PlayerState, PlayerInventoryItem } from '@/types/player'
 import type { SubBuild } from '@/types/build'
 import { getRegistry } from '@/engine'
-import {
-  getStorageItems,
-  getStorageUsedSlots,
-  getStorageMaxSlots,
-  addToStorage,
-  removeFromStorage,
-} from '@/engine'
+import { getStorageItems, getStorageUsedSlots, getStorageMaxSlots } from '@/engine'
 
 const props = defineProps<{
   playerState: PlayerState
@@ -89,7 +84,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'log', message: string): void
+  /** 存入仓库（由 useGame 执行并提示） */
+  (e: 'store', itemId: string, quantity: number): void
+  /** 取出仓库（由 useGame 执行并提示） */
+  (e: 'retrieve', instanceId: string, quantity: number): void
 }>()
 
 const registry = getRegistry()
@@ -103,9 +101,13 @@ const storageItems = computed<PlayerInventoryItem[]>(() => {
   return getStorageItems(props.playerState, props.subSceneId, props.buildId)
 })
 
-/** 玩家背包物品（排除已装备的） */
+/** 玩家背包物品（排除已装备的与杂项类别） */
 const playerInventory = computed<PlayerInventoryItem[]>(() => {
-  return props.playerState.inventory.filter((i) => !i.equippedSlot)
+  return props.playerState.inventory.filter((i) => {
+    if (i.equippedSlot) return false
+    const config = registry.getItem(i.itemId)
+    return !config || config.category !== 'misc'
+  })
 })
 
 /** 已用格数 */
@@ -122,33 +124,15 @@ const maxSlots = computed(() => {
 /** 从背包转移到仓库 */
 function onTransferToStorage(item: PlayerInventoryItem): void {
   if (!props.subSceneId) return
-  if (usedSlots.value >= maxSlots.value) {
-    emit('log', '仓库已满')
-    return
-  }
-
   const qty = batchMode.value ? item.quantity : 1
-  const added = addToStorage(props.playerState, props.subSceneId, props.buildId, item.itemId, qty)
-  if (added > 0) {
-    emit('log', `已将 ${registry.getItemName(item.itemId)} ×${added} 存入仓库`)
-  }
+  emit('store', item.itemId, qty)
 }
 
 /** 从仓库转移到背包 */
 function onTransferToInventory(item: PlayerInventoryItem): void {
   if (!props.subSceneId) return
-
   const qty = batchMode.value ? item.quantity : 1
-  const removed = removeFromStorage(
-    props.playerState,
-    props.subSceneId,
-    props.buildId,
-    item.instanceId,
-    qty,
-  )
-  if (removed > 0) {
-    emit('log', `已将 ${registry.getItemName(item.itemId)} ×${removed} 取出仓库`)
-  }
+  emit('retrieve', item.instanceId, qty)
 }
 
 function getItemName(itemId: string): string {
@@ -221,7 +205,7 @@ function getItemWeight(itemId: string): number {
   user-select: none;
 }
 
-.sp-batch-toggle input[type="checkbox"] {
+.sp-batch-toggle input[type='checkbox'] {
   accent-color: var(--accent);
 }
 
@@ -229,21 +213,23 @@ function getItemWeight(itemId: string): number {
   white-space: nowrap;
 }
 
-/* 主体：左右分栏 */
+/* 主体：上下分栏（上方仓库、下方背包） */
 .sp-body {
   flex: 1;
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
   padding: 0.5rem 1.2rem;
   overflow: hidden;
   min-height: 0;
 }
 
-.sp-column {
+.sp-section {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 
 .sp-col-header {
@@ -255,25 +241,30 @@ function getItemWeight(itemId: string): number {
   flex-shrink: 0;
 }
 
-.sp-col-list {
+/* 物品网格：每行4个（minmax(0,1fr) 防止内容撑宽列） */
+.sp-grid {
   flex: 1;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.3rem;
+  align-content: start;
 }
 
-/* 物品卡片 */
+/* 物品卡片（纵向紧凑布局） */
 .sp-item-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.5rem;
+  text-align: center;
+  gap: 0.1rem;
+  padding: 0.35rem 0.3rem;
   border: 1px solid var(--border-weak);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.02);
   cursor: pointer;
   transition: all var(--transition-fast);
+  min-width: 0;
 }
 
 .sp-item-card:hover {
@@ -288,24 +279,15 @@ function getItemWeight(itemId: string): number {
 .sp-item-icon {
   font-size: 1.2rem;
   flex-shrink: 0;
-  width: 1.6rem;
-  text-align: center;
-}
-
-.sp-item-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
 }
 
 .sp-item-name {
-  font-size: var(--font-sm);
+  font-size: var(--font-xs);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .sp-item-meta {
@@ -314,11 +296,12 @@ function getItemWeight(itemId: string): number {
 }
 
 .sp-item-weight {
-  margin-left: 0.3rem;
+  margin-left: 0.25rem;
 }
 
-/* 空状态 */
+/* 空状态（占满整行） */
 .sp-empty {
+  grid-column: 1 / -1;
   text-align: center;
   padding: 1rem;
   color: var(--text-muted);

@@ -75,6 +75,18 @@ export interface GameInstance {
   executeCraftRecipe: (recipeId: string, quantity: number) => CraftResult
   /** 执行烹饪配方 */
   executeCookRecipe: (recipeId: string) => CraftResult
+  /** 修复指定物品实例 */
+  repairItem: (instanceId: string) => CraftResult
+  /** 将背包物品存入当前仓库 */
+  storeItem: (itemId: string, quantity: number) => number
+  /** 从当前仓库取出物品到背包 */
+  retrieveItem: (instanceId: string, quantity: number) => number
+  /** 维修当前建筑 */
+  repairBuilding: (buildId: string) => void
+  /** 推进CG到下一帧 */
+  advanceCG: () => boolean
+  /** 结束CG，返回正常场景模式 */
+  endCG: () => void
   /** 退出建造模式 */
   exitBuildMode: () => void
   /** 打开背包 */
@@ -161,6 +173,12 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     executeDeconstruct: game.executeDeconstructBuilding,
     executeCraftRecipe: game.executeCraftRecipeMode,
     executeCookRecipe: game.executeCookRecipeMode,
+    repairItem: game.repairItem,
+    storeItem: game.handleStoreItem,
+    retrieveItem: game.handleRetrieveItem,
+    repairBuilding: game.handleRepairBuilding,
+    advanceCG: game.advanceCG,
+    endCG: game.endCG,
     exitBuildMode: game.exitBuildMode,
     openInventory: game.openInventory,
     closeInventory: game.closeInventory,
@@ -214,6 +232,12 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     executeDeconstruct: game.executeDeconstructBuilding,
     executeCraftRecipe: game.executeCraftRecipeMode,
     executeCookRecipe: game.executeCookRecipeMode,
+    repairItem: game.repairItem,
+    storeItem: game.handleStoreItem,
+    retrieveItem: game.handleRetrieveItem,
+    repairBuilding: game.handleRepairBuilding,
+    advanceCG: game.advanceCG,
+    endCG: game.endCG,
     exitBuildMode: game.exitBuildMode,
     openInventory: game.openInventory,
     closeInventory: game.closeInventory,

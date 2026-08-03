@@ -1,6 +1,6 @@
 // src/runtime/useGame.ts
 
-import { reactive, shallowReadonly } from 'vue'
+import { reactive, readonly } from 'vue'
 import type { PlayerState } from '@/types/player'
 import type {
   Scene,
@@ -43,8 +43,13 @@ import {
   executeDeconstruct,
   executeCraft as engineExecuteCraft,
   executeCook as engineExecuteCook,
+  executeRepair as engineExecuteRepair,
 } from '@/engine'
-import type { CraftResult } from '@/engine'
+import { addToStorage, removeFromStorage, getStorageItems } from '@/engine'
+import { getSubSceneStorageItemCount, removeFromSubSceneStorage } from '@/engine'
+import { removeItem, getItemCount } from '@/engine'
+import { nextCGFrame } from '@/engine'
+import type { CraftResult, ItemSource } from '@/engine'
 import type { ButtonOption } from '@/types/option'
 import type { buildOption } from '@/types/build'
 
@@ -699,15 +704,15 @@ export function useGame(initialPlayer: PlayerState) {
     // 回复san
     state.player.survival.san = Math.min(
       state.player.survival.maxSan,
-      state.player.survival.san + Math.round((timeHours * 60) / 10) * ((option?.buildLevel || 1)-1),
+      state.player.survival.san +
+        Math.round((timeHours * 60) / 10) * ((option?.buildLevel || 1) - 1),
     )
-
 
     // 3. 移除休息时应移除的状态
     removeRestStatuses(state.player)
 
     // 4、记录日志
-    setSceneTextAfter((option?.description || '').replace(/\{time\}/g, timeHours.toString()) )
+    setSceneTextAfter((option?.description || '').replace(/\{time\}/g, timeHours.toString()))
     setLogMessage(`你休息了 ${timeHours} 小时，恢复了一些体力`)
 
     // 5. 返回场景界面（退出建筑交互模式）
@@ -848,11 +853,25 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 构建营地材料的外部来源（当前子场景的所有仓库）
+   * 供建造/升级/制作/烹饪/修复时合并统计与补充消耗
+   */
+  function getStorageSource(subSceneId?: string): ItemSource | null {
+    if (!subSceneId) return null
+    return {
+      countOf: (itemId) => getSubSceneStorageItemCount(state.player, subSceneId, itemId),
+      remove: (itemId, quantity) =>
+        removeFromSubSceneStorage(state.player, subSceneId, itemId, quantity),
+    }
+  }
+
+  /**
    * 执行建造
    */
   function executeBuildRecipe(buildId: string): CraftResult {
     const subSceneId = state.currentSubScene?.id
-    const result = executeBuild(state.player, buildId, subSceneId)
+    const source = getStorageSource(subSceneId)
+    const result = executeBuild(state.player, buildId, subSceneId, source ?? undefined)
 
     if (result.success) {
       if (result.timeUsed > 0) {
@@ -876,7 +895,13 @@ export function useGame(initialPlayer: PlayerState) {
       return { success: false, message: '当前不在营地场景中', timeUsed: 0 }
     }
 
-    const result = executeUpgradeBuild(state.player, buildId, targetSubBuildId, subSceneId)
+    const result = executeUpgradeBuild(
+      state.player,
+      buildId,
+      targetSubBuildId,
+      subSceneId,
+      getStorageSource(subSceneId) ?? undefined,
+    )
 
     if (result.success) {
       if (result.timeUsed > 0) {
@@ -939,12 +964,23 @@ export function useGame(initialPlayer: PlayerState) {
 
     // 建筑 emoji 映射
     const buildingEmojiMap: Record<string, string> = {
-      '营火': '🔥', '加固营火': '🔥', '大型营火': '🔥',
-      '木墙': '🧱', '石墙': '🧱', '金属墙': '🧱',
-      '工作台': '🔨', '简易工作台': '🔨', '高级工作台': '🔨',
-      '储物箱': '📦', '大型储物箱': '📦',
-      '床铺': '🛏️', '简易床铺': '🛏️', '舒适床铺': '🛏️',
-      '篝火': '🔥', '围栏': '🪵', '水井': '🪣',
+      营火: '🔥',
+      加固营火: '🔥',
+      大型营火: '🔥',
+      木墙: '🧱',
+      石墙: '🧱',
+      金属墙: '🧱',
+      工作台: '🔨',
+      简易工作台: '🔨',
+      高级工作台: '🔨',
+      储物箱: '📦',
+      大型储物箱: '📦',
+      床铺: '🛏️',
+      简易床铺: '🛏️',
+      舒适床铺: '🛏️',
+      篝火: '🔥',
+      围栏: '🪵',
+      水井: '🪣',
     }
 
     for (const bldId of allIds) {
@@ -1022,8 +1058,8 @@ export function useGame(initialPlayer: PlayerState) {
 
   // 设置场景文本下部描述
   function setSceneTextAfter(description: string): void {
-    if(state.sceneTextAfter) {
-      state.sceneTextAfter += '\n' 
+    if (state.sceneTextAfter) {
+      state.sceneTextAfter += '\n'
     }
     state.sceneTextAfter += description
   }
@@ -1340,7 +1376,12 @@ export function useGame(initialPlayer: PlayerState) {
    * 执行制作配方（由 RecipePanel 调用）
    */
   function executeCraftRecipeMode(recipeId: string, quantity: number): CraftResult {
-    const result = engineExecuteCraft(state.player, recipeId, quantity)
+    const result = engineExecuteCraft(
+      state.player,
+      recipeId,
+      quantity,
+      getStorageSource(state.currentSubScene?.id) ?? undefined,
+    )
     if (result.success && result.timeUsed > 0) {
       advanceGameTime(result.timeUsed)
     }
@@ -1352,7 +1393,11 @@ export function useGame(initialPlayer: PlayerState) {
    * 执行烹饪配方（由 RecipePanel 调用）
    */
   function executeCookRecipeMode(recipeId: string): CraftResult {
-    const result = engineExecuteCook(state.player, recipeId)
+    const result = engineExecuteCook(
+      state.player,
+      recipeId,
+      getStorageSource(state.currentSubScene?.id) ?? undefined,
+    )
     if (result.success && result.timeUsed > 0) {
       advanceGameTime(result.timeUsed)
     }
@@ -1360,8 +1405,108 @@ export function useGame(initialPlayer: PlayerState) {
     return result
   }
 
+  /**
+   * 修复指定物品实例（由 RepairPanel 调用）
+   */
+  function repairItem(instanceId: string): CraftResult {
+    const result = engineExecuteRepair(
+      state.player,
+      instanceId,
+      getStorageSource(state.currentSubScene?.id) ?? undefined,
+    )
+    if (result.success && result.timeUsed > 0) {
+      advanceGameTime(result.timeUsed)
+    }
+    state.logMessage = result.message
+    return result
+  }
+
+  /**
+   * 获取指定场景/建筑当前等级对应的子建筑配置
+   */
+  function getCurrentSubBuild(buildId: string, subSceneId: string) {
+    const build = registry.getBuilding(buildId)
+    if (!build) return null
+    const currentSubId =
+      state.player.progress.campBuildingLevels[subSceneId]?.[buildId] ?? build.defaultBuild
+    return build.subBuild.find((s) => s.buildId === currentSubId) ?? null
+  }
+
+  /**
+   * 将背包物品存入当前仓库（由 StorePanel 调用）
+   */
+  function handleStoreItem(itemId: string, quantity: number): number {
+    const subSceneId = state.currentSubScene?.id
+    const buildId = state.currentBuildingId
+    if (!subSceneId || !buildId) return 0
+    const added = addToStorage(state.player, subSceneId, buildId, itemId, quantity)
+    state.logMessage =
+      added > 0 ? `已将 ${registry.getItemName(itemId)} ×${added} 存入仓库` : '仓库已满'
+    return added
+  }
+
+  /**
+   * 从当前仓库取出物品到背包（由 StorePanel 调用）
+   */
+  function handleRetrieveItem(instanceId: string, quantity: number): number {
+    const subSceneId = state.currentSubScene?.id
+    const buildId = state.currentBuildingId
+    if (!subSceneId || !buildId) return 0
+    const storage = getStorageItems(state.player, subSceneId, buildId)
+    const target = storage.find((s) => s.instanceId === instanceId)
+    const removed = removeFromStorage(state.player, subSceneId, buildId, instanceId, quantity)
+    if (removed > 0 && target) {
+      state.logMessage = `已将 ${registry.getItemName(target.itemId)} ×${removed} 取出仓库`
+    }
+    return removed
+  }
+
+  /**
+   * 维修当前建筑（由 BuildingDetail 调用）
+   */
+  function handleRepairBuilding(buildId: string): void {
+    const subSceneId = state.currentSubScene?.id
+    if (!subSceneId) return
+    const subBuild = getCurrentSubBuild(buildId, subSceneId)
+    if (!subBuild?.repairMaterials || subBuild.repairMaterials.length === 0) return
+
+    const source = getStorageSource(subSceneId)
+    for (const mat of subBuild.repairMaterials) {
+      const count =
+        getItemCount(state.player, mat.itemId) + (source ? source.countOf(mat.itemId) : 0)
+      if (count < mat.quantity) {
+        state.logMessage = `维修材料不足：${registry.getItemName(mat.itemId)}`
+        return
+      }
+    }
+    for (const mat of subBuild.repairMaterials) {
+      let remaining = mat.quantity
+      remaining -= removeItem(state.player, mat.itemId, remaining)
+      if (remaining > 0 && source) {
+        source.remove(mat.itemId, remaining)
+      }
+    }
+    state.logMessage = `${subBuild.buildName} 已修复`
+  }
+
+  /**
+   * 推进CG到下一帧（由 CGView 调用）
+   */
+  function advanceCG(): boolean {
+    if (!state.currentCG) return false
+    return nextCGFrame(state.currentCG)
+  }
+
+  /**
+   * 结束CG，返回正常场景模式（由 CGView 调用）
+   */
+  function endCG(): void {
+    state.mode = 'normal'
+    state.currentCG = null
+  }
+
   return {
-    state: shallowReadonly(state) as GameRuntimeState,
+    state: readonly(state) as GameRuntimeState,
     enterEvent,
     selectEventOption,
     handleInteraction,
@@ -1379,6 +1524,12 @@ export function useGame(initialPlayer: PlayerState) {
     executeDeconstructBuilding,
     executeCraftRecipeMode,
     executeCookRecipeMode,
+    repairItem,
+    handleStoreItem,
+    handleRetrieveItem,
+    handleRepairBuilding,
+    advanceCG,
+    endCG,
     exitBuildMode,
     openInventory,
     closeInventory,

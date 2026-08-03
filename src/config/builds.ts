@@ -305,7 +305,7 @@ const 工作台: Build = {
         },
         {
           id: 'repair',
-          name: '修复',
+          name: '维修',
           interactionType: 'repair',
           buildLevel: 3,
         },

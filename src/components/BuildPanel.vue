@@ -35,6 +35,10 @@
                 class="upgrade-item"
               >
                 <span class="upgrade-label">升级至 {{ upg.targetName }}</span>
+                <span v-if="upg.staminaCost > 0" class="cost-badge stamina-badge" title="体力消耗">
+                  ⚡{{ upg.staminaCost }}
+                </span>
+                <span class="cost-badge time-badge" title="所需时间"> ⏱{{ upg.timeStr }} </span>
                 <div class="upgrade-materials">
                   <span
                     v-for="mat in upg.materialDetails"
@@ -45,9 +49,9 @@
                     {{ mat.itemName }} {{ mat.current }}/{{ mat.required }}
                   </span>
                 </div>
-                <div v-if="upg.costDetails.length > 0" class="upgrade-costs">
+                <div v-if="getDisplayCosts(upg.costDetails).length > 0" class="upgrade-costs">
                   <span
-                    v-for="cost in upg.costDetails"
+                    v-for="cost in getDisplayCosts(upg.costDetails)"
                     :key="cost.type"
                     class="cost-item"
                     :class="cost.hasEnough ? 'cost-ok' : 'cost-miss'"
@@ -83,7 +87,10 @@
             <div class="build-main">
               <div class="build-header">
                 <span class="build-name">{{ bld.subBuildName }}</span>
-                <span class="build-time">⏱ {{ bld.buildTime }}分钟</span>
+                <span v-if="bld.staminaCost > 0" class="cost-badge stamina-badge" title="体力消耗">
+                  ⚡{{ bld.staminaCost }}
+                </span>
+                <span class="cost-badge time-badge" title="所需时间"> ⏱{{ bld.timeStr }} </span>
               </div>
               <p class="build-desc">{{ bld.subBuildDesc }}</p>
               <!-- 材料 -->
@@ -97,10 +104,10 @@
                   {{ mat.itemName }} {{ mat.current }}/{{ mat.required }}
                 </span>
               </div>
-              <!-- 消耗 -->
-              <div class="build-costs" v-if="bld.costDetails.length > 0">
+              <!-- 消耗（体力已显示在标题徽章） -->
+              <div class="build-costs" v-if="getDisplayCosts(bld.costDetails).length > 0">
                 <span
-                  v-for="cost in bld.costDetails"
+                  v-for="cost in getDisplayCosts(bld.costDetails)"
                   :key="cost.type"
                   class="cost-item"
                   :class="cost.hasEnough ? 'cost-ok' : 'cost-miss'"
@@ -132,7 +139,7 @@ import { computed } from 'vue'
 import type { SubScene } from '@/types/scene'
 import type { PlayerState } from '@/types/player'
 import type { Build, SubBuild, buildUpgrade } from '@/types/build'
-import { getRegistry } from '@/engine'
+import { getRegistry, getSubSceneStorageItemCount } from '@/engine'
 
 const props = defineProps<{
   subScene: SubScene | null
@@ -180,6 +187,8 @@ interface ExistingBuildingItem {
 interface UpgradeDisplayItem {
   targetBuildId: string
   targetName: string
+  staminaCost: number
+  timeStr: string
   canUpgrade: boolean
   failReason: string | null
   materialDetails: Array<{
@@ -214,6 +223,17 @@ const existingItems = computed<ExistingBuildingItem[]>(() => {
     const upgrades: UpgradeDisplayItem[] = (currentSub.upgrade ?? []).map((u) => {
       const targetSub = build.subBuild.find((s) => s.buildId === u.targetBuildId)
       const targetName = targetSub?.buildName ?? u.targetBuildId
+
+      // 体力消耗（含系数）
+      const staminaCost = u.upgradeCost
+        .filter((c) => c.costType === 'stamina')
+        .reduce(
+          (sum, c) =>
+            sum + (c.affectedByCoefficient ? Math.round(c.value * getStaminaCoeff()) : c.value),
+          0,
+        )
+      // 升级耗时（与 engine 的 timeUsed 一致：全部升级消耗之和）
+      const upgradeTime = u.upgradeCost.reduce((sum, c) => sum + c.value, 0)
 
       // 材料详情
       const materialDetails = u.upgradeItems.map((m) => {
@@ -266,6 +286,8 @@ const existingItems = computed<ExistingBuildingItem[]>(() => {
       return {
         targetBuildId: u.targetBuildId,
         targetName,
+        staminaCost,
+        timeStr: formatTime(upgradeTime),
         canUpgrade,
         failReason: prereqFail,
         materialDetails,
@@ -286,7 +308,8 @@ interface BuildDisplayItem {
   buildId: string
   subBuildName: string
   subBuildDesc: string
-  buildTime: number
+  staminaCost: number
+  timeStr: string
   canBuild: boolean
   failReason: string | null
   prereqFail: string | null
@@ -330,6 +353,15 @@ const availableBuilds = computed<BuildDisplayItem[]>(() => {
     // 获取默认子建筑
     const defaultSub = build.subBuild.find((s) => s.buildId === build.defaultBuild)
     if (!defaultSub) continue
+
+    // 体力消耗（含系数）
+    const staminaCost = build.defaultCost
+      .filter((c) => c.costType === 'stamina')
+      .reduce(
+        (sum, c) =>
+          sum + (c.affectedByCoefficient ? Math.round(c.value * getStaminaCoeff()) : c.value),
+        0,
+      )
 
     // 材料详情
     const materialDetails = build.defaultItems.map((m) => ({
@@ -388,7 +420,8 @@ const availableBuilds = computed<BuildDisplayItem[]>(() => {
       buildId: build.buildId,
       subBuildName: defaultSub.buildName,
       subBuildDesc: defaultSub.descriptionConfig.description,
-      buildTime: build.defaultTime,
+      staminaCost,
+      timeStr: formatTime(build.defaultTime),
       canBuild: matOk && costOk && prereqFail === null,
       failReason,
       prereqFail,
@@ -405,13 +438,17 @@ const availableBuilds = computed<BuildDisplayItem[]>(() => {
 // ============================================================
 
 function countItem(itemId: string): number {
-  return props.playerState.inventory.reduce((sum, inv) => {
+  const backpack = props.playerState.inventory.reduce((sum, inv) => {
     if (inv.itemId === itemId) {
       const isEquipped = Object.values(props.playerState.equipment).includes(itemId)
       return sum + (isEquipped ? 0 : inv.quantity)
     }
     return sum
   }, 0)
+  // 营地建造/升级可合并统计仓库中的材料
+  const ssId = props.subScene?.id
+  const storage = ssId ? getSubSceneStorageItemCount(props.playerState, ssId, itemId) : 0
+  return backpack + storage
 }
 
 function getSurvivalValue(costType: string): number {
@@ -431,6 +468,26 @@ function getSurvivalValue(costType: string): number {
 
 function getStaminaCoeff(): number {
   return props.playerState.attributes.coefficients.staminaConsumptionCoefficient
+}
+
+function formatTime(minutes: number): string {
+  if (minutes < 60) return `${minutes} 分钟`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m > 0 ? `${h} 小时 ${m} 分钟` : `${h} 小时`
+}
+
+interface CostDetail {
+  type: string
+  label: string
+  required: number
+  current: number
+  hasEnough: boolean
+}
+
+/** 材料下方显示的消耗（体力已移至标题徽章，此处排除） */
+function getDisplayCosts(costs: CostDetail[]): CostDetail[] {
+  return costs.filter((c) => c.type !== 'stamina')
 }
 
 // ============================================================
@@ -644,6 +701,25 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   cursor: not-allowed;
 }
 
+/* 体力/时间消耗徽章（与制作面板一致） */
+.cost-badge {
+  font-size: var(--font-xs);
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.stamina-badge {
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.time-badge {
+  color: #90caf9;
+  background: rgba(144, 202, 249, 0.1);
+}
+
 /* ---- 可建造 ---- */
 .build-list {
   display: flex;
@@ -688,11 +764,6 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
 .build-name {
   font-weight: bold;
   color: var(--text-primary);
-}
-
-.build-time {
-  font-size: var(--font-xs);
-  color: var(--text-muted);
 }
 
 .build-desc {

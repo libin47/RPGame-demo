@@ -27,7 +27,6 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getGameInstance } from '@/runtime/gameInstance'
-import { nextCGFrame } from '@/engine'
 import type { CGText } from '@/types/cg'
 
 const router = useRouter()
@@ -83,24 +82,19 @@ function textStyle(style: CGText['style']): Record<string, string | number> {
 /** 推进到下一帧或结束CG */
 function onNextFrame(): void {
   if (!game) return
-  const state = game.state.currentCG
-  if (!state) return
 
   if (isLastFrame.value) {
     // CG结束，返回游戏场景
     endCG()
   } else {
-    nextCGFrame(state)
+    game.advanceCG()
   }
 }
 
-/** 结束CG */
+/** 结束CG（由 useGame 统一变更状态） */
 function endCG(): void {
   if (!game) return
-  // 清除CG状态，返回正常模式
-  const state = game.state as { mode: string; currentCG: unknown }
-  state.mode = 'normal'
-  state.currentCG = null
+  game.endCG()
   router.push({ name: 'game' })
 }
 </script>

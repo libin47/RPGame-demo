@@ -88,6 +88,62 @@ const spear: WeaponType = {
   },
 }
 
+const axe: WeaponType = {
+  id: 'axe',
+  name: '斧',
+  description: '兼具砍伐与战斗功能的斧类武器，势大力沉',
+  iconId: 'icon_weapon_axe',
+  primaryDamageTypeId: 'slash',
+  isRanged: false,
+  defaultStats: {
+    baseDamage: 13,
+    damageVariance: 0.2,
+    attackRange: 1,
+    accuracyModifier: -0.05,
+    criticalChanceModifier: 0.05,
+    criticalMultiplier: 2.0,
+    attackSpeed: 0.8,
+    staminaCostPerAttack: 17,
+  },
+  skillUnlocks: {
+    0: ['basic_slash'],
+    3: ['power_strike'],
+  },
+  proficiencyGrowth: {
+    expPerHit: 10,
+    expPerCriticalHit: 20,
+    expPerKill: 45,
+  },
+}
+
+const knife: WeaponType = {
+  id: 'knife',
+  name: '短刀',
+  description: '轻巧灵活的短刃武器，出手迅捷',
+  iconId: 'icon_weapon_knife',
+  primaryDamageTypeId: 'slash',
+  isRanged: false,
+  defaultStats: {
+    baseDamage: 9,
+    damageVariance: 0.15,
+    attackRange: 1,
+    accuracyModifier: 0.05,
+    criticalChanceModifier: 0.12,
+    criticalMultiplier: 2.0,
+    attackSpeed: 1.2,
+    staminaCostPerAttack: 10,
+  },
+  skillUnlocks: {
+    0: ['basic_slash'],
+    3: ['power_strike'],
+  },
+  proficiencyGrowth: {
+    expPerHit: 12,
+    expPerCriticalHit: 25,
+    expPerKill: 50,
+  },
+}
+
 const unarmed: WeaponType = {
   id: 'unarmed',
   name: '徒手',
@@ -121,6 +177,8 @@ export const weaponTypeRegistry: WeaponTypeRegistry = {
     sword,
     bow,
     spear,
+    axe,
+    knife,
     unarmed,
   },
 }

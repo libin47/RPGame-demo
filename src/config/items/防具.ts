@@ -20,7 +20,7 @@ const 薄外套: ArmorItem = {
     isRepairable: true,
     repairMaterials: [{ itemId: '布料碎片', quantity: 2 }],
     repairWorkbenchLevel: 0,
-    destroyOnBreak: true,
+    destroyOnBreak: false,
   },
   equipmentSlot: EquipmentSlot.BODY,
   defenseStats: {

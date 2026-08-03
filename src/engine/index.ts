@@ -101,8 +101,9 @@ export {
   executeRepair,
   getCraftableRecipes,
   getRepairableItems,
+  getItemRepairInfo,
 } from './crafting'
-export type { CraftResult } from './crafting'
+export type { CraftResult, ItemSource } from './crafting'
 
 // 结局系统
 export { checkEnding } from './ending'
@@ -123,6 +124,8 @@ export {
   getStorageItems,
   getStorageUsedSlots,
   getStorageMaxSlots,
+  getSubSceneStorageItemCount,
+  removeFromSubSceneStorage,
   addToStorage,
   removeFromStorage,
   clearStorage,

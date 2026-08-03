@@ -88,6 +88,7 @@
         :mode="recipeMode"
         :device-level="recipeDeviceLevel"
         :player-state="game.state.player"
+        :sub-scene-id="game.state.currentSubScene?.id ?? null"
         @close="onExitRecipe"
         @execute="onRecipeExecute"
       />
@@ -108,7 +109,17 @@
         :sub-scene-id="game.state.currentSubScene?.id ?? null"
         :build-id="currentBuildingData.build.buildId"
         @close="onExitStore"
-        @log="onBuildingLog"
+        @store="onStoreItem"
+        @retrieve="onRetrieveItem"
+      />
+
+      <!-- 建筑交互模式 - 维修子模式 -->
+      <RepairPanel
+        v-else-if="game.state.mode === 'building' && repairMode"
+        :player-state="game.state.player"
+        :sub-scene-id="game.state.currentSubScene?.id ?? null"
+        @close="onExitRepair"
+        @repair="onRepairItem"
       />
 
       <!-- 建筑交互模式 -->
@@ -127,6 +138,7 @@
         @enter-recipe="onEnterRecipe"
         @enter-rest="onEnterRest"
         @enter-store="onEnterStore"
+        @enter-repair="onEnterRepair"
       />
 
       <!-- 其他模式（占位提示） -->
@@ -165,6 +177,7 @@ import BuildingDetail from '@/components/BuildingDetail.vue'
 import RecipePanel from '@/components/RecipePanel.vue'
 import RestPanel from '@/components/RestPanel.vue'
 import StorePanel from '@/components/StorePanel.vue'
+import RepairPanel from '@/components/RepairPanel.vue'
 import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
 import { getVisibleOptions, getVisibleVariations, isOptionAvailable } from '@/engine'
 import { getGameInstance } from '@/runtime/gameInstance'
@@ -193,11 +206,12 @@ function onExitRecipe(): void {
   recipeMode.value = null
 }
 
-function onRecipeExecute(result: import('@/engine').CraftResult): void {
-  if (result.success && result.timeUsed > 0) {
-    game.value.advanceGameTime(result.timeUsed)
+function onRecipeExecute(recipeId: string, quantity: number): void {
+  if (recipeMode.value === 'craft') {
+    game.value.executeCraftRecipe(recipeId, quantity)
+  } else {
+    game.value.executeCookRecipe(recipeId)
   }
-  game.value.setLogMessage(result.message)
 }
 
 // ============================================================
@@ -220,7 +234,6 @@ function onRestBack(): void {
 
 /** 执行休息：推进时间、恢复体力、移除休息状态，完成后返回场景 */
 function onRestExecute(hours: number, option: buildOption | undefined): void {
-
   game.value.handleRest(hours, option)
   // 5. 返回场景界面（退出建筑交互模式）
   restMode.value = false
@@ -238,6 +251,35 @@ function onEnterStore(): void {
 
 function onExitStore(): void {
   storeMode.value = false
+}
+
+/** 存入仓库（由 useGame 执行变更与提示） */
+function onStoreItem(itemId: string, qty: number): void {
+  game.value.storeItem(itemId, qty)
+}
+
+/** 取出仓库（由 useGame 执行变更与提示） */
+function onRetrieveItem(instanceId: string, qty: number): void {
+  game.value.retrieveItem(instanceId, qty)
+}
+
+// ============================================================
+// 维修面板状态（由 BuildingDetail 的 repair 交互进入）
+// ============================================================
+
+const repairMode = ref(false)
+
+function onEnterRepair(): void {
+  repairMode.value = true
+}
+
+function onExitRepair(): void {
+  repairMode.value = false
+}
+
+/** 维修指定物品实例（由 useGame 执行变更与提示） */
+function onRepairItem(instanceId: string): void {
+  game.value.repairItem(instanceId)
 }
 
 // ============================================================
@@ -425,7 +467,6 @@ function onSceneInteraction(interactionId: string): void {
 
 /** 移动 */
 function onMoveAction(moveAction: import('@/types/scene').MoveInteraction): void {
-  
   isEventClicked.value = false
   game.value.handleSceneMove(moveAction)
 }
@@ -485,10 +526,9 @@ function onDismantleBuilding(buildId: string): void {
   game.value.executeDeconstruct(buildId)
 }
 
-/** 修理建筑（BuildingDetail 内部已完成消耗，这里仅处理日志） */
-function onRepairBuilding(_buildId: string): void {
-  // 实际维修逻辑在 BuildingDetail 内部完成
-  console.log('修理建筑', _buildId)
+/** 维修建筑（由 useGame 检查材料、消耗并提示） */
+function onRepairBuilding(buildId: string): void {
+  game.value.repairBuilding(buildId)
 }
 
 /** 建筑交互日志 */

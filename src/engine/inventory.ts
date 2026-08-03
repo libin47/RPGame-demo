@@ -48,13 +48,22 @@ function notifyItemAdded(itemId: string, quantity: number): void {
 /**
  * 向背包添加物品
  * 自动处理堆叠和新实例创建
+ * 堆叠规则（按物品配置 maxStackSize）：
+ * - >1：限量堆叠，堆满后创建新实例
+ * - =1 或 0：不可堆叠，每个实例仅 1 件
+ * - <0：无限堆叠，单实例可容纳任意数量
  *
  * @param player - 玩家状态（会被直接修改）
  * @param itemId - 物品配置ID
  * @param quantity - 添加数量（默认1）
  * @returns 实际添加的数量
  */
-export function addItem(player: PlayerState, itemId: string, quantity: number = 1): number {
+export function addItem(
+  player: PlayerState,
+  itemId: string,
+  quantity: number = 1,
+  setText: boolean = true,
+): number {
   if (quantity <= 0) return 0
 
   const registry = getRegistry()
@@ -63,23 +72,29 @@ export function addItem(player: PlayerState, itemId: string, quantity: number = 
 
   let remaining = quantity
   const maxStack = itemConfig.maxStackSize
+  // maxStack < 0 表示无限堆叠（单实例可容纳任意数量）
+  const infiniteStack = maxStack < 0
+  const stackable = maxStack > 1 || infiniteStack
 
-  if (maxStack > 1) {
+  if (stackable) {
     // 可堆叠物品：先尝试叠加到已有物品（跳过已装备的实例，新获得的物品保持未装备状态）
     for (const invItem of player.inventory) {
-      if (invItem.itemId === itemId && !invItem.equippedSlot && invItem.quantity < maxStack) {
-        const space = maxStack - invItem.quantity
-        const toAdd = Math.min(remaining, space)
-        invItem.quantity += toAdd
-        remaining -= toAdd
-        if (remaining <= 0) break
+      if (invItem.itemId === itemId && !invItem.equippedSlot) {
+        // 无限堆叠的实例可直接吸收全部剩余；否则需未满堆
+        if (infiniteStack || invItem.quantity < maxStack) {
+          const space = infiniteStack ? remaining : maxStack - invItem.quantity
+          const toAdd = Math.min(remaining, space)
+          invItem.quantity += toAdd
+          remaining -= toAdd
+          if (remaining <= 0) break
+        }
       }
     }
   }
 
   // 剩余的创建新实例
   while (remaining > 0) {
-    const stackSize = maxStack > 1 ? Math.min(remaining, maxStack) : 1
+    const stackSize = infiniteStack ? remaining : stackable ? Math.min(remaining, maxStack) : 1
     player.inventory.push({
       instanceId: generateInstanceId(),
       itemId,
@@ -95,7 +110,9 @@ export function addItem(player: PlayerState, itemId: string, quantity: number = 
 
   // 通知物品获得监听器（供 runtime 层追加场景文本等）
   const added = quantity - remaining
-  notifyItemAdded(itemId, added)
+  if (added > 0 && setText) {
+    notifyItemAdded(itemId, added)
+  }
 
   return added
 }
