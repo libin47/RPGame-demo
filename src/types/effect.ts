@@ -314,6 +314,8 @@ export interface Condition {
 export enum ConditionTargetType {
   ATTRIBUTE = 'attribute',
   FLAG = 'flag',
+  FLAG_NUM = 'flagNum',
+  PARAM = 'param',
   ITEM = 'item',
   STATUS = 'status',
   SCENE = 'scene',

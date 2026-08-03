@@ -755,350 +755,6 @@ const event_机翼营地_搭建营地: GameEvent = {
   eventType: EventType.NORMAL,
 }
 
-// 椰树林
-const event_椰树林_摘椰子: GameEvent = {
-  id: 'event_椰树林_摘椰子',
-  name: '摘椰子',
-  frames: [
-    {
-      id: 'event_椰树林_摘椰子_1',
-      order: 1,
-      text: '椰子高高在上，你想怎么摘呢？',
-      textVariations: [
-        {
-          content: '椰子在看着你？',
-          displayFlag: ['beach_抵达机翼营地'],
-        },
-      ],
-      options: [
-        {
-          id: '爬上去',
-          name: '爬上去',
-          results: [
-            {
-              type: 'nextFrame',
-              targetFrameId: 'event_椰树林_摘椰子_爬上去成功',
-              weight: 5,
-              condition: {
-                target: {
-                  type: ConditionTargetType.ATTRIBUTE,
-                  attributeType: AttributeType.AGILITY,
-                },
-                operator: ComparisonOperator.GREATER,
-                value: 20,
-              },
-            },
-
-            {
-              type: 'nextFrame',
-              targetFrameId: 'event_椰树林_摘椰子_爬上去成功',
-              weight: 2,
-              condition: {
-                target: {
-                  type: ConditionTargetType.ATTRIBUTE,
-                  attributeType: AttributeType.AGILITY,
-                },
-                operator: ComparisonOperator.GREATER,
-                value: 10,
-              },
-            },
-
-            {
-              type: 'nextFrame',
-              targetFrameId: 'event_椰树林_摘椰子_爬上去失败',
-              weight: 1,
-            },
-          ],
-
-          isOneTime: false,
-        },
-
-        {
-          id: '用木竿打',
-          name: '用木竿打',
-          availableCondition: {
-            target: {
-              type: ConditionTargetType.ITEM,
-              id: '木竿',
-            },
-            operator: ComparisonOperator.GREATER_EQUAL,
-            value: 1,
-          },
-          results: [
-            {
-              type: 'nextFrame',
-              targetFrameId: 'event_椰树林_摘椰子_木竿',
-              weight: 1,
-            },
-          ],
-
-          isOneTime: false,
-        },
-        {
-          id: '离开',
-          name: '离开',
-          results: [
-            {
-              type: 'endEvent',
-            },
-          ],
-
-          isOneTime: false,
-        },
-      ],
-    },
-    {
-      id: 'event_椰树林_摘椰子_爬上去成功',
-      order: 2,
-      text: '你仰头望向树冠。\n\n你选了一棵不算太高的。\n\n你双臂环抱树干，脚掌抵住树根，开始往上攀。\n\n你摘了两个椰子，丢在树下。',
-      options: [
-        {
-          id: '收获椰子',
-          name: '收获椰子',
-
-          results: [
-            {
-              type: 'endEvent',
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: '椰子',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 2,
-                  },
-                  probability: 1.0,
-                  description: '获得椰子*2',
-                },
-              ],
-            },
-          ],
-
-          isOneTime: false,
-        },
-      ],
-    },
-    {
-      id: 'event_椰树林_摘椰子_爬上去失败',
-      order: 2,
-      text: '你仰头望向树冠。\n\n你选了一棵不算太高的。\n\n你双臂环抱树干，脚掌抵住树根，开始往上攀。\n\n然后你掉了下来。',
-      onEnterEffects: [
-        {
-          effect: {
-            type: EffectType.ATTRIBUTE,
-            attribute: AttributeType.HP,
-            operation: AttributeOperation.SUBTRACT,
-            value: 15,
-          },
-          probability: 1.0,
-          description: '你因跌落而受伤。',
-        },
-      ],
-      options: [
-        {
-          id: '离去',
-          name: '不甘离去',
-
-          results: [
-            {
-              type: 'endEvent',
-            },
-          ],
-
-          isOneTime: false,
-        },
-      ],
-    },
-
-    {
-      id: 'event_椰树林_摘椰子_木竿',
-      order: 2,
-      text: '你仰头望向树冠。\n\n你选了一棵不算太高的。\n\n你用木竿击打。\n\n一个椰子掉在了树下。',
-      options: [
-        {
-          id: '捡起椰子',
-          name: '捡起椰子',
-
-          results: [
-            {
-              type: 'endEvent',
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: '椰子',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 1,
-                  },
-                  probability: 1.0,
-                  description: '获得椰子*1',
-                },
-              ],
-            },
-          ],
-
-          isOneTime: false,
-        },
-      ],
-    },
-  ],
-  eventType: EventType.NORMAL,
-}
-
-const event_椰树林_砍树: GameEvent = {
-  id: 'event_椰树林_砍树',
-  name: '砍椰子树',
-  frames: [
-    {
-      id: 'event_椰树林_砍树_2',
-      order: 2,
-      text: '椰子树耸立于此\n\n但你两手空空无能为力。\n\n你需要斧头才能砍。',
-
-      options: [
-        {
-          id: '无能离去',
-          name: '无能离去',
-          results: [
-            {
-              type: 'endEvent',
-            },
-          ],
-
-          isOneTime: false,
-        },
-      ],
-    },
-    {
-      id: 'event_椰树林_砍树_1',
-      order: 1,
-      text: '椰子树耸立于此\n\n而你手持利斧。',
-      // displayCondition: {
-      //   target: {
-      //     type: ConditionTargetType.ITEM,
-      //     id: '斧头',
-      //   },
-      //   operator: ComparisonOperator.GREATER_EQUAL,
-      //   value: 1,
-      // },
-
-      options: [
-        {
-          id: '砍伐',
-          name: '砍伐',
-
-          results: [
-            {
-              type: 'nextFrame',
-              weight: 5,
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: '木头',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 2,
-                  },
-                  probability: 1.0,
-                  description: '获得木头*2',
-                },
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: '石头',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 10,
-                  },
-                  probability: 1.0,
-                  description: '获得石头*10',
-                },
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: '椰子',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 1,
-                  },
-                  probability: 1.0,
-                  description: '获得椰子*1',
-                },
-              ],
-              targetFrameId: 'event_椰树林_砍树_小成功',
-            },
-            {
-              type: 'nextFrame',
-              weight: 1,
-              effects: [
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: '木头',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 5,
-                  },
-                  probability: 1.0,
-                  description: '获得木头*5',
-                },
-                {
-                  effect: {
-                    type: EffectType.ITEM,
-                    itemId: '椰子',
-                    changeType: ItemChangeType.ADD,
-                    quantity: 1,
-                  },
-                  probability: 1.0,
-                  description: '获得椰子*3',
-                },
-              ],
-              targetFrameId: 'event_椰树林_砍树_大成功',
-            },
-          ],
-
-          isOneTime: false,
-        },
-      ],
-    },
-    {
-      id: 'event_椰树林_砍树_大成功',
-      order: 3,
-      text: '你的斧头舞的虎虎生风。\n\n椰树摧枯拉朽。\n\n大成功！',
-      options: [
-        {
-          id: '收获颇丰',
-          name: '收获颇丰',
-
-          results: [
-            {
-              type: 'endEvent',
-            },
-          ],
-
-          isOneTime: false,
-        },
-      ],
-    },
-    {
-      id: 'event_椰树林_砍树_小成功',
-      order: 3,
-      text: '你砍了一会儿，就有些累了。\n\n但还算有些收获。',
-      options: [
-        {
-          id: '收获离去',
-          name: '收获离去',
-
-          results: [
-            {
-              type: 'endEvent',
-            },
-          ],
-
-          isOneTime: false,
-        },
-      ],
-    },
-  ],
-  eventType: EventType.NORMAL,
-}
-
 // ============================================================
 // 海滩遇蟹
 // ============================================================
@@ -1263,20 +919,27 @@ const event_beach_大海的馈赠: GameEvent = {
             type: EffectType.ITEM,
             itemId: '木头',
             changeType: ItemChangeType.ADD,
-            quantity: 10,
+            quantity: 50,
           },
-          probability: 0.8,
-          description: '获得10个木头',
+          probability: 1,
         },
         {
           effect: {
             type: EffectType.ITEM,
-            itemId: '绳子',
+            itemId: '石头',
             changeType: ItemChangeType.ADD,
-            quantity: 1,
+            quantity: 50,
           },
-          probability: 0.4,
-          description: '获得一截绳子',
+          probability: 1,
+        },
+        {
+          effect: {
+            type: EffectType.ITEM,
+            itemId: '金属碎片',
+            changeType: ItemChangeType.ADD,
+            quantity: 50,
+          },
+          probability: 1,
         },
         {
           effect: {
@@ -1552,8 +1215,5 @@ export const eventRegistry: EventRegistry = {
     event_飞机残骸_搜索残骸: event_飞机残骸_搜索残骸,
 
     event_机翼营地_搭建营地: event_机翼营地_搭建营地,
-
-    event_椰树林_摘椰子: event_椰树林_摘椰子,
-    event_椰树林_砍树: event_椰树林_砍树,
   },
 }

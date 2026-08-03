@@ -211,9 +211,10 @@ import type {
   SubScene,
 } from '@/types/scene'
 import type { ButtonOption } from '@/types/option'
-import { getResolvedDescriptionText } from '@/engine'
+import { evaluateCondition, getResolvedDescriptionText } from '@/engine'
 import type { PlayerState } from '@/types/player'
 import { paramRegistry } from '@/config/params'
+import type { Condition } from '@/types/effect'
 
 /**
  * 营地建筑基本信息
@@ -292,12 +293,15 @@ function isInteractionVisible(
     usedFlag?: string
     hideFlag?: string[]
     displayFlag?: string[]
+    displayCondition?: Condition
   },
 ): boolean {
   if (inter.isOneTime && inter.usedFlag && props.playerState.flags[inter.usedFlag]) return false
   if (inter.hideFlag && inter.hideFlag.some((f) => props.playerState.flags[f] === true))
     return false
   if (inter.displayFlag && !inter.displayFlag.every((f) => props.playerState.flags[f] === true))
+    return false
+  if (inter.displayCondition && !evaluateCondition(inter.displayCondition, props.playerState))
     return false
   return true
 }

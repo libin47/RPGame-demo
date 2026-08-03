@@ -845,11 +845,53 @@ export function useGame(initialPlayer: PlayerState) {
         markDescriptionSeen(selectedDesc, state.player)
       }
     } else {
-      // 普通 move 类型（地牢方向移动）
-      advanceGameTime(moveAction.costTime ?? 10)
-      state.logMessage = '你向目标移动'
+      // 普通 move 类型：打开大地图界面（不消耗时间，移动时再结算）
+      state.sceneTextAfter = ''
+      state.logMessage = ''
+      state.mode = 'map'
     }
     handleFlag(moveAction)
+  }
+
+  /**
+   * 获取当前大地图配置（由 MapPanel 显示）
+   */
+  function getCurrentMap() {
+    const mapId = state.player.currentLocation.mapId || registry.getInitialMapId()
+    return registry.getMap(mapId) ?? null
+  }
+
+  /**
+   * 从地图点击节点移动到目标场景
+   */
+  function moveToMapScene(sceneId: string): void {
+    const targetScene = registry.getScene(sceneId)
+    if (!targetScene) {
+      state.logMessage = `场景 ${sceneId} 不存在`
+      state.mode = 'normal'
+      return
+    }
+    state.sceneTextAfter = ''
+    state.sceneTextPrefix = ''
+    state.currentScene = targetScene
+    state.currentSubScene = null
+    const selectedDesc = selectSceneDescription(targetScene, state.player)
+    state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
+    state.currentDescriptionConfig = selectedDesc || null
+    if (selectedDesc) {
+      markDescriptionSeen(selectedDesc, state.player)
+    }
+    state.player.currentLocation.sceneId = sceneId
+    state.player.currentLocation.subSceneId = null
+    state.mode = 'normal'
+  }
+
+  /**
+   * 关闭大地图，返回进入地图前的场景
+   */
+  function closeMap(): void {
+    state.sceneTextAfter = ''
+    state.mode = 'normal'
   }
 
   /**
@@ -1515,6 +1557,9 @@ export function useGame(initialPlayer: PlayerState) {
     handleRest,
     handleCollect,
     handleSceneMove,
+    getCurrentMap,
+    moveToMapScene,
+    closeMap,
     getCampsiteBuildings,
     enterBuilding,
     exitBuilding,

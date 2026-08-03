@@ -118,6 +118,34 @@ const beach: Scene = {
         },
       ],
     },
+    {
+      id: 'beach_5',
+      priority: 3,
+      text: '美丽的海滩。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_6',
+      priority: 3,
+      text: '你想起了很久前在马尔代夫度过的那个夏天',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_7',
+      priority: 3,
+      text: '你想起了年少时看到的墙上的海报——海报上的景色或许还不如现在的海滩。\n\n只是物是人非。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_8',
+      priority: 3,
+      text: '目之所及，大海不见尽头。\n\n你应该不会想靠游泳游回大陆的，对吧？',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
   ],
   temperatureModifier: 5,
   collects: [
@@ -399,6 +427,17 @@ const beach_机翼营地: SubScene = {
           content: '地上铺着一层防水布，算是勉强有一个栖身之所了。',
           displayFlag: ['event_机翼营地_铺地'],
         },
+        {
+          content: '地上铺着一层防水布，算是勉强有一个栖身之所了。',
+          condition: {
+        target: {
+          type: ConditionTargetType.PARAM,
+          id: 'beach_椰子',
+        },
+        operator: ComparisonOperator.EQUAL,
+        value: 0,
+      },
+        },
       ],
       isAutoTrigger: false,
       isOneTime: false,
@@ -445,6 +484,57 @@ const beach_椰树林: SubScene = {
       isAutoTrigger: false,
       isOneTime: false,
     },
+    {
+      id: 'beach_椰树林_2 ',
+      priority: 1,
+      text: '椰树。。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_椰树林_3 ',
+      priority: 1,
+      text: '太好啦，有椰子！',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_椰树林_4 ',
+      priority: 1,
+      text: '椰✌……',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_椰树林_5 ',
+      priority: 1,
+      text: '望椰止渴。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_椰树林_6 ',
+      priority: 1,
+      text: '长满了椰树，但是不要砍伐过度哦~',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_椰树林_0 ',
+      priority: 5,
+      text: '椰树都被你砍完了，SAD。\n\n等几天说不定还会长出来。',
+      isAutoTrigger: false,
+      isOneTime: false,
+      displayCondition: {
+        target: {
+          type: ConditionTargetType.PARAM,
+          id: 'beach_椰子',
+        },
+        operator: ComparisonOperator.EQUAL,
+        value: 0,
+      },
+      
+    },
   ],
   temperatureModifier: 0,
   explore: exploreButton,
@@ -463,10 +553,18 @@ const beach_椰树林: SubScene = {
     {
       id: 'beach_椰树林_搜索椰子',
       name: '椰子',
-      description: '搜索椰子',
-      descriptionTitle: '搜索椰子',
-      costTime: 10,
-      costEnergy: 10,
+      description: '爬上树去摘椰子，要是有个长杆就好了。',
+      descriptionTitle: '摘椰子',
+      displayCondition: {
+        target: {
+          type: ConditionTargetType.ITEM,
+          id: '木竿',
+        },
+        operator: ComparisonOperator.LESS,
+        value: 1,
+      },
+      costTime: 20,
+      costEnergy: 20,
       resourceType: 'item',
       paramId: 'beach_椰子',
       itemConfig: [
@@ -474,8 +572,43 @@ const beach_椰树林: SubScene = {
           itemId: '椰子',
           quantity: 2,
         },
+        {
+          itemId: '椰子',
+          quantity: 1,
+          probability: 0.5,
+        },
       ],
-      text: '你奋力爬上椰子树。',
+      text: '你奋力爬上椰子树，要是有个长杆，你就可以直接打椰子了，而不是这么费力的爬上爬下。',
+    },    
+    {
+      id: 'beach_椰树林_打椰子',
+      name: '椰子',
+      description: '用长杆打椰子。',
+      descriptionTitle: '打椰子',
+      displayCondition: {
+        target: {
+          type: ConditionTargetType.ITEM,
+          id: '木竿',
+        },
+        operator: ComparisonOperator.GREATER_EQUAL,
+        value: 1,
+      },
+      costTime: 10,
+      costEnergy: 10,
+      resourceType: 'item',
+      paramId: 'beach_椰子',
+      itemConfig: [
+        {
+          itemId: '椰子',
+          quantity: 1,
+        },
+        {
+          itemId: '椰子',
+          quantity: 3,
+          probability: 0.5,
+        },
+      ],
+      text: '你抬头举起木竿打下椰子。',
     },
     {
       id: 'beach_椰树林_砍伐',
@@ -498,11 +631,16 @@ const beach_椰树林: SubScene = {
       itemConfig: [
         {
           itemId: '椰子',
-          quantity: 2,
+          quantity: 1
         },
         {
           itemId: '木头',
           quantity: 3,
+        },
+        {
+          itemId: '木头',
+          quantity: 1,
+          probability: 0.5,
         },
       ],
     },
@@ -518,6 +656,34 @@ const beach_礁石区: SubScene = {
       id: 'beach_礁石区_1 ',
       priority: 1,
       text: '黑色的礁石杂乱地堆砌在海岸线上，像某种巨大生物的脊骨。海浪在礁石间穿行，发出沉闷的轰鸣声。石面上布满锋利的藤壶壳，在阳光下泛着微光。\n\n一些礁石围成的浅水坑里，有小鱼和螃蟹的踪影。更深处的岩缝中，似乎附着些贻贝。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_礁石区_2 ',
+      priority: 1,
+      text: '黑色的礁石。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_礁石区_3 ',
+      priority: 1,
+      text: '好多石头。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_礁石区_4 ',
+      priority: 1,
+      text: '黑色的礁石。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+    {
+      id: 'beach_礁石区_5 ',
+      priority: 1,
+      text: '礁(jiao)石。',
       isAutoTrigger: false,
       isOneTime: false,
     },
@@ -547,7 +713,7 @@ const beach_礁石区: SubScene = {
       paramId: 'beach_贻贝',
       itemConfig: [
         {
-          itemId: '贻贝',
+          itemId: '贝壳',
           quantity: 2,
         },
       ],
@@ -557,18 +723,97 @@ const beach_礁石区: SubScene = {
       name: '探索',
       description: '看看水坑里有什么',
       descriptionTitle: '潮汐池',
-      costTime: 10,
-      costEnergy: 10,
+      costTime: 20,
+      costEnergy: 20,
       resourceType: 'item',
       paramId: 'beach_潮汐池',
       itemConfig: [
         {
-          itemId: '贝壳',
-          quantity: 5,
+          itemId: '燧石',
+          quantity: 2,
         },
       ],
     },
   ],
+  isDungeon: false,
+}
+
+// ============================================================
+// 大地图测试场景（用于大地图移动测试）
+// ============================================================
+
+const forest: Scene = {
+  id: 'forest',
+  name: '森林',
+  descriptions: [
+    {
+      id: 'forest_1',
+      priority: 10,
+      text: '你走进森林。光线从层层叠叠的树冠缝隙间漏下来，在地面上投下斑驳的光影。\n空气中弥漫着潮湿的泥土和腐殖质的味道。远处有鸟鸣，也有细碎的不明声响。\n这里暂时是安全的，但你总觉得有什么在暗处注视着你。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+  ],
+  moves: [
+    {
+      id: 'forest_移动',
+      name: '移动',
+      moveType: 'move',
+    },
+  ],
+  temperatureModifier: -2,
+  explore: exploreButton,
+  interactions: [],
+  isDungeon: false,
+}
+
+const mountain: Scene = {
+  id: 'mountain',
+  name: '山区',
+  descriptions: [
+    {
+      id: 'mountain_1',
+      priority: 10,
+      text: '山路陡峭，碎石在脚下滚动。\n风很大，吹得你几乎站不稳。从这里可以俯瞰整座岛的轮廓——一片被蓝海包围的绿色陆地。\n岩缝里或许藏着有用的东西。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+  ],
+  moves: [
+    {
+      id: 'mountain_移动',
+      name: '移动',
+      moveType: 'move',
+    },
+  ],
+  temperatureModifier: -5,
+  explore: exploreButton,
+  interactions: [],
+  isDungeon: false,
+}
+
+const ruins: Scene = {
+  id: 'ruins',
+  name: '遗迹',
+  descriptions: [
+    {
+      id: 'ruins_1',
+      priority: 10,
+      text: '残破的石柱歪斜地立在荒草之中，像某种古老文明的墓碑。\n墙壁上刻着看不懂的符号，在夕阳下泛着暗红的光。\n这里的空气很安静——安静得不太正常。',
+      isAutoTrigger: false,
+      isOneTime: false,
+    },
+  ],
+  moves: [
+    {
+      id: 'ruins_移动',
+      name: '移动',
+      moveType: 'move',
+    },
+  ],
+  temperatureModifier: 0,
+  explore: exploreButton,
+  interactions: [],
   isDungeon: false,
 }
 
@@ -579,6 +824,9 @@ const beach_礁石区: SubScene = {
 export const sceneRegistry: SceneRegistry = {
   scenes: {
     beach,
+    forest,
+    mountain,
+    ruins,
   },
   subScenes: {
     beach_飞机残骸,

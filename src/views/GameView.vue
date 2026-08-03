@@ -42,6 +42,15 @@
         @enter-building="onEnterBuilding"
       />
 
+      <!-- 地图模式（moveType === 'move' 时打开大地图） -->
+      <MapPanel
+        v-else-if="game.state.mode === 'map' && currentMap"
+        :map="currentMap"
+        :current-scene-id="game.state.player.currentLocation.sceneId"
+        @close="onCloseMap"
+        @move-to="onMoveToMapScene"
+      />
+
       <!-- 背包模式 -->
       <InventoryPanel
         v-else-if="game.state.mode === 'inventory'"
@@ -178,6 +187,7 @@ import RecipePanel from '@/components/RecipePanel.vue'
 import RestPanel from '@/components/RestPanel.vue'
 import StorePanel from '@/components/StorePanel.vue'
 import RepairPanel from '@/components/RepairPanel.vue'
+import MapPanel from '@/components/MapPanel.vue'
 import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
 import { getVisibleOptions, getVisibleVariations, isOptionAvailable } from '@/engine'
 import { getGameInstance } from '@/runtime/gameInstance'
@@ -469,6 +479,19 @@ function onSceneInteraction(interactionId: string): void {
 function onMoveAction(moveAction: import('@/types/scene').MoveInteraction): void {
   isEventClicked.value = false
   game.value.handleSceneMove(moveAction)
+}
+
+/** 当前大地图配置（地图模式下显示） */
+const currentMap = computed(() => game.value.getCurrentMap())
+
+/** 关闭大地图，返回场景 */
+function onCloseMap(): void {
+  game.value.closeMap()
+}
+
+/** 从地图移动到目标场景 */
+function onMoveToMapScene(sceneId: string): void {
+  game.value.moveToMapScene(sceneId)
 }
 
 /** 人物交互（暂未实现） */

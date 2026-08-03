@@ -4,7 +4,7 @@ import type { GameMap, MapRegistry } from '../types/map'
 const mainIsland: GameMap = {
   id: 'main_island',
   name: '主岛',
-  backgroundImageId: 'map_main_island',
+  backgroundImageId: 'map.png',
   nodes: [
     {
       id: 'node_beach',

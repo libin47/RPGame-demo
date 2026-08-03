@@ -121,6 +121,24 @@ function resolveConditionTarget(
       if (typeof value === 'number') return value
       return String(value)
     }
+    // -------- 标志位数值 --------
+    case ConditionTargetType.FLAG_NUM: {
+      const flagId = target.id
+      if (!flagId) return undefined
+      const value = player.flagsNum[flagId]
+      if (value === undefined) return undefined
+      if (typeof value === 'boolean') return value
+      if (typeof value === 'number') return value
+      return String(value)
+    }    
+    // -------- 参数 --------
+    case ConditionTargetType.PARAM: {
+      const paramId = target.id
+      if (!paramId) return undefined
+      const value = player.params[paramId]
+      if (value === undefined) return undefined
+      return value
+    }
 
     // -------- 物品 --------
     case ConditionTargetType.ITEM: {
@@ -225,6 +243,8 @@ function resolveConditionTarget(
     // -------- 负重率 --------
     case ConditionTargetType.CARRY_WEIGHT_RATE:
       return calcCarryWeightRate(player.survival.carryWeight, player.survival.maxCarryWeight)
+    
+
 
     default:
       return undefined

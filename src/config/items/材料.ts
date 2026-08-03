@@ -105,7 +105,35 @@ const 石头: MaterialItem = {
   isKeyItem: false,
   tags: ['material', 'stone'],
 }
+/** 贝壳 */
+const 贝壳: MaterialItem = {
+  id: '贝壳',
+  name: '贝壳',
+  description: '一块贝壳。',
+  category: ItemCategory.MATERIAL,
+  iconId: 'icon_shell',
+  weight: 0.1,
+  maxStackSize: -1,
+  isSellable: true,
+  basePrice: 4,
+  isKeyItem: false,
+  tags: ['material', 'stone'],
+}
+/** 燧石 */
+const 燧石: MaterialItem = {
+  id: '燧石',
+  name: '燧石',
+  description: '一块燧石。',
+  category: ItemCategory.MATERIAL,
+  iconId: 'icon_firestone',
+  weight: 0.1,
+  maxStackSize: -1,
+  isSellable: true,
+  basePrice: 4,
+  isKeyItem: false,
+  tags: ['material', 'stone'],
+}
 
 
 
-export { 镜子, 防水布, 尼龙绳, 木头, 金属碎片, 石头, 布料 }
+export { 镜子, 防水布, 尼龙绳, 木头, 金属碎片, 石头, 布料, 贝壳, 燧石 }

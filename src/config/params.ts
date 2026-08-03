@@ -45,12 +45,12 @@ const beach_椰子树: Param = {
 }
 const beach_贻贝: Param = {
   id: 'beach_贻贝',
-  defaultValue: 20,
+  defaultValue: 10,
   timeVarying: {
-    mode: 'accumulate',
-    recoveryPerDay: 1,
+    mode: 'reset_daily',
+    resetValue: 5,
     min: 0,
-    max: 20,
+    max: 5,
   },
 }
 const beach_潮汐池: Param = {
@@ -58,9 +58,9 @@ const beach_潮汐池: Param = {
   defaultValue: 20,
   timeVarying: {
     mode: 'accumulate',
-    recoveryPerDay: 1,
+    deltaPerDay: 5,
     min: 0,
-    max: 20,
+    max: 10,
   },
 }
 

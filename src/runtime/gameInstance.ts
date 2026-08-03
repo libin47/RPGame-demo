@@ -13,6 +13,7 @@ import type { CharacterClass } from '@/types/character'
 import type { PlayerState, NewGameConfig } from '@/types/player'
 import type { GameMode } from './useGame'
 import type { ResourceInteraction, MoveInteraction } from '@/types/scene'
+import type { GameMap } from '@/types/map'
 import type { EndingConfig } from '@/types/ending'
 import type { CraftResult } from '@/engine'
 import type { ButtonOption } from '@/types/option'
@@ -57,6 +58,12 @@ export interface GameInstance {
   handleCollect: (collect: ResourceInteraction) => void
   /** 场景移动 */
   handleSceneMove: (moveAction: MoveInteraction) => void
+  /** 获取当前大地图配置 */
+  getCurrentMap: () => GameMap | null
+  /** 从地图移动到目标场景 */
+  moveToMapScene: (sceneId: string) => void
+  /** 关闭大地图，返回进入地图前的场景 */
+  closeMap: () => void
   /** 获取当前场景中营地建筑基本信息列表 */
   getCampsiteBuildings: () => CampsiteBuildingInfo[]
   /** 进入建筑交互模式 */
@@ -164,6 +171,9 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     handleRest: game.handleRest,
     handleCollect: game.handleCollect,
     handleSceneMove: game.handleSceneMove,
+    getCurrentMap: game.getCurrentMap,
+    moveToMapScene: game.moveToMapScene,
+    closeMap: game.closeMap,
     getCampsiteBuildings: game.getCampsiteBuildings,
     enterBuilding: game.enterBuilding,
     exitBuilding: game.exitBuilding,
@@ -223,6 +233,9 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     handleRest: game.handleRest,
     handleCollect: game.handleCollect,
     handleSceneMove: game.handleSceneMove,
+    getCurrentMap: game.getCurrentMap,
+    moveToMapScene: game.moveToMapScene,
+    closeMap: game.closeMap,
     getCampsiteBuildings: game.getCampsiteBuildings,
     enterBuilding: game.enterBuilding,
     exitBuilding: game.exitBuilding,
