@@ -6,6 +6,7 @@ import type { StatusConfig } from '@/types/status'
 import { StatusType, StatusStackingRule } from '@/types/status'
 import { StatusAffectedAttribute } from '@/types/status'
 import type { StatusAttributeChange } from '@/types/status'
+import type { DamageTypeId } from '@/types/damage'
 import { getRegistry } from './registry'
 import { getEffectResolver } from './effect'
 import { evaluateCondition } from './event'
@@ -314,8 +315,8 @@ export function triggerStatusEffects(player: PlayerState): string[] {
  */
 export function calculateStatusModifiers(
   player: PlayerState,
-): Partial<Record<StatusAffectedAttribute, number>> {
-  const modifiers: Partial<Record<StatusAffectedAttribute, number>> = {}
+): Partial<Record<StatusAffectedAttribute | DamageTypeId, number>> {
+  const modifiers: Partial<Record<StatusAffectedAttribute | DamageTypeId, number>> = {}
   const registry = getRegistry()
 
   for (const status of player.activeStatuses) {
@@ -374,8 +375,19 @@ function applyAttributeChange(
   stackMultiplier: number,
 ): void {
   const value = attrChange.value * stackMultiplier
+  const { attribute } = attrChange
 
-  switch (attrChange.attribute) {
+  // 防御属性：以伤害类型 id 直接读写 defenses（与 damageTypes.ts 注册表一致）
+  if (getRegistry().getDamageType(attribute)) {
+    player.attributes.defenses[attribute as DamageTypeId] = clampStat(
+      (player.attributes.defenses[attribute as DamageTypeId] ?? 0) + value,
+      0,
+      100,
+    )
+    return
+  }
+
+  switch (attribute) {
     case StatusAffectedAttribute.HP:
       player.survival.hp = clampStat(player.survival.hp + value, 0, player.survival.maxHp)
       break
@@ -423,41 +435,7 @@ function applyAttributeChange(
     case StatusAffectedAttribute.STAMINA_RECOVERY_FIX:
       player.attributes.coefficients.staminaRecoveryFix += value
       break
-    case StatusAffectedAttribute.SLASH_DEFENSE:
-      player.attributes.defenses.slashDefense = clampStat(
-        player.attributes.defenses.slashDefense + value,
-        0,
-        100,
-      )
-      break
-    case StatusAffectedAttribute.BLUNT_DEFENSE:
-      player.attributes.defenses.bluntDefense = clampStat(
-        player.attributes.defenses.bluntDefense + value,
-        0,
-        100,
-      )
-      break
-    case StatusAffectedAttribute.RANGED_DEFENSE:
-      player.attributes.defenses.rangedDefense = clampStat(
-        player.attributes.defenses.rangedDefense + value,
-        0,
-        100,
-      )
-      break
-    case StatusAffectedAttribute.POISON_DEFENSE:
-      player.attributes.defenses.poisonDefense = clampStat(
-        player.attributes.defenses.poisonDefense + value,
-        0,
-        100,
-      )
-      break
-    case StatusAffectedAttribute.FIRE_DEFENSE:
-      player.attributes.defenses.fireDefense = clampStat(
-        player.attributes.defenses.fireDefense + value,
-        0,
-        100,
-      )
-      break
+    // 防御属性（以伤害类型 id 处理，见函数开头）
     case StatusAffectedAttribute.TEMPERATURE_LOW:
       player.attributes.coefficients.temperatureLowModifier += value
       break

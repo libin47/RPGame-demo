@@ -47,6 +47,7 @@
         v-else-if="game.state.mode === 'map' && currentMap"
         :map="currentMap"
         :current-scene-id="game.state.player.currentLocation.sceneId"
+        :player-state="game.state.player"
         @close="onCloseMap"
         @move-to="onMoveToMapScene"
       />
@@ -78,7 +79,11 @@
         v-else-if="game.state.mode === 'battle' && game.state.currentBattle"
         :enemies="game.state.currentBattle.enemies"
         :logs="game.state.currentBattle.logs"
+        :distance="game.state.currentBattle.distance"
+        :player="game.state.player"
+        :target-enemy-id="game.state.currentBattle.targetEnemyId"
         @action="onBattleAction"
+        @select-target="onSelectEnemyTarget"
       />
 
       <!-- 建造模式 -->
@@ -410,12 +415,13 @@ function onEnterEventFromEntry(eventId: string): void {
   isEventClicked.value = true
 }
 
-function onBattleAction(actionType: PlayerActionType): void {
-  if (actionType === PlayerActionType.BATTLE_SKILL) {
-    game.value.executeBattleAction(PlayerActionType.BATTLE_SKILL, 'basic_attack')
-  } else {
-    game.value.executeBattleAction(actionType)
-  }
+function onBattleAction(actionType: PlayerActionType, skillId?: string): void {
+  game.value.executeBattleAction(actionType, skillId)
+}
+
+/** 切换玩家当前攻击目标 */
+function onSelectEnemyTarget(enemyId: string): void {
+  game.value.setBattleTarget(enemyId)
 }
 
 /** 使用物品 */

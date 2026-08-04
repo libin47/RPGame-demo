@@ -4,6 +4,8 @@ export { initRegistry, getRegistry } from './registry'
 export { createNewPlayerState } from './player'
 export { getEffectResolver } from './effect'
 export { advanceTime, calculateTemperature } from './world'
+export { findMapRoute } from './map'
+export type { MapRouteLeg } from './map'
 
 // 随机工具
 export {
@@ -83,9 +85,16 @@ export {
   startBattle,
   executePlayerAction,
   settleBattle,
+  selectBattleTarget,
   BattlePhase,
   BattleResult,
   PlayerActionType,
+  getPlayerBattleSkillDistance,
+  canSkillHitAtDistance,
+  getPlayerBattleSkills,
+  calcPlayerTotalDefense,
+  MIN_BATTLE_DISTANCE,
+  MAX_BATTLE_DISTANCE,
 } from './combat'
 export type { BattleState, BattleEnemy } from './combat'
 

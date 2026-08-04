@@ -65,6 +65,11 @@ class GameRegistryManager {
     return this.registry.damageTypes.damageTypes[id]
   }
 
+  /** 获取所有伤害类型配置 */
+  getAllDamageTypes(): Record<string, DamageType> {
+    return this.registry.damageTypes.damageTypes
+  }
+
   // ============================================================
   // 技能
   // ============================================================
@@ -77,6 +82,11 @@ class GameRegistryManager {
   /** 获取战斗技能配置 */
   getBattleSkill(id: string): BattleSkill | undefined {
     return this.registry.skills.battleSkills[id]
+  }
+
+  /** 获取所有战斗技能配置 */
+  getAllBattleSkills(): Record<string, BattleSkill> {
+    return this.registry.skills.battleSkills
   }
 
   /** 获取被动技能配置 */

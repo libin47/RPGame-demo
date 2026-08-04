@@ -1,11 +1,6 @@
 // config/skills.ts
 import { AttributeType } from '@/types/effect'
-import type {
-  SurvivalSkill,
-  BattleSkill,
-  PassiveSkill,
-  SkillRegistry,
-} from '../types/skill'
+import type { SurvivalSkill, BattleSkill, PassiveSkill, SkillRegistry } from '../types/skill'
 import { BattleSkillTargetType } from '../types/skill'
 
 // ===== 生存技能 =====
@@ -87,7 +82,35 @@ const gathering: SurvivalSkill = {
 }
 
 // ===== 战斗技能 =====
-
+const axeSlash: BattleSkill = {
+  id: 'axe_slash',
+  name: '斧头挥砍',
+  description: '使用斧头进行基础的挥砍攻击',
+  iconId: 'icon_skill_basic_slash',
+  skillType: 'battle',
+  level: 0,
+  maxLevel: 10,
+  attackDistance: 3,
+  unlockCondition: '武器熟练度: 斧 0',
+  weaponRestriction: 'axe',
+  damageTypeId: 'slash',
+  stats: {
+    damageMultiplier: 3,
+    strengthScaling: 0.8,
+    agilityScaling: 0.2,
+    intelligenceScaling: 0.0,
+    accuracyModifier: 1.0,
+    criticalChanceModifier: 0.0,
+    criticalMultiplierBonus: 0.0,
+  },
+  costs: [{ costType: 'stamina', value: 15 }],
+  cooldown: 0,
+  targetType: BattleSkillTargetType.SINGLE_ENEMY,
+  onHitEffects: [],
+  useTextTemplate: '你挥动武器，对{target}造成了{damage}点伤害',
+  missTextTemplate: '你的攻击落空了',
+  isDefaultAttack: true,
+}
 const basicSlash: BattleSkill = {
   id: 'basic_slash',
   name: '挥砍',
@@ -260,6 +283,34 @@ const punch: BattleSkill = {
   isDefaultAttack: true,
 }
 
+const basicAttack: BattleSkill = {
+  id: 'basic_attack',
+  name: '攻击',
+  description: '使用当前装备的武器进行普通攻击',
+  iconId: 'icon_skill_basic_attack',
+  skillType: 'battle',
+  level: 0,
+  maxLevel: 10,
+  unlockCondition: '默认解锁',
+  // 不设 attackDistance：攻击距离取当前武器（武器未设置则为1）
+  stats: {
+    damageMultiplier: 1.0,
+    strengthScaling: 0.8,
+    agilityScaling: 0.2,
+    intelligenceScaling: 0.0,
+    accuracyModifier: 0.0,
+    criticalChanceModifier: 0.0,
+    criticalMultiplierBonus: 0.0,
+  },
+  costs: [],
+  cooldown: 0,
+  targetType: BattleSkillTargetType.SINGLE_ENEMY,
+  onHitEffects: [],
+  useTextTemplate: '你对{target}发动攻击，造成{damage}点伤害',
+  missTextTemplate: '你的攻击落空了',
+  isDefaultAttack: true,
+}
+
 // ===== 被动技能 =====
 
 const ironStomach: PassiveSkill = {
@@ -314,6 +365,8 @@ export const skillRegistry: SkillRegistry = {
     aimed_shot: aimedShot,
     thrust,
     punch,
+    basic_attack: basicAttack,
+    axe_slash: axeSlash,
   },
   passiveSkills: {
     iron_stomach: ironStomach,

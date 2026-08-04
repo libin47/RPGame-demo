@@ -112,6 +112,8 @@ export interface GameInstance {
     skillId?: string,
     itemInstanceId?: string,
   ) => void
+  /** 设置玩家当前攻击目标（敌人实例ID，多敌人战斗） */
+  setBattleTarget: (enemyInstanceId: string) => void
   /** 触发结局 */
   triggerEnding: (ending: EndingConfig, reason: string) => void
   /** 检查结局条件 */
@@ -196,6 +198,7 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
     executeBattleAction: game.executeBattleAction,
+    setBattleTarget: game.setBattleTarget,
     triggerEnding: game.triggerEnding,
     checkAndTriggerEnding: game.checkAndTriggerEnding,
     useItem: game.handleUseItem,
@@ -258,6 +261,7 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
     executeBattleAction: game.executeBattleAction,
+    setBattleTarget: game.setBattleTarget,
     triggerEnding: game.triggerEnding,
     checkAndTriggerEnding: game.checkAndTriggerEnding,
     useItem: game.handleUseItem,

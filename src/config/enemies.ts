@@ -19,12 +19,13 @@ const 大螃蟹: Enemy = {
   hp: 40,
   strength: 12,
   agility: 6,
+  // 减免比例（0~1，1=完全免疫）；键为伤害类型ID
   defenses: {
-    slashDefense: 4,
-    bluntDefense: 2,
-    rangedDefense: 1,
-    poisonDefense: 0,
-    fireDefense: 0,
+    slash: 0.4,
+    blunt: 0.2,
+    ranged: 0.1,
+    poison: 0,
+    fire: 0,
   },
   skills: [
     {
@@ -106,30 +107,12 @@ const 大螃蟹: Enemy = {
   canNotEscape: false,
   loot: [
     {
-      itemId: 'crab_meat',
-      probability: 0.8,
+      itemId: '蟹肉',
+      probability: 1,
       minQuantity: 1,
       maxQuantity: 3,
     },
-    {
-      itemId: 'chitin_shell',
-      probability: 0.4,
-      minQuantity: 1,
-      maxQuantity: 2,
-      affectedByPlayerSkill: {
-        skillId: 'gathering',
-        bonusPerLevel: 0.05,
-        quantityBonusPerLevel: 0.1,
-      },
-    },
-    {
-      itemId: 'gold_coin',
-      probability: 0.15,
-      minQuantity: 1,
-      maxQuantity: 5,
-    },
   ],
-  defeatFlag: 'defeated_first_crab',
   spawnCondition: {
     logic: LogicOperator.AND,
     subConditions: [
@@ -172,12 +155,13 @@ const dreamStalker: Enemy = {
   hp: 25,
   strength: 10,
   agility: 14,
+  // 减免比例（0~1，1=完全免疫）；键为伤害类型ID
   defenses: {
-    slashDefense: 1,
-    bluntDefense: 0,
-    rangedDefense: 2,
-    poisonDefense: 5,
-    fireDefense: 0,
+    slash: 0.1,
+    blunt: 0,
+    ranged: 0.2,
+    poison: 0.5,
+    fire: 0,
   },
   skills: [
     {
@@ -208,6 +192,7 @@ const dreamStalker: Enemy = {
       description: '发出令人疯狂的低语',
       priority: 2,
       weight: 40,
+      damageTypeId: 'slash',
       useCondition: {
         hpAboveRatio: 0.3,
       },

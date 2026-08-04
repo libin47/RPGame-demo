@@ -23,12 +23,14 @@ const 薄外套: ArmorItem = {
     destroyOnBreak: false,
   },
   equipmentSlot: EquipmentSlot.BODY,
+  // 减免比例（0~1，1=完全免疫，负数=弱点放大）；键为伤害类型ID
   defenseStats: {
-    slashDefense: 1,
-    bluntDefense: 1,
-    rangedDefense: 0,
-    poisonDefense: 0,
-    fireDefense: 0,
+    slash: 1,
+    pierce: 1,
+    blunt: 1,
+    ranged: 1,
+    poison: 1,
+    fire: 1,
   },
   attributeModifiers: [],
   temperatureResistance: {

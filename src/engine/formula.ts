@@ -230,63 +230,38 @@ export function calcCriticalMultiplier(
 }
 
 /**
- * 计算玩家攻击最终伤害
+ * 计算伤害经过防御减免后的最终值
+ * 公式：最终伤害 = X·dp + X·(1−dp)·max(0, 1−d)
+ *   X  = 技能修正后的原始伤害（含浮动与暴击倍率）
+ *   dp = 伤害类型穿透比例（DamageType.defensePenetration，0~1；1=完全无视防御，如真实伤害）
+ *   d  = 目标对应类型防御比例（≥1 完全减免，0 不减免，<0 放大该部分伤害）
+ * 允许完全减免产生 0 伤害
  *
- * @param baseDamage - 基础伤害
- * @param isCritical - 是否暴击
- * @param criticalMultiplier - 暴击倍率
- * @param targetDefense - 目标对应防御值
- * @param damageVariance - 伤害浮动（0-1，默认 0.1）
- * @returns 最终伤害（向上取整）
+ * @returns 最终伤害（向上取整，最小 0）
  */
-export function calcFinalDamage(
-  baseDamage: number,
-  isCritical: boolean,
-  criticalMultiplier: number,
-  targetDefense: number,
-  damageVariance: number = 0.1,
+export function calcDamageAfterDefense(
+  rawDamage: number,
+  defensePenetration: number,
+  defenseRatio: number,
 ): number {
-  // 防御减伤（每点防御减少 0.5% 伤害，上限 75%）
-  const damageReduction = Math.min(0.75, targetDefense * 0.005)
-  const defenseMultiplier = 1 - damageReduction
-
-  // 伤害浮动
-  const variance = 1 + (Math.random() * 2 - 1) * damageVariance
-
-  let damage = baseDamage * defenseMultiplier * variance
-  if (isCritical) {
-    damage *= criticalMultiplier
-  }
-
-  return Math.max(1, Math.ceil(damage))
+  const penetratedDamage = rawDamage * defensePenetration
+  const reducedDamage = rawDamage * (1 - defensePenetration) * Math.max(0, 1 - defenseRatio)
+  return Math.max(0, Math.ceil(penetratedDamage + reducedDamage))
 }
 
 /**
- * 计算敌人攻击最终伤害
- *
- * @param enemyStrength - 敌人力量
- * @param skillBaseDamage - 技能基础伤害
- * @param strengthScaling - 力量加成系数
- * @param targetDefense - 玩家对应防御值
- * @param damageVariance - 伤害浮动
- * @returns 最终伤害（向上取整）
+ * 计算防御实际减免掉的伤害量（用于防具耐久扣除）
+ * = X·(1−dp)·clamp(d, 0, 1)
+ * 完全减免（d≥1）时等于全部可减免部分；d≤0 时无减免
  */
-export function calcEnemyFinalDamage(
-  enemyStrength: number,
-  skillBaseDamage: number,
-  strengthScaling: number,
-  targetDefense: number,
-  damageVariance: number = 0.1,
+export function calcAbsorbedDamage(
+  rawDamage: number,
+  defensePenetration: number,
+  defenseRatio: number,
 ): number {
-  // 防御减伤
-  const damageReduction = Math.min(0.75, targetDefense * 0.005)
-  const defenseMultiplier = 1 - damageReduction
-
-  // 伤害浮动
-  const variance = 1 + (Math.random() * 2 - 1) * damageVariance
-
-  const damage = (skillBaseDamage + enemyStrength * strengthScaling) * defenseMultiplier * variance
-  return Math.max(1, Math.ceil(damage))
+  const reducedPortion = rawDamage * (1 - defensePenetration)
+  const clampedRatio = Math.max(0, Math.min(1, defenseRatio))
+  return reducedPortion * clampedRatio
 }
 
 /**

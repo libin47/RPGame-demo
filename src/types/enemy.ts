@@ -2,6 +2,7 @@
 
 import type { Condition } from './effect'
 import type { EffectResult } from './effect'
+import type { DamageTypeId } from './damage'
 
 // ============================================================
 // 敌人配置
@@ -21,7 +22,7 @@ export interface Enemy {
   notes?: string
 
   /** 敌人类型 */
-  enemyType: EnemyType
+  enemyType?: EnemyType
 
   /** 敌人描述（战斗中的观察/分析结果） */
   description: string
@@ -192,7 +193,10 @@ export interface EnemySkill {
   maxUses: number
 
   /** 伤害类型 */
-  damageTypeId?: string
+  damageTypeId: string
+
+  /** 攻击距离（默认1，即贴身攻击；-1为不限制距离） */
+  attackDistance?: number
 
   /** 技能数值 */
   stats: EnemySkillStats
@@ -337,16 +341,7 @@ export interface EnemyCorruptionScaling {
  */
 export interface EnemyStatModifier {
   /** 目标属性 */
-  stat:
-    | 'hp'
-    | 'strength'
-    | 'agility'
-    | 'slashDefense'
-    | 'bluntDefense'
-    | 'rangedDefense'
-    | 'poisonDefense'
-    | 'fireDefense'
-    | 'mentalDefense'
+  stat: 'hp' | 'strength' | 'agility' | DamageTypeId | 'mentalDefense'
   /** 修正类型 */
   modifierType: 'add' | 'multiply' | 'set'
   /** 修正值 */

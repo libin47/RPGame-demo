@@ -40,15 +40,17 @@ function calculateMaxSan(sanModifier: number): number {
 
 /**
  * 根据基础属性计算实际防御值
- * 基础值 + 装备加成 + 状态修正（初始无装备和状态，全部为0）
+ * 以伤害类型ID为键（与 damageTypes.ts 一致）；初始无装备和状态，全部为0
  */
 function calculateDefenses(): PlayerDefenses {
   return {
-    slashDefense: 0,
-    bluntDefense: 0,
-    rangedDefense: 0,
-    poisonDefense: 0,
-    fireDefense: 0,
+    slash: 0,
+    pierce: 0,
+    blunt: 0,
+    ranged: 0,
+    poison: 0,
+    fire: 0,
+    realDamage: 0,
   }
 }
 

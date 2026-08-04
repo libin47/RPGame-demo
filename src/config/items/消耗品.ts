@@ -118,6 +118,16 @@ const 椰子: ConsumableItem = {
       probability: 1,
       description: '恢复40点饱食度',
     },
+    {
+      effect: {
+        type: EffectType.ATTRIBUTE,
+        attribute: AttributeType.HP,
+        operation: AttributeOperation.ADD,
+        value: 100,
+      },
+      probability: 1,
+      description: '恢复40点饱食度',
+    },
   ],
   useText: '椰汁可口',
   tags: ['consumable', 'drink', 'coconut'],

@@ -3,7 +3,10 @@
 
 import type { PlayerState } from '@/types/player'
 import type { Enemy, EnemySkill } from '@/types/enemy'
+import type { BattleSkill } from '@/types/skill'
+import type { DamageTypeId } from '@/types/damage'
 import { EnemyType, EnemySkillTargetType } from '@/types/enemy'
+import { BattleSkillTargetType } from '@/types/skill'
 import { getRegistry } from './registry'
 import {
   calcTurnOrder,
@@ -11,8 +14,8 @@ import {
   calcHitChance,
   calcCriticalChance,
   calcCriticalMultiplier,
-  calcFinalDamage,
-  calcEnemyFinalDamage,
+  calcDamageAfterDefense,
+  calcAbsorbedDamage,
   calcEnemyHitChance,
   calcEscapeChance,
   calcObserveChance,
@@ -23,7 +26,7 @@ import {
 import { weightedSelect, randomInt, chance } from './dice'
 import { getEffectResolver } from './effect'
 import { updateStatusTurns, removeBattleEndStatuses, triggerStatusEffects } from './status'
-import { addItem } from './inventory'
+import { addItem, unequipSlot } from './inventory'
 
 // ============================================================
 // 战斗状态枚举
@@ -65,7 +68,15 @@ export enum PlayerActionType {
   OBSERVE = 'observe',
   /** 逃跑 */
   ESCAPE = 'escape',
+  /** 靠近（距离 -1） */
+  MOVE_CLOSER = 'moveCloser',
+  /** 远离（距离 +1） */
+  MOVE_AWAY = 'moveAway',
 }
+
+/** 敌我距离的下限（贴身）与上限 */
+export const MIN_BATTLE_DISTANCE = 1
+export const MAX_BATTLE_DISTANCE = 5
 
 // ============================================================
 // 战斗状态接口
@@ -80,8 +91,13 @@ export interface BattleState {
   /** 战斗结果 */
   result: BattleResult
 
+  /** 敌我当前距离（1-5，1=贴身） */
+  distance: number
+
   /** 敌人列表（可被缩放后的副本） */
   enemies: BattleEnemy[]
+  /** 玩家当前选中的攻击目标实例ID（null=自动取第一个存活敌人） */
+  targetEnemyId: string | null
   /** 玩家是否在本回合防守 */
   isPlayerDefending: boolean
 
@@ -94,6 +110,8 @@ export interface BattleState {
 
 /** 战斗中的敌人实例 */
 export interface BattleEnemy {
+  /** 敌人实例唯一ID（同一配置的多个敌人可通过此区分） */
+  instanceId: string
   /** 敌人配置 */
   config: Enemy
   /** 当前生命值 */
@@ -117,6 +135,193 @@ export interface BattleEnemy {
 }
 
 // ============================================================
+// 距离系统
+// ============================================================
+
+/**
+ * 解析技能的实际攻击距离：
+ * 技能未设置 → 取当前装备武器的距离；武器也未设置 → 1；-1 表示不限距离
+ */
+export function getPlayerBattleSkillDistance(player: PlayerState, skill: BattleSkill): number {
+  if (skill.attackDistance !== undefined) return skill.attackDistance
+  const weaponId = player.equipment.weapon
+  if (weaponId) {
+    const item = getRegistry().getItem(weaponId)
+    if (item && 'weaponStats' in item) {
+      const stats = (item as { weaponStats?: { attackDistance?: number } }).weaponStats
+      if (stats && stats.attackDistance !== undefined) return stats.attackDistance
+    }
+  }
+  return 1
+}
+
+/** 判断某攻击距离在当前敌我距离下是否可命中（-1 表示不限距离，总是可命中） */
+export function canSkillHitAtDistance(skillDistance: number, currentDistance: number): boolean {
+  return skillDistance === -1 || skillDistance >= currentDistance
+}
+
+/**
+ * 玩家当前可用的战斗技能列表
+ * 可用性判定（与 battleSkills 的等级记录无关）：
+ *  1. 技能有 weaponRestriction 时：与当前装备武器类型相同，且 unlockLevel（默认0）≤ 当前武器熟练度，且未锁定
+ *  2. 技能无 weaponRestriction：未锁定即可用（含默认普攻 basic_attack）
+ *  3. 技能ID出现在 unlockedBattleSkillIds 中：直接可用（无视武器限制与锁定）
+ */
+export function getPlayerBattleSkills(player: PlayerState): BattleSkill[] {
+  const registry = getRegistry()
+
+  // 当前装备武器的武器类型（未装备武器视为徒手）
+  const weaponId = player.equipment.weapon
+  const weaponTypeId = weaponId
+    ? ((registry.getItem(weaponId) as { weaponTypeId?: string })?.weaponTypeId ?? 'unarmed')
+    : 'unarmed'
+  // 当前武器熟练度等级
+  const weaponProficiency = player.skills.weaponProficiencies[weaponTypeId]?.level ?? 0
+  // 已解锁的技能ID集合（通过事件/道具等解锁）
+  const unlockedIds = new Set(player.skills.unlockedBattleSkillIds)
+
+  return Object.values(registry.getAllBattleSkills()).filter((skill) => {
+    // 条件3：已解锁（无视武器限制与锁定）
+    if (unlockedIds.has(skill.id)) return true
+
+    // 锁定（需通过其他方式解锁）→ 不可用
+    if (skill.lock) return false
+
+    // 条件2：无武器限制 → 可用
+    if (!skill.weaponRestriction) return true
+
+    // 条件1：武器类型匹配 + 熟练度达到解锁等级
+    if (skill.weaponRestriction !== weaponTypeId) return false
+    const unlockLevel = skill.unlockLevel ?? 0
+    return weaponProficiency >= unlockLevel
+  })
+}
+
+/** 敌我距离限制在 [1, 5] */
+function clampDistance(d: number): number {
+  return Math.max(MIN_BATTLE_DISTANCE, Math.min(MAX_BATTLE_DISTANCE, d))
+}
+
+/** 普攻占位配置（无攻击距离设置，让普攻距离取武器距离） */
+const basicAttackDummy = { id: 'basic_attack', isDefaultAttack: true } as BattleSkill
+
+// ============================================================
+// 防御计算（穿透 + 减免 + 防具耐久）
+// ============================================================
+
+/** 获取伤害类型的穿透比例（找不到默认 0） */
+function getDefensePenetration(damageTypeId: string): number {
+  return getRegistry().getDamageType(damageTypeId)?.defensePenetration ?? 0
+}
+
+/** 获取敌人的防御比例（对应伤害类型的减免比例，无对应键或未定义视为 0） */
+function getEnemyDefenseRatio(enemy: BattleEnemy, damageTypeId: string): number {
+  return enemy.defenses[damageTypeId] ?? 0
+}
+
+/** 单件防具对某伤害类型的减免贡献（供耐久分摊） */
+interface GearDefenseContribution {
+  instanceId: string
+  slot: keyof PlayerState['equipment']
+  /** 该防具对伤害类型的减免比例 */
+  ratio: number
+  /** 耐久扣除系数（默认 1） */
+  coefficient: number
+  name: string
+}
+
+/**
+ * 计算玩家对某伤害类型的总防御比例
+ * = 基础/状态防御（attributes.defenses[伤害类型id]）+ 已装备且未破损（durability>0）的防具 defenseStats 之和
+ * 战斗结算与属性面板共用此口径（防具破损后自动不计入）
+ */
+export function calcPlayerTotalDefense(player: PlayerState, damageTypeId: string): number {
+  let total = player.attributes.defenses[damageTypeId as DamageTypeId] ?? 0
+
+  const registry = getRegistry()
+  const slots = Object.keys(player.equipment) as Array<keyof PlayerState['equipment']>
+  for (const slot of slots) {
+    const itemId = player.equipment[slot]
+    if (!itemId) continue
+    const itemConfig = registry.getItem(itemId)
+    if (!itemConfig || !('defenseStats' in itemConfig)) continue
+    // 只统计装备中且未破损的防具实例
+    const invItem = player.inventory.find((i) => i.itemId === itemId && i.equippedSlot === slot)
+    if (!invItem || invItem.durability <= 0) continue
+    total += itemConfig.defenseStats[damageTypeId as DamageTypeId] ?? 0
+  }
+
+  return total
+}
+
+/**
+ * 计算玩家对某伤害类型的总防御比例及防具贡献明细
+ * @returns 总防御比例与各防具贡献（用于按比例分摊耐久扣除）
+ */
+function getPlayerDefenseInfo(
+  player: PlayerState,
+  damageTypeId: string,
+): { total: number; gearPieces: GearDefenseContribution[] } {
+  const total = calcPlayerTotalDefense(player, damageTypeId)
+
+  const registry = getRegistry()
+  const gearPieces: GearDefenseContribution[] = []
+  const slots = Object.keys(player.equipment) as Array<keyof PlayerState['equipment']>
+  for (const slot of slots) {
+    const itemId = player.equipment[slot]
+    if (!itemId) continue
+    const itemConfig = registry.getItem(itemId)
+    if (!itemConfig || !('defenseStats' in itemConfig)) continue
+    // 只统计装备中且未破损的防具实例
+    const invItem = player.inventory.find((i) => i.itemId === itemId && i.equippedSlot === slot)
+    if (!invItem || invItem.durability <= 0) continue
+
+    const ratio = itemConfig.defenseStats[damageTypeId as DamageTypeId] ?? 0
+    if (ratio === 0) continue
+
+    gearPieces.push({
+      instanceId: invItem.instanceId,
+      slot,
+      ratio,
+      coefficient:
+        (itemConfig as { durabilityDrainCoefficient?: number }).durabilityDrainCoefficient ?? 1,
+      name: itemConfig.name,
+    })
+  }
+
+  return { total, gearPieces }
+}
+
+/**
+ * 玩家受击后按各防具贡献比例分摊扣减耐久
+ * 规则：扣耐久 = 实际减免的伤害量 × (该防具比例 / 总防御比例) × 系数
+ * 归零的那一下按全部减免计算（本次已全额生效），归零后卸下该防具，不再减免
+ */
+function applyArmorDurabilityDrain(
+  player: PlayerState,
+  absorbedDamage: number,
+  gearPieces: GearDefenseContribution[],
+  totalDefenseRatio: number,
+  logs: string[],
+): void {
+  if (absorbedDamage <= 0 || totalDefenseRatio <= 0 || gearPieces.length === 0) return
+
+  for (const gear of gearPieces) {
+    const share = gear.ratio / totalDefenseRatio
+    const drain = Math.max(1, Math.round(absorbedDamage * share * gear.coefficient))
+    const invItem = player.inventory.find((i) => i.instanceId === gear.instanceId)
+    if (!invItem) continue
+
+    invItem.durability -= drain
+    if (invItem.durability <= 0) {
+      invItem.durability = 0
+      unequipSlot(player, gear.slot)
+      logs.push(`你的「${gear.name}」破损了，已失去防护效果`)
+    }
+  }
+}
+
+// ============================================================
 // 战斗工厂
 // ============================================================
 
@@ -134,9 +339,11 @@ export function createBattle(player: PlayerState, enemyIds: string[]): BattleSta
   const enemies: BattleEnemy[] = enemyIds
     .map((id) => registry.getEnemy(id))
     .filter((enemy): enemy is Enemy => enemy !== undefined)
-    .map((enemy) => {
+    .map((enemy, index) => {
       const scaled = scaleEnemyByCorruption(enemy, corruption)
       return {
+        // 实例唯一ID：同一配置的多个敌人用下标区分
+        instanceId: `${enemy.id}#${index}`,
         config: enemy,
         hp: scaled.hp,
         maxHp: scaled.hp,
@@ -150,11 +357,24 @@ export function createBattle(player: PlayerState, enemyIds: string[]): BattleSta
       }
     })
 
+  // 初始距离：以双方技能的最远攻击距离为准，限制在 [1, 5]
+  const maxPlayerDist = Math.max(
+    MIN_BATTLE_DISTANCE,
+    ...getPlayerBattleSkills(player).map((s) => getPlayerBattleSkillDistance(player, s)),
+  )
+  const maxEnemyDist = Math.max(
+    MIN_BATTLE_DISTANCE,
+    ...enemies.flatMap((e) => e.config.skills.map((s) => s.attackDistance ?? 1)),
+  )
+  const distance = clampDistance(Math.max(maxPlayerDist, maxEnemyDist))
+
   return {
     phase: BattlePhase.START,
     turn: 0,
     result: BattleResult.ONGOING,
+    distance,
     enemies,
+    targetEnemyId: null,
     isPlayerDefending: false,
     logs: [],
     isFirstEncounter: true,
@@ -178,11 +398,51 @@ export function startBattle(battle: BattleState): string[] {
   battle.logs = []
 
   const enemyNames = battle.enemies.map((e) => e.config.name).join('、')
-  battle.logs.push(`⚔ 战斗开始！${enemyNames}出现了！`)
+  battle.logs.push(`⚔ 战斗开始！${enemyNames}出现了！（距离 ${battle.distance}）`)
 
   // 进入玩家回合
   battle.phase = BattlePhase.PLAYER_TURN
   return [...battle.logs]
+}
+
+// ============================================================
+// 目标选择（多敌人）
+// ============================================================
+
+/**
+ * 设置玩家当前攻击目标
+ * @param enemyInstanceId - 敌人实例ID（不存在的ID会被忽略）
+ */
+export function selectBattleTarget(battle: BattleState, enemyInstanceId: string): void {
+  if (battle.enemies.some((e) => e.instanceId === enemyInstanceId)) {
+    battle.targetEnemyId = enemyInstanceId
+  }
+}
+
+/** 所有存活的敌人 */
+function getLivingEnemies(battle: BattleState): BattleEnemy[] {
+  return battle.enemies.filter((e) => e.hp > 0)
+}
+
+/**
+ * 解析玩家当前攻击目标：
+ * 优先取选中的目标（若存活），否则回退到第一个存活敌人
+ */
+function resolveTarget(battle: BattleState): BattleEnemy | undefined {
+  const living = getLivingEnemies(battle)
+  if (living.length === 0) return undefined
+  if (battle.targetEnemyId) {
+    const selected = living.find((e) => e.instanceId === battle.targetEnemyId)
+    if (selected) return selected
+  }
+  return living[0]
+}
+
+/** 随机一个存活敌人 */
+function resolveRandomTarget(battle: BattleState): BattleEnemy | undefined {
+  const living = getLivingEnemies(battle)
+  if (living.length === 0) return undefined
+  return living[randomInt(0, living.length - 1)]
 }
 
 /**
@@ -208,13 +468,40 @@ export function executePlayerAction(
   battle.isPlayerDefending = false
 
   switch (actionType) {
-    case PlayerActionType.BATTLE_SKILL:
-      if (skillId) {
-        executePlayerBattleSkill(player, battle, skillId)
+    case PlayerActionType.BATTLE_SKILL: {
+      const skill = skillId ? getRegistry().getBattleSkill(skillId) : undefined
+
+      // 距离校验：不在攻击范围内的技能无法使用（返回时不消耗回合，保持玩家回合）
+      const skillDistance = skill
+        ? getPlayerBattleSkillDistance(player, skill)
+        : getPlayerBattleSkillDistance(player, basicAttackDummy)
+      if (!canSkillHitAtDistance(skillDistance, battle.distance)) {
+        const skillName = skill?.name ?? '普通攻击'
+        battle.logs.push(`距离太远，无法使用「${skillName}」（当前距离 ${battle.distance}）`)
+        return battle.logs
+      }
+
+      if (skill && skill.isDefaultAttack) {
+        executePlayerBasicAttack(player, battle)
+      } else if (skill) {
+        executePlayerBattleSkill(player, battle, skillId as string)
       } else {
         executePlayerBasicAttack(player, battle)
       }
+
+      // 技能附带位移（在结算后生效）
+      const move = skill?.moveDistance ?? 0
+      if (move !== 0) {
+        const before = battle.distance
+        battle.distance = clampDistance(battle.distance - move)
+        if (battle.distance < before) {
+          battle.logs.push(`你向前突进，与敌人的距离缩短到 ${battle.distance}`)
+        } else if (battle.distance > before) {
+          battle.logs.push(`你向后跳跃，与敌人的距离拉开到 ${battle.distance}`)
+        }
+      }
       break
+    }
 
     case PlayerActionType.DEFEND:
       battle.isPlayerDefending = true
@@ -238,6 +525,24 @@ export function executePlayerAction(
       if ((battle.result as BattleResult) === BattleResult.ESCAPED) {
         removeBattleEndStatuses(player)
         return battle.logs
+      }
+      break
+
+    case PlayerActionType.MOVE_CLOSER:
+      if (battle.distance <= MIN_BATTLE_DISTANCE) {
+        battle.logs.push('你已经与敌人贴身，无法再靠近')
+      } else {
+        battle.distance -= 1
+        battle.logs.push(`你向前移动，与敌人的距离缩短到 ${battle.distance}`)
+      }
+      break
+
+    case PlayerActionType.MOVE_AWAY:
+      if (battle.distance >= MAX_BATTLE_DISTANCE) {
+        battle.logs.push('你已退到最远距离，无法再远离')
+      } else {
+        battle.distance += 1
+        battle.logs.push(`你向后撤退，与敌人的距离拉开到 ${battle.distance}`)
       }
       break
   }
@@ -324,8 +629,8 @@ function executePlayerBasicAttack(player: PlayerState, battle: BattleState): voi
   const proficiencyCritBonus = proficiency * 0.02
   const proficiencyCritMultBonus = proficiency * 0.1
 
-  // 选择目标（当前存活的第一敌人）
-  const target = battle.enemies.find((e) => e.hp > 0)
+  // 选择目标（优先玩家选中的目标，其次第一个存活敌人）
+  const target = resolveTarget(battle)
   if (!target) return
 
   // 命中判定
@@ -347,10 +652,14 @@ function executePlayerBasicAttack(player: PlayerState, battle: BattleState): voi
   const isCritical = chance(critChance)
   const critMultiplier = calcCriticalMultiplier(proficiencyCritMultBonus, critMultiplierBonus)
 
-  // 计算伤害
+  // 计算伤害（穿透 + 防御减免）
   const baseDamage = calcPlayerBaseDamage(effectiveAgility, weaponDamage, proficiencyDamageBonus)
-  const targetDefense = target.defenses[damageTypeId] ?? 0
-  const finalDamage = calcFinalDamage(baseDamage, isCritical, critMultiplier, targetDefense)
+  const defensePenetration = getDefensePenetration(damageTypeId)
+  const defenseRatio = getEnemyDefenseRatio(target, damageTypeId)
+  // 原始伤害 X = 基础伤害 × 浮动 × 暴击倍率
+  const variance = 1 + (Math.random() * 2 - 1) * 0.1
+  const rawDamage = baseDamage * variance * (isCritical ? critMultiplier : 1)
+  const finalDamage = calcDamageAfterDefense(rawDamage, defensePenetration, defenseRatio)
 
   // 应用伤害
   target.hp -= finalDamage
@@ -398,17 +707,48 @@ function executePlayerBattleSkill(player: PlayerState, battle: BattleState, skil
 
   player.survival.stamina -= staminaCost
 
-  // 技能命中与伤害（简化实现，后续可扩展）
-  const target = battle.enemies.find((e) => e.hp > 0)
-  if (!target) return
-
-  // 计算武器熟练度加成
+  // 技能命中与伤害（对单个目标结算）
   const weaponTypeId = player.equipment.weapon
     ? ((registry.getItem(player.equipment.weapon) as { weaponTypeId?: string })?.weaponTypeId ??
       'unarmed')
     : 'unarmed'
   const proficiency = player.skills.weaponProficiencies[weaponTypeId]?.level ?? 0
 
+  const living = getLivingEnemies(battle)
+  if (living.length === 0) return
+
+  const targetType = skillConfig.targetType ?? BattleSkillTargetType.SINGLE_ENEMY
+
+  if (targetType === BattleSkillTargetType.ALL_ENEMIES) {
+    // 全体攻击：对每个存活敌人分别结算
+    for (const target of living) {
+      applyPlayerSkillDamage(player, battle, skillConfig, target, effectiveAgility, proficiency)
+    }
+  } else if (targetType === BattleSkillTargetType.RANDOM_ENEMY) {
+    const target = resolveRandomTarget(battle)
+    if (target) {
+      applyPlayerSkillDamage(player, battle, skillConfig, target, effectiveAgility, proficiency)
+    }
+  } else {
+    // 单目标（默认）：优先玩家选中的目标
+    const target = resolveTarget(battle)
+    if (target) {
+      applyPlayerSkillDamage(player, battle, skillConfig, target, effectiveAgility, proficiency)
+    }
+  }
+}
+
+/**
+ * 对单个敌人结算玩家技能伤害（命中/暴击/伤害），写入日志
+ */
+function applyPlayerSkillDamage(
+  player: PlayerState,
+  battle: BattleState,
+  skillConfig: BattleSkill,
+  target: BattleEnemy,
+  effectiveAgility: number,
+  proficiency: number,
+): void {
   const hitChance = calcHitChance(
     effectiveAgility,
     proficiency * 0.03,
@@ -417,7 +757,7 @@ function executePlayerBattleSkill(player: PlayerState, battle: BattleState, skil
   )
 
   if (!chance(hitChance)) {
-    battle.logs.push(`你的 ${skillConfig.name} 没有命中!`)
+    battle.logs.push(`你的 ${skillConfig.name} 对 ${target.config.name} 没有命中!`)
     return
   }
 
@@ -436,8 +776,13 @@ function executePlayerBattleSkill(player: PlayerState, battle: BattleState, skil
     (skillConfig as { baseDamage?: number }).baseDamage ??
     calcPlayerBaseDamage(effectiveAgility, 0, proficiency * 2)
   const damageTypeId = (skillConfig as { damageTypeId?: string }).damageTypeId ?? 'blunt'
-  const targetDefense = target.defenses[damageTypeId] ?? 0
-  const finalDamage = calcFinalDamage(baseDamage, isCritical, critMultiplier, targetDefense)
+  // 穿透 + 防御减免
+  const defensePenetration = getDefensePenetration(damageTypeId)
+  const defenseRatio = getEnemyDefenseRatio(target, damageTypeId)
+  // 原始伤害 X = 基础伤害 × 浮动 × 暴击倍率
+  const variance = 1 + (Math.random() * 2 - 1) * 0.1
+  const rawDamage = baseDamage * variance * (isCritical ? critMultiplier : 1)
+  const finalDamage = calcDamageAfterDefense(rawDamage, defensePenetration, defenseRatio)
 
   target.hp -= finalDamage
   if (target.hp < 0) target.hp = 0
@@ -464,7 +809,7 @@ function executePlayerObserve(player: PlayerState, battle: BattleState): void {
     player.attributes.intelligence + player.attributes.intelligenceModifier
   const successChance = calcObserveChance(effectiveIntelligence)
 
-  const target = battle.enemies.find((e) => e.hp > 0)
+  const target = resolveTarget(battle)
   if (!target) return
 
   if (chance(successChance)) {
@@ -545,11 +890,22 @@ function executeEnemyTurn(player: PlayerState, battle: BattleState): void {
       }
     }
 
-    // 选择技能
+    // 选择技能（已在可用技能中过滤攻击距离）
     const selectedSkill = selectEnemySkill(enemy, battle)
 
     if (!selectedSkill) {
-      // 无可用技能时跳过
+      // 当前距离没有能命中的技能
+      if (battle.distance > MIN_BATTLE_DISTANCE) {
+        // 向前逼近
+        battle.distance -= 1
+        battle.logs.push(`${enemy.config.name} 向前逼近，距离缩短到 ${battle.distance}`)
+      } else {
+        // 已贴身仍无技能可命中 → 勉强出手（按未命中处理，避免空转）
+        const fallback = selectFallbackSkill(enemy, battle)
+        if (fallback) {
+          battle.logs.push(`${enemy.config.name} 勉强出手，但未能命中你！`)
+        }
+      }
       continue
     }
 
@@ -580,21 +936,20 @@ function executeEnemyTurn(player: PlayerState, battle: BattleState): void {
 
     // 执行伤害
     const damageTypeId = selectedSkill.damageTypeId
-    const targetDefense =
-      player.attributes.defenses[damageTypeId as keyof typeof player.attributes.defenses] ?? 0
+    const defensePenetration = getDefensePenetration(damageTypeId)
+    const { total: playerDefenseRatio, gearPieces } = getPlayerDefenseInfo(player, damageTypeId)
 
-    let finalDamage = calcEnemyFinalDamage(
-      enemy.strength,
-      selectedSkill.stats.baseDamage,
-      selectedSkill.stats.strengthScaling,
-      targetDefense,
-      selectedSkill.stats.damageVariance,
-    )
+    // 原始伤害 X = (基础伤害 + 力量×系数) × 浮动
+    const variance = 1 + (Math.random() * 2 - 1) * selectedSkill.stats.damageVariance
+    const rawDamage =
+      (selectedSkill.stats.baseDamage + enemy.strength * selectedSkill.stats.strengthScaling) *
+      variance
+    // 穿透 + 防御减免后的最终伤害，以及防具实际减免量（用于耐久扣除）
+    const finalBase = calcDamageAfterDefense(rawDamage, defensePenetration, playerDefenseRatio)
+    const absorbed = calcAbsorbedDamage(rawDamage, defensePenetration, playerDefenseRatio)
 
     // 玩家防守时减半伤害
-    if (battle.isPlayerDefending) {
-      finalDamage = calcDefenseDamageReduction(finalDamage)
-    }
+    let finalDamage = battle.isPlayerDefending ? calcDefenseDamageReduction(finalBase) : finalBase
 
     // 命中判定
     const hitChance = calcEnemyHitChance(
@@ -624,6 +979,9 @@ function executeEnemyTurn(player: PlayerState, battle: BattleState): void {
 
     battle.logs.push(useText)
 
+    // 命中后按贡献比例扣减防具耐久（归零卸下并提示）
+    applyArmorDurabilityDrain(player, absorbed, gearPieces, playerDefenseRatio, battle.logs)
+
     // 命中后效果
     if (selectedSkill.onHitEffects && selectedSkill.onHitEffects.length > 0) {
       getEffectResolver().executeEffectResults(player, selectedSkill.onHitEffects)
@@ -647,23 +1005,29 @@ function executeEnemyChargedSkill(
   const skill = enemy.config.skills.find((s) => s.id === enemy.chargingSkillId)
   if (!skill) return
 
+  // 蓄力期间玩家可拉开距离：释放时若超出射程则落空
+  const skillDistance = skill.attackDistance ?? 1
+  if (!canSkillHitAtDistance(skillDistance, battle.distance)) {
+    battle.logs.push(`${enemy.config.name} 的蓄力攻击落空了（距离太远）`)
+    return
+  }
+
   const damageTypeId = skill.damageTypeId
-  const targetDefense =
-    player.attributes.defenses[damageTypeId as keyof typeof player.attributes.defenses] ?? 0
+  const defensePenetration = getDefensePenetration(damageTypeId)
+  const { total: playerDefenseRatio, gearPieces } = getPlayerDefenseInfo(player, damageTypeId)
 
   // 蓄力技能有额外伤害加成
   const chargeBonus = 1.5
-  let finalDamage = calcEnemyFinalDamage(
-    enemy.strength,
-    skill.stats.baseDamage * chargeBonus,
-    skill.stats.strengthScaling,
-    targetDefense,
-    skill.stats.damageVariance,
-  )
+  // 原始伤害 X = (基础伤害×蓄力加成 + 力量×系数) × 浮动
+  const variance = 1 + (Math.random() * 2 - 1) * skill.stats.damageVariance
+  const rawDamage =
+    (skill.stats.baseDamage * chargeBonus + enemy.strength * skill.stats.strengthScaling) * variance
+  // 穿透 + 防御减免后的最终伤害，以及防具实际减免量（用于耐久扣除）
+  const finalBase = calcDamageAfterDefense(rawDamage, defensePenetration, playerDefenseRatio)
+  const absorbed = calcAbsorbedDamage(rawDamage, defensePenetration, playerDefenseRatio)
 
-  if (battle.isPlayerDefending) {
-    finalDamage = calcDefenseDamageReduction(finalDamage)
-  }
+  // 玩家防守时减半伤害
+  const finalDamage = battle.isPlayerDefending ? calcDefenseDamageReduction(finalBase) : finalBase
 
   player.survival.hp -= finalDamage
   if (player.survival.hp < 0) player.survival.hp = 0
@@ -673,6 +1037,9 @@ function executeEnemyChargedSkill(
     : `${enemy.config.name} 的蓄力攻击造成了 ${finalDamage} 点伤害！`
 
   battle.logs.push(useText)
+
+  // 命中后按贡献比例扣减防具耐久（归零卸下并提示）
+  applyArmorDurabilityDrain(player, absorbed, gearPieces, playerDefenseRatio, battle.logs)
 }
 
 // ============================================================
@@ -680,40 +1047,40 @@ function executeEnemyChargedSkill(
 // ============================================================
 
 /**
- * 敌人AI选择技能
- * 根据优先级和概率选择可用技能
+ * 技能是否可用（次数/冷却/使用条件，不含距离判定）
  */
-function selectEnemySkill(enemy: BattleEnemy, battle: BattleState): EnemySkill | undefined {
-  const availableSkills = enemy.config.skills.filter((skill) => {
-    // 检查使用次数上限
-    const useCount = enemy.skillUseCount[skill.id] ?? 0
-    if (skill.maxUses >= 0 && useCount >= skill.maxUses) return false
+function isSkillAvailable(enemy: BattleEnemy, battle: BattleState, skill: EnemySkill): boolean {
+  // 检查使用次数上限
+  const useCount = enemy.skillUseCount[skill.id] ?? 0
+  if (skill.maxUses >= 0 && useCount >= skill.maxUses) return false
 
-    // 检查冷却
-    const cd = enemy.skillCooldowns[skill.id]
-    if (cd !== undefined && cd > 0) return false
+  // 检查冷却
+  const cd = enemy.skillCooldowns[skill.id]
+  if (cd !== undefined && cd > 0) return false
 
-    // 检查使用条件
-    if (skill.useCondition) {
-      const cond = skill.useCondition
-      const hpRatio = enemy.hp / enemy.maxHp
+  // 检查使用条件
+  if (skill.useCondition) {
+    const cond = skill.useCondition
+    const hpRatio = enemy.hp / enemy.maxHp
 
-      if (cond.hpBelowRatio !== undefined && hpRatio > cond.hpBelowRatio) return false
-      if (cond.hpAboveRatio !== undefined && hpRatio < cond.hpAboveRatio) return false
-      if (cond.minTurn !== undefined && battle.turn < cond.minTurn) return false
-      if (cond.maxTurn !== undefined && battle.turn > cond.maxTurn) return false
-    }
+    if (cond.hpBelowRatio !== undefined && hpRatio > cond.hpBelowRatio) return false
+    if (cond.hpAboveRatio !== undefined && hpRatio < cond.hpAboveRatio) return false
+    if (cond.minTurn !== undefined && battle.turn < cond.minTurn) return false
+    if (cond.maxTurn !== undefined && battle.turn > cond.maxTurn) return false
+  }
 
-    return true
-  })
+  return true
+}
 
-  if (availableSkills.length === 0) return undefined
+/**
+ * 从技能组中按优先级+权重选取一个
+ */
+function pickSkillByPriority(skills: EnemySkill[]): EnemySkill | undefined {
+  if (skills.length === 0) return undefined
 
-  // 按优先级分组
   const priorityGroups = new Map<number, EnemySkill[]>()
   let maxPriority = -Infinity
-
-  for (const skill of availableSkills) {
+  for (const skill of skills) {
     const group = priorityGroups.get(skill.priority)
     if (group) {
       group.push(skill)
@@ -725,15 +1092,41 @@ function selectEnemySkill(enemy: BattleEnemy, battle: BattleState): EnemySkill |
     }
   }
 
-  // 取最高优先级组
   const topGroup = priorityGroups.get(maxPriority)
   if (!topGroup) return undefined
-
-  // 按权重随机选择
   return weightedSelect(
     topGroup,
     topGroup.map((s) => s.weight),
   )
+}
+
+/**
+ * 敌人AI选择技能
+ * 在可用技能中过滤出当前距离可命中的，再按优先级和概率选取
+ */
+function selectEnemySkill(enemy: BattleEnemy, battle: BattleState): EnemySkill | undefined {
+  const availableSkills = enemy.config.skills.filter((skill) => {
+    if (!isSkillAvailable(enemy, battle, skill)) return false
+
+    // 检查攻击距离（不在范围内无法命中）
+    const dist = skill.attackDistance ?? 1
+    if (!canSkillHitAtDistance(dist, battle.distance)) return false
+
+    return true
+  })
+
+  return pickSkillByPriority(availableSkills)
+}
+
+/**
+ * 敌人在贴身（距离1）仍无技能可命中时的兜底技能
+ * 忽略距离限制，取优先级最高的可用技能"勉强出手"（按未命中处理）
+ */
+function selectFallbackSkill(enemy: BattleEnemy, battle: BattleState): EnemySkill | undefined {
+  const availableSkills = enemy.config.skills.filter((skill) =>
+    isSkillAvailable(enemy, battle, skill),
+  )
+  return pickSkillByPriority(availableSkills)
 }
 
 // ============================================================

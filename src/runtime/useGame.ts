@@ -28,7 +28,14 @@ import {
   markDescriptionEventSeen,
 } from '@/engine'
 import { getVisibleOptions, findFirstVisibleFrame } from '@/engine'
-import { createBattle, startBattle, executePlayerAction, settleBattle } from '@/engine'
+import { findMapRoute } from '@/engine'
+import {
+  createBattle,
+  startBattle,
+  executePlayerAction,
+  settleBattle,
+  selectBattleTarget,
+} from '@/engine'
 import { BattlePhase, BattleResult, PlayerActionType } from '@/engine'
 import type { BattleState } from '@/engine'
 import { removeRestStatuses } from '@/engine'
@@ -52,6 +59,7 @@ import { nextCGFrame } from '@/engine'
 import type { CraftResult, ItemSource } from '@/engine'
 import type { ButtonOption } from '@/types/option'
 import type { buildOption } from '@/types/build'
+import type { GameMap } from '@/types/map'
 
 /**
  * 游戏界面模式
@@ -776,13 +784,28 @@ export function useGame(initialPlayer: PlayerState) {
       setSceneTextAfter(collect.text)
     }
 
-    // 如果是敌人类型 → 进入战斗
+    // 如果是敌人类型 → 进入战斗（按 quantity 展开，同一敌人可出现多个）
     if (collect.resourceType === 'enemy' && collect.enemyConfig && collect.enemyConfig.length > 0) {
-      const enemyIds = collect.enemyConfig.map((e) => e.enemyId)
-      const battle = createBattle(state.player, enemyIds)
-      startBattle(battle)
-      state.currentBattle = battle
-      state.mode = 'battle'
+      const enemyIds: string[] = []
+      for (const e of collect.enemyConfig) {
+        // 条件不满足或概率未触发 → 跳过该组
+        if (e.condition && !evaluateCondition(e.condition, state.player)) continue
+        const prob = e.probability ?? 1
+        if (Math.random() >= prob) continue
+        const quantity = Math.max(1, Math.floor(e.quantity ?? 1))
+        for (let i = 0; i < quantity; i++) {
+          enemyIds.push(e.enemyId)
+        }
+      }
+
+      if (enemyIds.length > 0) {
+        const battle = createBattle(state.player, enemyIds)
+        startBattle(battle)
+        state.currentBattle = battle
+        state.mode = 'battle'
+      } else {
+        state.logMessage = '没有遇到敌人'
+      }
     } else if (collect.resourceType === 'item' && collect.itemConfig) {
       // 物品类型 → 直接获得
       for (const itemCfg of collect.itemConfig) {
@@ -862,6 +885,47 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 计算地图移动方案（时间 + 体力）
+   * 优先沿地图路径（paths）逐段累计；配置了路径但不可达时返回 null（无法移动）；
+   * 未配置路径的地图退回坐标距离公式（兼容旧地图）
+   */
+  function calculateMoveCost(
+    map: GameMap,
+    startScene: Scene | null,
+    endScene: Scene,
+    player: PlayerState,
+  ): { minutes: number; staminaCost: number } | null {
+    const start = map.nodes.find((n) => n.sceneId === startScene?.id)
+    const end = map.nodes.find((n) => n.sceneId === endScene.id)
+    if (!start || !end) {
+      return null
+    }
+
+    // 沿路径行走
+    const route = findMapRoute(map, start.id, end.id, player)
+    if (route && route.length > 0) {
+      return {
+        minutes: route.reduce((sum, leg) => sum + leg.travelMinutes, 0),
+        staminaCost: route.reduce((sum, leg) => sum + leg.staminaCost, 0),
+      }
+    }
+
+    // 配置了路径但无可行路线 → 无法移动
+    const paths = map.paths ?? []
+    if (paths.length > 0) return null
+
+    // 兜底：坐标欧氏距离（像素）作为分钟数
+    return {
+      minutes: Math.round(
+        Math.sqrt(
+          (end.position.x - start.position.x) ** 2 + (end.position.y - start.position.y) ** 2,
+        ),
+      ),
+      staminaCost: 0,
+    }
+  }
+
+  /**
    * 从地图点击节点移动到目标场景
    */
   function moveToMapScene(sceneId: string): void {
@@ -871,6 +935,35 @@ export function useGame(initialPlayer: PlayerState) {
       state.mode = 'normal'
       return
     }
+    // 根据路径/距离计算移动方案（时间 + 体力）
+    const currentMap =
+      registry.getMap(state.player.currentLocation.mapId || registry.getInitialMapId()) ?? null
+    if (!currentMap) {
+      state.logMessage = '当前地图不存在'
+      state.mode = 'normal'
+      return
+    }
+    const cost = calculateMoveCost(currentMap, state.currentScene, targetScene, state.player)
+
+    // 无可行路径 → 无法移动（仅影响配置了 paths 的地图）
+    if (!cost) {
+      state.logMessage = `没有通往「${targetScene.name}」的可行路径，无法前往`
+      return
+    }
+
+    // 体力校验
+    if (cost.staminaCost > 0 && state.player.survival.stamina < cost.staminaCost) {
+      state.logMessage = `体力不足，无法前往${targetScene.name}（需要 ${cost.staminaCost} 点体力）`
+      return
+    }
+
+    // 扣除体力并推进时间
+    if (cost.staminaCost > 0) {
+      state.player.survival.stamina = Math.max(0, state.player.survival.stamina - cost.staminaCost)
+    }
+    advanceGameTime(cost.minutes)
+
+    // 移动到目标场景
     state.sceneTextAfter = ''
     state.sceneTextPrefix = ''
     state.currentScene = targetScene
@@ -1283,6 +1376,15 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 设置玩家当前攻击目标（多敌人战斗）
+   * @param enemyInstanceId - 敌人实例ID（同一配置的多个敌人用 #下标 区分）
+   */
+  function setBattleTarget(enemyInstanceId: string): void {
+    if (!state.currentBattle) return
+    selectBattleTarget(state.currentBattle, enemyInstanceId)
+  }
+
+  /**
    * 刷新当前场景描述
    * 使用 exploration.selectSceneDescription 根据条件选取描述
    * 同时检测描述中的自动触发事件
@@ -1582,6 +1684,7 @@ export function useGame(initialPlayer: PlayerState) {
     resolveText,
     advanceGameTime,
     executeBattleAction,
+    setBattleTarget,
     triggerEnding,
     checkAndTriggerEnding,
     handleUseItem,

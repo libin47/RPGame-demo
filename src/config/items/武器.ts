@@ -27,7 +27,8 @@ const 石斧: WeaponItem = {
   weaponTypeId: 'axe',
   equipmentSlot: EquipmentSlot.WEAPON,
   weaponStats: {
-    baseDamage: 7,
+    baseDamage: 27,
+    attackDistance: 1,
     damageTypeId: 'slash',
     damageVariance: 0.15,
     accuracyModifier: 0,
@@ -63,6 +64,7 @@ const 木矛: WeaponItem = {
   equipmentSlot: EquipmentSlot.WEAPON,
   weaponStats: {
     baseDamage: 6,
+    attackDistance: 2,
     damageTypeId: 'pierce',
     damageVariance: 0.2,
     accuracyModifier: 0,
@@ -98,6 +100,7 @@ const 石刀: WeaponItem = {
   equipmentSlot: EquipmentSlot.WEAPON,
   weaponStats: {
     baseDamage: 5,
+    attackDistance: 1,
     damageTypeId: 'slash',
     damageVariance: 0.1,
     accuracyModifier: 0.05,
@@ -137,6 +140,7 @@ const 多功能战术刀: WeaponItem = {
   equipmentSlot: EquipmentSlot.WEAPON,
   weaponStats: {
     baseDamage: 8,
+    attackDistance: 1,
     damageTypeId: 'slash',
     damageVariance: 0.1,
     accuracyModifier: 0.05,

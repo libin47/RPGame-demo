@@ -12,7 +12,7 @@ import { CraftCategory } from '../types/craft'
 /** 石斧：木头×2 + 石头×2 → 石斧 */
 const craftStoneAxe: CraftRecipe = {
   id: 'craft_stone_axe',
-  name: '制作石斧',
+  name: '石斧',
   recipeType: RecipeType.CRAFT,
   iconId: 'icon_stone_axe',
   unlockHint: '初始解锁',
@@ -35,7 +35,7 @@ const craftStoneAxe: CraftRecipe = {
 /** 木矛：木头×3 + 尼龙绳×1 → 木矛 */
 const craftWoodenSpear: CraftRecipe = {
   id: 'craft_wooden_spear',
-  name: '制作木矛',
+  name: '木矛',
   recipeType: RecipeType.CRAFT,
   iconId: 'icon_wooden_spear',
   unlockHint: '初始解锁',
@@ -58,7 +58,7 @@ const craftWoodenSpear: CraftRecipe = {
 /** 石刀：石头×1 + 布料×1 → 石刀 */
 const craftStoneKnife: CraftRecipe = {
   id: 'craft_stone_knife',
-  name: '制作石刀',
+  name: '石刀',
   recipeType: RecipeType.CRAFT,
   iconId: 'icon_stone_knife',
   unlockHint: '初始解锁',
@@ -81,7 +81,7 @@ const craftStoneKnife: CraftRecipe = {
 /** 简易鱼竿：木竿×1 + 尼龙绳×1 → 简易鱼竿 */
 const craftFishingRod: CraftRecipe = {
   id: 'craft_fishing_rod',
-  name: '制作简易鱼竿',
+  name: '简易鱼竿',
   recipeType: RecipeType.CRAFT,
   iconId: 'icon_fishing_rod',
   unlockHint: '获得木竿后解锁',
@@ -104,7 +104,7 @@ const craftFishingRod: CraftRecipe = {
 /** 木竿：木头×3 → 木竿 */
 const craftWoodenPole: CraftRecipe = {
   id: 'craft_wooden_pole',
-  name: '制作木竿',
+  name: '木竿',
   recipeType: RecipeType.CRAFT,
   iconId: 'icon_log',
   unlockHint: '初始解锁',
@@ -128,7 +128,7 @@ const craftWoodenPole: CraftRecipe = {
 /** 绷带：布料×2 → 绷带 */
 const craftBandage: CraftRecipe = {
   id: 'craft_bandage',
-  name: '制作绷带',
+  name: '绷带',
   recipeType: RecipeType.CRAFT,
   iconId: 'icon_bandage',
   unlockHint: '初始解锁',
@@ -152,7 +152,7 @@ const craftBandage: CraftRecipe = {
 /** 布料碎片：布料×1 → 布料碎片×3 */
 const craftClothScrap: CraftRecipe = {
   id: 'craft_cloth_scrap',
-  name: '裁剪布料碎片',
+  name: '布料碎片',
   recipeType: RecipeType.CRAFT,
   iconId: 'icon_cloth',
   unlockHint: '初始解锁',

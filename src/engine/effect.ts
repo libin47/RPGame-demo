@@ -3,6 +3,7 @@
 import type { PlayerState } from '@/types/player'
 import type { EffectResult, Effect } from '@/types/effect'
 import { EffectType, AttributeType, AttributeOperation, ItemChangeType } from '@/types/effect'
+import type { DamageTypeId } from '@/types/damage'
 import { getRegistry } from './registry'
 import { applyStatus, removeStatus } from './status'
 import { addItem, removeItem, equipItemById, unequipByItemId } from './inventory'
@@ -202,9 +203,14 @@ export class EffectResolver {
    */
   private getAttributeValue(
     player: PlayerState,
-    attribute: AttributeType,
+    attribute: AttributeType | DamageTypeId,
     subType?: string,
   ): number | null {
+    // 防御属性：以伤害类型 id 直接读写 defenses（与 damageTypes.ts 注册表一致）
+    if (getRegistry().getDamageType(attribute)) {
+      return player.attributes.defenses[attribute as DamageTypeId] ?? 0
+    }
+
     switch (attribute) {
       // 生存属性
       case AttributeType.HP:
@@ -246,17 +252,7 @@ export class EffectResolver {
         if (!subType) return null
         return player.skills.weaponProficiencies[subType]?.exp ?? 0
 
-      // 防御属性
-      case AttributeType.SLASH_DEFENSE:
-        return player.attributes.defenses.slashDefense
-      case AttributeType.BLUNT_DEFENSE:
-        return player.attributes.defenses.bluntDefense
-      case AttributeType.RANGED_DEFENSE:
-        return player.attributes.defenses.rangedDefense
-      case AttributeType.POISON_DEFENSE:
-        return player.attributes.defenses.poisonDefense
-      case AttributeType.FIRE_DEFENSE:
-        return player.attributes.defenses.fireDefense
+      // 防御属性（以伤害类型 id 处理，见函数开头）
 
       // 技能等级（需要 subType 指定技能ID）
       case AttributeType.SKILL_LEVEL:
@@ -301,10 +297,16 @@ export class EffectResolver {
    */
   private setAttributeValue(
     player: PlayerState,
-    attribute: AttributeType,
+    attribute: AttributeType | DamageTypeId,
     subType: string | undefined,
     newValue: number,
   ): void {
+    // 防御属性：以伤害类型 id 直接读写 defenses（与 damageTypes.ts 注册表一致）
+    if (getRegistry().getDamageType(attribute)) {
+      player.attributes.defenses[attribute as DamageTypeId] = Math.max(0, newValue)
+      return
+    }
+
     switch (attribute) {
       // 生存属性（带边界限制）
       case AttributeType.HP:
@@ -375,22 +377,7 @@ export class EffectResolver {
         }
         break
 
-      // 防御属性
-      case AttributeType.SLASH_DEFENSE:
-        player.attributes.defenses.slashDefense = Math.max(0, newValue)
-        break
-      case AttributeType.BLUNT_DEFENSE:
-        player.attributes.defenses.bluntDefense = Math.max(0, newValue)
-        break
-      case AttributeType.RANGED_DEFENSE:
-        player.attributes.defenses.rangedDefense = Math.max(0, newValue)
-        break
-      case AttributeType.POISON_DEFENSE:
-        player.attributes.defenses.poisonDefense = Math.max(0, newValue)
-        break
-      case AttributeType.FIRE_DEFENSE:
-        player.attributes.defenses.fireDefense = Math.max(0, newValue)
-        break
+      // 防御属性（以伤害类型 id 处理，见函数开头）
 
       // 技能等级
       case AttributeType.SKILL_LEVEL:
@@ -684,7 +671,7 @@ export class EffectResolver {
 
     return null
   }
-    /**
+  /**
    * 执行标志位效果
    */
   private executeFlagNumEffect(

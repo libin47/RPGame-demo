@@ -4,6 +4,7 @@ import type { Condition } from './effect'
 import type { EffectResult } from './effect'
 import type { AttributeType } from './effect'
 import type { RecipeType } from './recipe'
+import type { DamageTypeId } from './damage'
 // ============================================================
 // 基础标识类型
 // ============================================================
@@ -190,7 +191,8 @@ export interface WeaponStats {
   damageTypeId: string
   /** 伤害浮动范围（最终伤害 = baseDamage * (1 ± damageVariance)） */
   damageVariance: number
-
+  /** 攻击距离（默认1.0，即直接攻击目标） */
+  attackDistance?: number
   /** 基础命中修正（加到命中计算中） */
   accuracyModifier: number
   /** 基础暴击率修正（0.1 = +10%暴击率） */
@@ -215,8 +217,15 @@ export interface ArmorItem extends BaseItem {
   /** 装备槽位 */
   equipmentSlot: ArmorSlot
 
-  /** 防具提供的防御属性 */
-  defenseStats: Record<string, number>
+  /** 防具提供的防御属性（键为伤害类型ID，与 damageTypes.ts 一致；值为减免比例 0~1，负数=弱点放大） */
+  defenseStats: Partial<Record<DamageTypeId, number>>
+
+  /**
+   * 耐久扣除系数（可选，默认 1）
+   * 每次受击按"该防具实际减免的伤害量 × 此系数"扣除耐久
+   * 系数越小越耐穿，0 表示永不磨损
+   */
+  durabilityDrainCoefficient?: number
 
   /** 防具提供的属性修正 */
   attributeModifiers?: AttributeModifier[]

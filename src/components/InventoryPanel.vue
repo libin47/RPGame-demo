@@ -167,7 +167,7 @@ import { ref, computed } from 'vue'
 import type { PlayerState, PlayerInventoryItem } from '@/types/player'
 import { ItemCategory } from '@/types/item'
 import type { Item, WeaponItem } from '@/types/item'
-import { getRegistry } from '@/engine'
+import { getRegistry, calcPlayerTotalDefense } from '@/engine'
 
 const props = defineProps<{
   playerState: PlayerState
@@ -444,21 +444,14 @@ const meleeDamage = computed<{ min: number; max: number } | null>(() => {
 })
 
 const defenseList = computed<DefenseEntry[]>(() => {
-  const defs = props.playerState.attributes.defenses
-  const labels: Record<string, string> = {
-    slashDefense: '斩击',
-    bluntDefense: '钝击',
-    rangedDefense: '远程',
-    poisonDefense: '毒素',
-    fireDefense: '火焰',
-  }
-  return Object.entries(defs)
-    .filter(([, v]) => v > 0)
-    .map(([key, value]) => ({
-      key,
-      label: labels[key] || key,
-      value,
+  return Object.values(registry.getAllDamageTypes())
+    .filter((dt) => dt.id !== 'realDamage')
+    .map((dt) => ({
+      key: dt.id,
+      label: dt.name,
+      value: calcPlayerTotalDefense(props.playerState, dt.id),
     }))
+    .filter((entry) => entry.value > 0)
 })
 
 // ═══════════════════════════════════════════

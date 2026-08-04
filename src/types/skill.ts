@@ -100,7 +100,17 @@ export interface BattleSkill {
   /** 技能描述 */
   description: string
   /** 技能图标资源ID */
-  iconId: string
+  iconId?: string
+
+  /** 攻击距离（默认1.0，即直接攻击目标），-1为不限制距离 */
+  attackDistance?: number
+
+  /**
+   * 使用本技能后附带的位置移动（正数=拉近/突进，负数=拉开/后跳，0或未设置=不移动）
+   * 距离判定在使用前按当前距离进行；位移在技能结算后生效，范围始终限制在 [1, 5]
+   * 示例：突进技能可配置 attackDistance: -1 + moveDistance: 2（任意距离可用，先冲近2格再命中）
+   */
+  moveDistance?: number
 
   /** 技能类型 */
   skillType: 'battle'
@@ -110,8 +120,13 @@ export interface BattleSkill {
   /** 最大等级 */
   maxLevel: number
 
-  /** 解锁条件 */
-  unlockCondition: string //仅作备注，逻辑不生效
+  // 武器熟练度等级
+  unlockLevel?: number
+
+  /** 是否锁定，通过其他方式解锁 */
+  lock?: boolean
+  // 解锁条件，仅作备注，逻辑不生效
+  unlockCondition?: string
 
   /** 武器类型限制（为空则不限武器，徒手或任意武器均可使用） */
   weaponRestriction?: string

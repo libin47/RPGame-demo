@@ -1,6 +1,7 @@
 // effect.ts - 效果数据结构
 
 import type { RecipeType } from './recipe'
+import type { DamageTypeId } from './damage'
 
 // ============================================================
 // 效果类型枚举
@@ -66,12 +67,7 @@ export enum AttributeType {
   WEAPON_PROFICIENCY = 'weaponProficiency',
   WEAPON_PROFICIENCY_EXP = 'weaponProficiencyExp',
 
-  // 防御属性
-  SLASH_DEFENSE = 'slashDefense',
-  BLUNT_DEFENSE = 'bluntDefense',
-  RANGED_DEFENSE = 'rangedDefense',
-  POISON_DEFENSE = 'poisonDefense',
-  FIRE_DEFENSE = 'fireDefense',
+  // 防御属性（防御以伤害类型ID为键，不在此枚举中；请使用 DamageTypeId）
 
   // 技能等级
   SKILL_LEVEL = 'skillLevel',
@@ -109,7 +105,8 @@ export enum AttributeOperation {
 /** 属性效果 */
 export interface AttributeEffect {
   type: EffectType.ATTRIBUTE
-  attribute: AttributeType
+  /** 目标属性（防御类属性直接使用伤害类型ID，如 'slash'/'fire'） */
+  attribute: AttributeType | DamageTypeId
   operation: AttributeOperation
   value: number
   /** 子类型（武器熟练度/技能等需要指定具体类型时使用） */
@@ -173,7 +170,7 @@ export interface FlagEffect {
 export interface FlagNumEffect {
   type: EffectType.FLAG_NUM
   flagId: string
-  operation: 'set' | 'add' | 'subtract' 
+  operation: 'set' | 'add' | 'subtract'
   value?: number
 }
 

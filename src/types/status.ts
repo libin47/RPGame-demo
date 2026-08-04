@@ -3,6 +3,7 @@
 import type { EffectResult } from './effect'
 import type { Condition } from './effect'
 import type { AttributeType } from './effect'
+import type { DamageTypeId } from './damage'
 
 // ============================================================
 // 状态配置
@@ -169,8 +170,8 @@ export interface StatusEffectConfig {
  * 状态属性变动
  */
 export interface StatusAttributeChange {
-  /** 目标属性 */
-  attribute: StatusAffectedAttribute
+  /** 目标属性（防御类属性直接使用伤害类型ID，如 'slash'/'fire'） */
+  attribute: StatusAffectedAttribute | DamageTypeId
   /** 变动类型 */
   operation: 'add' | 'multiply' | 'set'
   /** 变动值（正数为增益，负数为减益） */
@@ -202,12 +203,7 @@ export enum StatusAffectedAttribute {
   STAMINA_RECOVERY_COEFFICIENT = 'staminaRecoveryCoefficient',
   STAMINA_RECOVERY_FIX = 'staminaRecoveryFix',
 
-  // 防御
-  SLASH_DEFENSE = 'slashDefense',
-  BLUNT_DEFENSE = 'bluntDefense',
-  RANGED_DEFENSE = 'rangedDefense',
-  POISON_DEFENSE = 'poisonDefense',
-  FIRE_DEFENSE = 'fireDefense',
+  // 防御属性（防御以伤害类型ID为键，不在此枚举中；请使用 DamageTypeId）
 
   // 温度
   TEMPERATURE_LOW = 'temperatureLow',

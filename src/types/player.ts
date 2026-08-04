@@ -1,6 +1,7 @@
 // player.ts - 玩家运行时状态数据结构
 import type { Season, SeasonPhase } from './seasonWeather'
 import type { Param } from './param'
+import type { DamageTypeId } from './damage'
 
 // ============================================================
 // 玩家运行时状态
@@ -186,14 +187,11 @@ export interface PlayerAttributes {
 
 /**
  * 玩家防御属性
+ * 以伤害类型ID为键（与 damageTypes.ts 注册表一致，攻击与防御共用同一套id），
+ * 值为减免比例（0~1，1=完全免疫，负数=弱点放大伤害）
+ * 未设置的伤害类型视为 0（不减免）
  */
-export interface PlayerDefenses {
-  slashDefense: number
-  bluntDefense: number
-  rangedDefense: number
-  poisonDefense: number
-  fireDefense: number
-}
+export type PlayerDefenses = Partial<Record<DamageTypeId, number>>
 
 /**
  * 玩家系数属性

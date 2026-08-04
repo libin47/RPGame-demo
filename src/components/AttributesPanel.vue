@@ -51,23 +51,36 @@
         <div class="stat-grid">
           <div class="stat-row">
             <span class="stat-label">生命值</span>
-            <span class="stat-value">{{ playerState.survival.hp.toFixed(0) }} / {{ playerState.survival.maxHp }}</span>
+            <span class="stat-value"
+              >{{ playerState.survival.hp.toFixed(0) }} / {{ playerState.survival.maxHp }}</span
+            >
           </div>
           <div class="stat-row">
             <span class="stat-label">饱食度</span>
-            <span class="stat-value">{{ playerState.survival.satiety.toFixed(0) }} / {{ playerState.survival.maxSatiety }}</span>
+            <span class="stat-value"
+              >{{ playerState.survival.satiety.toFixed(0) }} /
+              {{ playerState.survival.maxSatiety }}</span
+            >
           </div>
           <div class="stat-row">
             <span class="stat-label">体力</span>
-            <span class="stat-value">{{ playerState.survival.stamina.toFixed(0) }} / {{ playerState.survival.maxStamina }}</span>
+            <span class="stat-value"
+              >{{ playerState.survival.stamina.toFixed(0) }} /
+              {{ playerState.survival.maxStamina }}</span
+            >
           </div>
           <div class="stat-row">
             <span class="stat-label">SAN</span>
-            <span class="stat-value">{{ playerState.survival.san.toFixed(0) }} / {{ playerState.survival.maxSan }}</span>
+            <span class="stat-value"
+              >{{ playerState.survival.san.toFixed(0) }} / {{ playerState.survival.maxSan }}</span
+            >
           </div>
           <div class="stat-row">
             <span class="stat-label">负重</span>
-            <span class="stat-value">{{ playerState.survival.carryWeight.toFixed(1) }} / {{ playerState.survival.maxCarryWeight.toFixed(1) }} kg</span>
+            <span class="stat-value"
+              >{{ playerState.survival.carryWeight.toFixed(1) }} /
+              {{ playerState.survival.maxCarryWeight.toFixed(1) }} kg</span
+            >
           </div>
           <div class="stat-row">
             <span class="stat-label">温暖度</span>
@@ -80,25 +93,9 @@
       <section class="attr-section">
         <h3 class="section-title">防御</h3>
         <div class="attr-grid cols-3">
-          <div class="attr-item">
-            <span class="attr-label">劈砍</span>
-            <span class="attr-value def-value">{{ defenses.slashDefense }}</span>
-          </div>
-          <div class="attr-item">
-            <span class="attr-label">钝击</span>
-            <span class="attr-value def-value">{{ defenses.bluntDefense }}</span>
-          </div>
-          <div class="attr-item">
-            <span class="attr-label">远程</span>
-            <span class="attr-value def-value">{{ defenses.rangedDefense }}</span>
-          </div>
-          <div class="attr-item">
-            <span class="attr-label">毒素</span>
-            <span class="attr-value def-value">{{ defenses.poisonDefense }}</span>
-          </div>
-          <div class="attr-item">
-            <span class="attr-label">火焰</span>
-            <span class="attr-value def-value">{{ defenses.fireDefense }}</span>
+          <div v-for="dt in defenseTypes" :key="dt.id" class="attr-item">
+            <span class="attr-label">{{ dt.name }}</span>
+            <span class="attr-value def-value">{{ totalDefenses[dt.id] ?? 0 }}</span>
           </div>
         </div>
       </section>
@@ -175,7 +172,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PlayerState } from '@/types/player'
-import { getRegistry } from '@/engine'
+import type { DamageTypeId } from '@/types/damage'
+import { getRegistry, calcPlayerTotalDefense } from '@/engine'
 
 const props = defineProps<{
   playerState: PlayerState
@@ -211,7 +209,21 @@ function modClass(val: number): string {
 
 // ── 防御 ──
 
-const defenses = computed(() => props.playerState.attributes.defenses)
+/** 可防御的伤害类型列表（排除真实伤害——穿透1，防御恒为0），用于按注册表渲染防御行 */
+const defenseTypes = computed(() =>
+  Object.values(registry.getAllDamageTypes())
+    .filter((dt) => dt.id !== 'realDamage')
+    .map((dt) => ({ id: dt.id as DamageTypeId, name: dt.name })),
+)
+
+/** 各伤害类型的总防御（基础/状态 + 已装备未破损防具，与战斗结算同一口径） */
+const totalDefenses = computed<Partial<Record<DamageTypeId, number>>>(() => {
+  const result: Partial<Record<DamageTypeId, number>> = {}
+  for (const dt of defenseTypes.value) {
+    result[dt.id] = calcPlayerTotalDefense(props.playerState, dt.id)
+  }
+  return result
+})
 
 // ── 系数 ──
 
@@ -413,9 +425,15 @@ const warmthClass = computed<string>(() => {
   font-size: 13px;
   font-weight: 600;
 }
-.warmth-comfortable { color: var(--accent, #81c784); }
-.warmth-cold { color: #7ec8e3; }
-.warmth-hot { color: #ff6b6b; }
+.warmth-comfortable {
+  color: var(--accent, #81c784);
+}
+.warmth-cold {
+  color: #7ec8e3;
+}
+.warmth-hot {
+  color: #ff6b6b;
+}
 
 /* ═══════════════════════════════════════════
    系数列表

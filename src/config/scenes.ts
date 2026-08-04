@@ -162,7 +162,7 @@ const beach: Scene = {
       enemyConfig: [
         {
           enemyId: '大螃蟹',
-          quantity: 1,
+          quantity: 2,
         },
       ],
     },
@@ -398,7 +398,7 @@ const beach_机翼营地: SubScene = {
   name: '机翼营地',
   parentSceneId: 'beach',
   isCampsite: true,
-  buildingList: ['营火', '木墙', '工作台',  '储物箱'],
+  buildingList: ['营火', '木墙', '工作台', '储物箱'],
   buildingInit: [],
   descriptions: [
     {
@@ -430,13 +430,13 @@ const beach_机翼营地: SubScene = {
         {
           content: '地上铺着一层防水布，算是勉强有一个栖身之所了。',
           condition: {
-        target: {
-          type: ConditionTargetType.PARAM,
-          id: 'beach_椰子',
-        },
-        operator: ComparisonOperator.EQUAL,
-        value: 0,
-      },
+            target: {
+              type: ConditionTargetType.PARAM,
+              id: 'beach_椰子',
+            },
+            operator: ComparisonOperator.EQUAL,
+            value: 0,
+          },
         },
       ],
       isAutoTrigger: false,
@@ -533,7 +533,6 @@ const beach_椰树林: SubScene = {
         operator: ComparisonOperator.EQUAL,
         value: 0,
       },
-      
     },
   ],
   temperatureModifier: 0,
@@ -579,7 +578,7 @@ const beach_椰树林: SubScene = {
         },
       ],
       text: '你奋力爬上椰子树，要是有个长杆，你就可以直接打椰子了，而不是这么费力的爬上爬下。',
-    },    
+    },
     {
       id: 'beach_椰树林_打椰子',
       name: '椰子',
@@ -631,7 +630,7 @@ const beach_椰树林: SubScene = {
       itemConfig: [
         {
           itemId: '椰子',
-          quantity: 1
+          quantity: 1,
         },
         {
           itemId: '木头',
