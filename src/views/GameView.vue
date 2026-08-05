@@ -82,6 +82,7 @@
         :distance="game.state.currentBattle.distance"
         :player="game.state.player"
         :target-enemy-id="game.state.currentBattle.targetEnemyId"
+        :result="game.state.currentBattle.result"
         @action="onBattleAction"
         @select-target="onSelectEnemyTarget"
       />
@@ -225,7 +226,7 @@ function onRecipeExecute(recipeId: string, quantity: number): void {
   if (recipeMode.value === 'craft') {
     game.value.executeCraftRecipe(recipeId, quantity)
   } else {
-    game.value.executeCookRecipe(recipeId)
+    game.value.executeCookRecipe(recipeId, recipeDeviceLevel.value)
   }
 }
 
@@ -415,8 +416,12 @@ function onEnterEventFromEntry(eventId: string): void {
   isEventClicked.value = true
 }
 
-function onBattleAction(actionType: PlayerActionType, skillId?: string): void {
-  game.value.executeBattleAction(actionType, skillId)
+function onBattleAction(
+  actionType: PlayerActionType,
+  skillId?: string,
+  itemInstanceId?: string,
+): void {
+  game.value.executeBattleAction(actionType, skillId, itemInstanceId)
 }
 
 /** 切换玩家当前攻击目标 */

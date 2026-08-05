@@ -24,66 +24,6 @@ export interface SkillAttributeBonus {
 }
 
 // ============================================================
-// 生存技能
-// ============================================================
-
-/**
- * 生存技能配置
- * 非战斗状态下使用的技能，影响对应的交互效率、结果及判定条件。
- * 如：探索、砍伐、挖掘、采集、制作、种植、烹饪
- */
-export interface SurvivalSkill {
-  /** 技能唯一ID */
-  id: string
-  /** 技能名称 */
-  name: string
-  /** 技能描述 */
-  description: string
-  /** 技能图标资源ID */
-  iconId: string
-
-  /** 技能类型 */
-  skillType: 'survival'
-
-  /** 技能等级上限 */
-  maxLevel: number
-
-  /** 升级所需经验公式（当前等级 -> 所需经验） */
-  expToNextLevel: (currentLevel: number) => number
-
-  /** 技能等级对交互效果的加成公式 */
-  levelBonus: SurvivalSkillLevelBonus
-
-  /** 该技能相关的交互ID列表（用于判断哪些交互可获得此技能经验） */
-  relatedInteractionIds?: string[]
-
-  /** 执行相关交互时获得的经验值 */
-  expPerAction: number
-}
-
-/**
- * 生存技能等级加成配置
- */
-export interface SurvivalSkillLevelBonus {
-  /** 效果倍率（如采集数量倍率 = 1 + level * bonusPerLevel） */
-  bonusPerLevel: number
-  /** 高等级解锁的特殊能力 */
-  specialAbilities?: SurvivalSkillSpecialAbility[]
-}
-
-/**
- * 生存技能特殊能力
- */
-export interface SurvivalSkillSpecialAbility {
-  /** 所需技能等级 */
-  requiredLevel: number
-  /** 能力描述 */
-  description: string
-  /** 能力效果（解锁后产生的被动效果） */
-  effects: EffectResult[]
-}
-
-// ============================================================
 // 战斗技能
 // ============================================================
 
@@ -250,10 +190,10 @@ export interface PassiveSkill {
 // ============================================================
 
 /** 所有技能类型 */
-export type Skill = SurvivalSkill | BattleSkill | PassiveSkill
+export type Skill = BattleSkill | PassiveSkill
 
-/** 可成长的技能（生存技能和战斗技能有等级/经验） */
-export type GrowableSkill = SurvivalSkill | BattleSkill
+/** 可成长的技能（战斗技能有等级/经验） */
+export type GrowableSkill = BattleSkill
 
 // ============================================================
 // 技能注册表
@@ -263,8 +203,6 @@ export type GrowableSkill = SurvivalSkill | BattleSkill
  * 技能注册表（全局技能配置汇总）
  */
 export interface SkillRegistry {
-  /** 生存技能 */
-  survivalSkills: Record<string, SurvivalSkill>
   /** 战斗技能 */
   battleSkills: Record<string, BattleSkill>
   /** 被动技能 */

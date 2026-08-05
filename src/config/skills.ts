@@ -1,85 +1,7 @@
 // config/skills.ts
 import { AttributeType } from '@/types/effect'
-import type { SurvivalSkill, BattleSkill, PassiveSkill, SkillRegistry } from '../types/skill'
+import type { BattleSkill, PassiveSkill, SkillRegistry } from '../types/skill'
 import { BattleSkillTargetType } from '../types/skill'
-
-// ===== 生存技能 =====
-
-const exploration: SurvivalSkill = {
-  id: 'exploration',
-  name: '探索',
-  description: '影响探索场景时发现事件的概率和奖励',
-  iconId: 'icon_skill_exploration',
-  skillType: 'survival',
-  maxLevel: 10,
-  expToNextLevel: (currentLevel: number) => currentLevel * 100,
-  levelBonus: {
-    bonusPerLevel: 0.05,
-    specialAbilities: [
-      {
-        requiredLevel: 5,
-        description: '探索时有概率发现隐藏区域',
-        effects: [],
-      },
-      {
-        requiredLevel: 10,
-        description: '探索消耗体力减半',
-        effects: [],
-      },
-    ],
-  },
-  relatedInteractionIds: ['explore_beach', 'explore_forest', 'explore_cave'],
-  expPerAction: 25,
-}
-
-const cooking: SurvivalSkill = {
-  id: 'cooking',
-  name: '烹饪',
-  description: '影响烹饪食物时的品质和效率',
-  iconId: 'icon_skill_cooking',
-  skillType: 'survival',
-  maxLevel: 10,
-  expToNextLevel: (currentLevel: number) => currentLevel * 100,
-  levelBonus: {
-    bonusPerLevel: 0.06,
-    specialAbilities: [
-      {
-        requiredLevel: 3,
-        description: '解锁炖汤配方',
-        effects: [],
-      },
-      {
-        requiredLevel: 7,
-        description: '烹饪有概率产出双份',
-        effects: [],
-      },
-    ],
-  },
-  relatedInteractionIds: ['cook_at_campfire', 'cook_at_kitchen'],
-  expPerAction: 30,
-}
-
-const gathering: SurvivalSkill = {
-  id: 'gathering',
-  name: '采集',
-  description: '影响采集植物、果实等资源的效率',
-  iconId: 'icon_skill_gathering',
-  skillType: 'survival',
-  maxLevel: 10,
-  expToNextLevel: (currentLevel: number) => currentLevel * 100,
-  levelBonus: {
-    bonusPerLevel: 0.04,
-    specialAbilities: [
-      {
-        requiredLevel: 5,
-        description: '可辨识有毒植物',
-        effects: [],
-      },
-    ],
-  },
-  relatedInteractionIds: ['gather_herbs', 'gather_berries'],
-  expPerAction: 20,
-}
 
 // ===== 战斗技能 =====
 const axeSlash: BattleSkill = {
@@ -353,11 +275,6 @@ const resilientMind: PassiveSkill = {
 }
 
 export const skillRegistry: SkillRegistry = {
-  survivalSkills: {
-    exploration,
-    cooking,
-    gathering,
-  },
   battleSkills: {
     basic_slash: basicSlash,
     power_strike: powerStrike,

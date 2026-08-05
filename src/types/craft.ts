@@ -27,9 +27,6 @@ export interface CraftRecipe extends BaseRecipe {
   /** 所需设备等级（0=徒手，1=简易工作台，2=铁砧/高级工作台，3=精密设备等） */
   requiredDeviceLevel: number
 
-  /** 制作经验奖励（完成时获得的生存技能经验） */
-  experienceReward: CraftExperienceReward
-
   /** 最小制作数量（批量制作） */
   minCraftQuantity: number
   /** 最大制作数量（批量制作，-1=无上限，取决于材料） */
@@ -62,18 +59,6 @@ export enum CraftCategory {
   LIGHT = 'light',
   /** 其他 */
   OTHER = 'other',
-}
-
-/**
- * 制作经验奖励
- */
-export interface CraftExperienceReward {
-  /** 技能ID */
-  skillId: string
-  /** 每次制作获得的经验（批量制作时每件获得此经验） */
-  expPerCraft: number
-  /** 首次制作额外经验 */
-  firstTimeBonusExp: number
 }
 
 // ============================================================

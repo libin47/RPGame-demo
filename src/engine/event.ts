@@ -98,11 +98,6 @@ function resolveConditionTarget(
       if (attrType === 'constitution')
         return player.attributes.constitution + player.attributes.constitutionModifier
 
-      // 技能等级（需要 subType）
-      if (attrType === 'skillLevel' && target.subType) {
-        return player.skills.survivalSkills[target.subType]?.level ?? 0
-      }
-
       // 武器熟练度（需要 subType）
       if (attrType === 'weaponProficiency' && target.subType) {
         return player.skills.weaponProficiencies[target.subType]?.level ?? 0

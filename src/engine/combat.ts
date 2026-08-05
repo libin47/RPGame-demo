@@ -1,10 +1,12 @@
 // src/engine/combat.ts
 // 战斗系统：回合制战斗、出手顺序、伤害计算、敌人AI
 
-import type { PlayerState } from '@/types/player'
+import type { PlayerState, PlayerDefenses } from '@/types/player'
+import type { DamageTypeId } from '@/types/damage'
 import type { Enemy, EnemySkill } from '@/types/enemy'
 import type { BattleSkill } from '@/types/skill'
-import type { DamageTypeId } from '@/types/damage'
+import type { ConsumableItem, ConsumableStatusEffect, WeaponItem } from '@/types/item'
+import { ItemCategory, ConsumableType } from '@/types/item'
 import { EnemyType, EnemySkillTargetType } from '@/types/enemy'
 import { BattleSkillTargetType } from '@/types/skill'
 import { getRegistry } from './registry'
@@ -18,15 +20,19 @@ import {
   calcAbsorbedDamage,
   calcEnemyHitChance,
   calcEscapeChance,
-  calcObserveChance,
   calcStaminaCost,
   scaleEnemyByCorruption,
   calcDefenseDamageReduction,
 } from './formula'
 import { weightedSelect, randomInt, chance } from './dice'
 import { getEffectResolver } from './effect'
-import { updateStatusTurns, removeBattleEndStatuses, triggerStatusEffects } from './status'
-import { addItem, unequipSlot } from './inventory'
+import {
+  applyStatus,
+  updateStatusTurns,
+  removeBattleEndStatuses,
+  triggerStatusEffects,
+} from './status'
+import { addItem, unequipSlot, recalculateCarryWeight } from './inventory'
 
 // ============================================================
 // 战斗状态枚举
@@ -64,14 +70,14 @@ export enum PlayerActionType {
   DEFEND = 'defend',
   /** 使用物品 */
   USE_ITEM = 'useItem',
-  /** 观察/分析 */
-  OBSERVE = 'observe',
   /** 逃跑 */
   ESCAPE = 'escape',
   /** 靠近（距离 -1） */
   MOVE_CLOSER = 'moveCloser',
   /** 远离（距离 +1） */
   MOVE_AWAY = 'moveAway',
+  /** 结束战斗（结算胜利奖励并退出战斗，仅胜利时可用） */
+  END_BATTLE = 'endBattle',
 }
 
 /** 敌我距离的下限（贴身）与上限 */
@@ -108,6 +114,18 @@ export interface BattleState {
   isFirstEncounter: boolean
 }
 
+/** 敌人身上的状态实例（战斗内最小状态系统，按回合结算） */
+export interface EnemyStatusInstance {
+  /** 状态配置ID */
+  statusId: string
+  /** 叠层数 */
+  stacks: number
+  /** 剩余回合数（每敌方回合递减，到 0 移除） */
+  remainingTurns: number
+  /** 已存续回合数（用于按 StatusEffectConfig.interval 触发） */
+  turnsActive: number
+}
+
 /** 战斗中的敌人实例 */
 export interface BattleEnemy {
   /** 敌人实例唯一ID（同一配置的多个敌人可通过此区分） */
@@ -132,6 +150,8 @@ export interface BattleEnemy {
   chargingSkillId: string | null
   /** 蓄力剩余回合 */
   chargeRemainingTurns: number
+  /** 敌人当前携带的状态（战斗内生效，战斗结束即清除） */
+  statuses: EnemyStatusInstance[]
 }
 
 // ============================================================
@@ -322,6 +342,110 @@ function applyArmorDurabilityDrain(
 }
 
 // ============================================================
+// 敌人状态（战斗内最小系统，按回合结算）
+// ============================================================
+
+/**
+ * 敌人状态的持续回合数换算：
+ * durationMinutes > 0 → 按"1 战斗回合 ≈ 10 游戏分钟"折算（临时约定，可调整）
+ * durationMinutes <= 0 → 视为永久（战斗结束自动清除）
+ */
+function enemyStatusDurationTurns(durationMinutes: number): number {
+  if (durationMinutes <= 0) return 9999
+  return Math.max(1, Math.round(durationMinutes / 10))
+}
+
+/**
+ * 向敌人施加状态（战斗中）
+ * 已存在同状态时叠层并刷新持续回合；叠加概率由 ConsumableStatusEffect.probability 决定
+ */
+function applyEnemyStatuses(
+  battle: BattleState,
+  enemy: BattleEnemy,
+  statusEffects: ConsumableStatusEffect[],
+  sourceName: string,
+): void {
+  const registry = getRegistry()
+  for (const se of statusEffects) {
+    if (!chance(se.probability)) continue
+    const statusConfig = registry.getStatus(se.statusId)
+    if (!statusConfig) continue
+
+    const existing = enemy.statuses.find((s) => s.statusId === se.statusId)
+    if (existing) {
+      existing.stacks = Math.min(existing.stacks + 1, statusConfig.defaultDuration.maxValue ?? 5)
+      existing.remainingTurns = enemyStatusDurationTurns(se.durationMinutes)
+      battle.logs.push(
+        `${enemy.config.name} 的${statusConfig.name}层数+1（当前 ${existing.stacks} 层）`,
+      )
+    } else {
+      enemy.statuses.push({
+        statusId: se.statusId,
+        stacks: 1,
+        remainingTurns: enemyStatusDurationTurns(se.durationMinutes),
+        turnsActive: 0,
+      })
+      battle.logs.push(`${sourceName}使 ${enemy.config.name} 陷入${statusConfig.name}！`)
+    }
+  }
+}
+
+/**
+ * 敌方回合开始时结算其身上的状态：
+ * 按 StatusEffectConfig.interval 触发（HP/力量/敏捷类变动），随后递减剩余回合，到期移除
+ */
+function tickEnemyStatuses(battle: BattleState, enemy: BattleEnemy, logs: string[]): void {
+  if (enemy.statuses.length === 0) return
+
+  for (const status of [...enemy.statuses]) {
+    const statusConfig = getRegistry().getStatus(status.statusId)
+    if (!statusConfig) continue
+
+    status.turnsActive += 1
+
+    // 触发周期到期的效果
+    for (const effectConfig of statusConfig.effects) {
+      if (
+        status.turnsActive < effectConfig.interval ||
+        status.turnsActive % effectConfig.interval !== 0
+      ) {
+        continue
+      }
+      if (!chance(effectConfig.triggerChance)) continue
+
+      const stackMultiplier = effectConfig.scalesWithStacks ? status.stacks : 1
+      let totalValue = 0
+      for (const change of effectConfig.attributeChanges) {
+        const value = change.value * stackMultiplier
+        if (change.attribute === 'hp') {
+          enemy.hp = Math.max(0, enemy.hp + value)
+          totalValue += value
+        } else if (change.attribute === 'strength') {
+          enemy.strength = Math.max(0, enemy.strength + value)
+        } else if (change.attribute === 'agility') {
+          enemy.agility = Math.max(0, enemy.agility + value)
+        }
+      }
+
+      if (totalValue < 0) {
+        logs.push(
+          `${enemy.config.name} 因${statusConfig.name}损失了 ${Math.abs(Math.round(totalValue))} 点生命值`,
+        )
+      } else if (effectConfig.triggerText) {
+        logs.push(`${enemy.config.name} 的${statusConfig.name}效果发作了`)
+      }
+    }
+
+    // 递减剩余回合
+    status.remainingTurns -= 1
+    if (status.remainingTurns <= 0) {
+      enemy.statuses = enemy.statuses.filter((s) => s !== status)
+      logs.push(`${enemy.config.name} 身上的${statusConfig.name}消失了`)
+    }
+  }
+}
+
+// ============================================================
 // 战斗工厂
 // ============================================================
 
@@ -354,6 +478,7 @@ export function createBattle(player: PlayerState, enemyIds: string[]): BattleSta
         skillCooldowns: {},
         chargingSkillId: null,
         chargeRemainingTurns: 0,
+        statuses: [],
       }
     })
 
@@ -514,10 +639,6 @@ export function executePlayerAction(
       } else {
         battle.logs.push('未选择要使用的物品')
       }
-      break
-
-    case PlayerActionType.OBSERVE:
-      executePlayerObserve(player, battle)
       break
 
     case PlayerActionType.ESCAPE:
@@ -795,38 +916,164 @@ function applyPlayerSkillDamage(
 }
 
 /**
- * 执行玩家使用物品
+ * 执行玩家使用物品（战斗内）
+ * 支持三类：
+ *  1. 未装备的武器 → 投掷（伤害 = 基础伤害 × throwDamageMultiplier，默认 2）
+ *  2. 药品（MEDICINE）→ 仅对玩家生效（effects + applyStatus）
+ *  3. 道具（consumableTool）→ 对玩家生效 + 对敌人生效（applyEnemyStatus）
+ * 统一消耗 1 数量
  */
 function executePlayerUseItem(player: PlayerState, battle: BattleState, instanceId: string): void {
-  battle.logs.push('战斗中使用物品尚未完全实现')
+  const registry = getRegistry()
+  const invIndex = player.inventory.findIndex((i) => i.instanceId === instanceId)
+  if (invIndex === -1) {
+    battle.logs.push('物品未找到')
+    return
+  }
+
+  const invItem = player.inventory[invIndex]
+  if (!invItem) {
+    battle.logs.push('物品未找到')
+    return
+  }
+
+  const itemConfig = registry.getItem(invItem.itemId)
+  if (!itemConfig) {
+    battle.logs.push('物品配置未找到')
+    return
+  }
+
+  let used = false
+  if (itemConfig.category === ItemCategory.WEAPON && !invItem.equippedSlot) {
+    // 未装备的武器 → 投掷
+    used = throwWeapon(player, battle, itemConfig as WeaponItem)
+  } else if (itemConfig.category === ItemCategory.CONSUMABLE) {
+    // 消耗品（药品 / 道具）
+    used = useConsumableInBattle(player, battle, itemConfig as ConsumableItem)
+  } else {
+    battle.logs.push(`${itemConfig.name} 无法在战斗中使用`)
+  }
+
+  if (!used) return
+
+  // 消耗 1 数量
+  if (invItem.quantity <= 1) {
+    player.inventory.splice(invIndex, 1)
+  } else {
+    invItem.quantity -= 1
+  }
+  recalculateCarryWeight(player)
 }
 
 /**
- * 执行玩家观察/分析
+ * 投掷未装备武器：
+ * 伤害 = weaponStats.baseDamage × throwDamageMultiplier（默认 2）× 浮动 × 暴击倍率
+ * 命中/暴击沿用武器配置的命中修正与暴击率/倍率；穿透与防御正常结算
+ * @returns 是否出手（未命中也消耗武器）
  */
-function executePlayerObserve(player: PlayerState, battle: BattleState): void {
-  const effectiveIntelligence =
-    player.attributes.intelligence + player.attributes.intelligenceModifier
-  const successChance = calcObserveChance(effectiveIntelligence)
-
+function throwWeapon(player: PlayerState, battle: BattleState, weapon: WeaponItem): boolean {
   const target = resolveTarget(battle)
-  if (!target) return
+  if (!target) return false
 
-  if (chance(successChance)) {
-    const defenseInfo = Object.entries(target.defenses)
-      .filter(([, v]) => v > 0)
-      .map(([k, v]) => `${k}:${v}`)
-      .join(', ')
+  const stats = weapon.weaponStats
+  const multiplier = stats.throwDamageMultiplier ?? 2
 
-    battle.logs.push(
-      `【分析成功】${target.config.name} - ` +
-        `HP:${target.hp}/${target.maxHp}, ` +
-        `力量:${target.strength}, 敏捷:${target.agility}` +
-        (defenseInfo ? `, 防御[${defenseInfo}]` : ''),
-    )
-  } else {
-    battle.logs.push('你试图分析敌人，但未能获得有效信息')
+  // 命中判定（投掷不吃武器熟练度加成）
+  const hitChance = calcHitChance(
+    player.attributes.agility + player.attributes.agilityModifier,
+    0,
+    stats.accuracyModifier,
+    target.agility,
+  )
+  if (!chance(hitChance)) {
+    battle.logs.push(`你投掷了 ${weapon.name}，但没有命中 ${target.config.name}`)
+    return true
   }
+
+  // 暴击判定
+  const isCritical = chance(calcCriticalChance(0, stats.criticalChanceModifier))
+  const critMultiplier = isCritical ? stats.criticalMultiplier : 1
+
+  // 原始伤害 = 基础伤害 × 投掷倍率 × 浮动 × 暴击倍率
+  const variance = 1 + (Math.random() * 2 - 1) * stats.damageVariance
+  const rawDamage = stats.baseDamage * multiplier * variance * critMultiplier
+  const finalDamage = calcDamageAfterDefense(
+    rawDamage,
+    getDefensePenetration(stats.damageTypeId),
+    getEnemyDefenseRatio(target, stats.damageTypeId),
+  )
+
+  target.hp -= finalDamage
+  if (target.hp < 0) target.hp = 0
+
+  const critText = isCritical ? '暴击！' : ''
+  battle.logs.push(
+    `你投掷了 ${weapon.name}，对 ${target.config.name} 造成 ${finalDamage} 点伤害${critText}` +
+      (target.hp <= 0 ? `，${target.config.name} 被击败了!` : ''),
+  )
+  return true
+}
+
+/**
+ * 战斗中使用消耗品：
+ * - 药品/道具均先对玩家生效（effects + applyStatus）
+ * - 道具额外对敌人生效（applyEnemyStatus：all=true 全体敌人 / false 当前目标；含直接伤害与施加状态）
+ */
+function useConsumableInBattle(
+  player: PlayerState,
+  battle: BattleState,
+  consumable: ConsumableItem,
+): boolean {
+  const resolver = getEffectResolver()
+
+  // 1. 对玩家生效（与背包使用一致：effects + applyStatus）
+  const selfLogs = resolver.executeEffectResults(player, consumable.effects)
+  if (consumable.applyStatus) {
+    for (const se of consumable.applyStatus) {
+      if (!chance(se.probability)) continue
+      selfLogs.push(applyStatus(player, se.statusId, se.durationMinutes, consumable.name))
+    }
+  }
+
+  // 2. 道具额外对敌人生效
+  const enemyEffects = consumable.applyEnemyStatus
+  if (consumable.consumableType === ConsumableType.TOOL && enemyEffects) {
+    const targets = enemyEffects.all
+      ? battle.enemies.filter((e) => e.hp > 0)
+      : [resolveTarget(battle)].filter((t): t is BattleEnemy => t !== undefined)
+
+    for (const target of targets) {
+      // 直接伤害
+      if (enemyEffects.damage) {
+        const dmg = enemyEffects.damage
+        const variance = 1 + (Math.random() * 2 - 1) * 0.1
+        const rawDamage = dmg.baseDamage * variance
+        const finalDamage = calcDamageAfterDefense(
+          rawDamage,
+          getDefensePenetration(dmg.damageTypeId),
+          getEnemyDefenseRatio(target, dmg.damageTypeId),
+        )
+        target.hp -= finalDamage
+        if (target.hp < 0) target.hp = 0
+        battle.logs.push(
+          `${consumable.name} 对 ${target.config.name} 造成 ${finalDamage} 点伤害` +
+            (target.hp <= 0 ? `，${target.config.name} 被击败了!` : ''),
+        )
+      }
+      // 施加状态
+      if (enemyEffects.applyStatus) {
+        applyEnemyStatuses(battle, target, enemyEffects.applyStatus, consumable.name)
+      }
+    }
+  }
+
+  const selfText = selfLogs.filter(Boolean).join('；')
+  battle.logs.push(
+    consumable.useText
+      ? `${consumable.useText}${selfText ? `（${selfText}）` : ''}`
+      : `你使用了 ${consumable.name}${selfText ? `（${selfText}）` : ''}`,
+  )
+  return true
 }
 
 /**
@@ -873,9 +1120,17 @@ function executePlayerEscape(player: PlayerState, battle: BattleState): void {
  */
 function executeEnemyTurn(player: PlayerState, battle: BattleState): void {
   const registry = getRegistry()
+  let haveMove = false
 
   for (const enemy of battle.enemies) {
     if (enemy.hp <= 0) continue
+
+    // 敌方回合开始时结算身上的状态（中毒等持续伤害，可能致死）
+    tickEnemyStatuses(battle, enemy, battle.logs)
+    if (enemy.hp <= 0) {
+      battle.logs.push(`${enemy.config.name} 在状态侵蚀下倒下了！`)
+      continue
+    }
 
     // 处理蓄力
     if (enemy.chargingSkillId) {
@@ -897,7 +1152,10 @@ function executeEnemyTurn(player: PlayerState, battle: BattleState): void {
       // 当前距离没有能命中的技能
       if (battle.distance > MIN_BATTLE_DISTANCE) {
         // 向前逼近
-        battle.distance -= 1
+        if (!haveMove) {
+          haveMove = true
+          battle.distance -= 1
+        }
         battle.logs.push(`${enemy.config.name} 向前逼近，距离缩短到 ${battle.distance}`)
       } else {
         // 已贴身仍无技能可命中 → 勉强出手（按未命中处理，避免空转）
@@ -1184,15 +1442,7 @@ function generateLoot(player: PlayerState, enemy: BattleEnemy): string[] {
 
   for (const loot of lootPool) {
     // 概率判定
-    let probability = loot.probability
-
-    // 玩家技能影响掉落概率
-    if (loot.affectedByPlayerSkill) {
-      const skill = player.skills.survivalSkills[loot.affectedByPlayerSkill.skillId]
-      if (skill) {
-        probability += skill.level * loot.affectedByPlayerSkill.bonusPerLevel
-      }
-    }
+    const probability = loot.probability
 
     if (!chance(probability)) continue
 

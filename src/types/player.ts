@@ -230,9 +230,6 @@ export interface PlayerCoefficients {
  * 玩家技能状态
  */
 export interface PlayerSkills {
-  /** 生存技能等级 */
-  survivalSkills: Record<string, PlayerSkillLevel>
-
   /** 武器熟练度 */
   weaponProficiencies: Record<string, PlayerSkillLevel>
 

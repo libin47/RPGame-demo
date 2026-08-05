@@ -309,17 +309,6 @@ export function calcEscapeChance(
   return chance
 }
 
-/**
- * 计算观察/分析成功率
- * 公式：玩家智力 / (玩家智力 + 50)
- *
- * @param playerIntelligence - 玩家智力
- * @returns 成功率（0-1）
- */
-export function calcObserveChance(playerIntelligence: number): number {
-  return playerIntelligence / (playerIntelligence + 50)
-}
-
 // ============================================================
 // 防守减伤
 // ============================================================

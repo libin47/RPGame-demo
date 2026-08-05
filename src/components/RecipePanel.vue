@@ -374,7 +374,7 @@ function buildCookList(): RecipeDisplayItem[] {
     const timeStr = formatTime(recipe.cookTimeMinutes)
     const canExecute = materials.every((m) => m.hasEnough) && costs.every((c) => c.hasEnough)
 
-    const qualityLevel = calculateCookQuality(props.playerState, recipe)
+    const qualityLevel = calculateCookQuality(recipe, props.deviceLevel)
     const qualityName = qualityLevel.name
 
     list.push({

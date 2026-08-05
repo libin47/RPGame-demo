@@ -69,10 +69,6 @@ export enum AttributeType {
 
   // 防御属性（防御以伤害类型ID为键，不在此枚举中；请使用 DamageTypeId）
 
-  // 技能等级
-  SKILL_LEVEL = 'skillLevel',
-  SKILL_EXP = 'skillExp',
-
   // 系数属性
   RECOVERY_RATE_COEFFICIENT = 'recoveryRateCoefficient',
   SATIETY_UPPER_LIMIT_COEFFICIENT = 'satietyUpperLimitCoefficient',
@@ -227,8 +223,6 @@ export interface GainExpEffect {
 }
 
 export enum GainExpTarget {
-  /** 生存技能 */
-  SURVIVAL_SKILL = 'survivalSkill',
   /** 武器熟练度 */
   WEAPON_PROFICIENCY = 'weaponProficiency',
   /** 战斗技能 */

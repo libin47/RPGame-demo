@@ -7,7 +7,7 @@ import type { Enemy } from '@/types/enemy'
 import type { Scene, SubScene } from '@/types/scene'
 import type { WeaponType } from '@/types/weapon'
 import type { DamageType } from '@/types/damage'
-import type { SurvivalSkill, BattleSkill, PassiveSkill } from '@/types/skill'
+import type { BattleSkill, PassiveSkill } from '@/types/skill'
 import type { StatusConfig } from '@/types/status'
 import type { Build } from '@/types/build'
 import type { CraftRecipe } from '@/types/craft'
@@ -73,11 +73,6 @@ class GameRegistryManager {
   // ============================================================
   // 技能
   // ============================================================
-
-  /** 获取生存技能配置 */
-  getSurvivalSkill(id: string): SurvivalSkill | undefined {
-    return this.registry.skills.survivalSkills[id]
-  }
 
   /** 获取战斗技能配置 */
   getBattleSkill(id: string): BattleSkill | undefined {

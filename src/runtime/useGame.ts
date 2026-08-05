@@ -1322,23 +1322,19 @@ export function useGame(initialPlayer: PlayerState) {
     }
 
     const battle = state.currentBattle
+
+    // 玩家点击"结束战斗"：结算胜利奖励并退出战斗
+    if (actionType === PlayerActionType.END_BATTLE) {
+      settleVictoryAndExit()
+      return
+    }
+
     executePlayerAction(state.player, battle, actionType, skillId, itemInstanceId)
 
     // 检查战斗是否结束
     if (battle.result === BattleResult.VICTORY) {
-      const settleLogs = settleBattle(state.player, battle)
-
-      // 尝试跳转到胜利帧
-      const victoryFrameId = state.pendingBattleFrameIds?.victoryFrameId
-      if (victoryFrameId && state.currentEvent) {
-        jumpToEventFrame(victoryFrameId)
-      } else {
-        state.mode = state.currentEvent ? 'event' : 'normal'
-      }
-
-      state.currentBattle = null
-      state.pendingBattleFrameIds = null
-      state.logMessage = [...battle.logs, ...settleLogs].filter(Boolean).join('；')
+      // 战斗胜利：保留战斗界面，隐藏操作栏，等待玩家点击"结束战斗"按钮结算奖励并退出
+      state.logMessage = battle.logs.filter(Boolean).join('；')
     } else if (battle.result === BattleResult.DEFEAT) {
       // 尝试跳转到战败帧
       const defeatFrameId = state.pendingBattleFrameIds?.defeatFrameId
@@ -1373,6 +1369,28 @@ export function useGame(initialPlayer: PlayerState) {
       // 战斗还在继续，显示日志
       state.logMessage = battle.logs.filter(Boolean).join('；')
     }
+  }
+
+  /**
+   * 结算胜利奖励并退出战斗：
+   * 生成战利品 → 跳转到胜利帧（或返回事件/正常模式）→ 关闭战斗
+   */
+  function settleVictoryAndExit(): void {
+    if (!state.currentBattle) return
+    const battle = state.currentBattle
+    const settleLogs = settleBattle(state.player, battle)
+
+    // 尝试跳转到胜利帧
+    const victoryFrameId = state.pendingBattleFrameIds?.victoryFrameId
+    if (victoryFrameId && state.currentEvent) {
+      jumpToEventFrame(victoryFrameId)
+    } else {
+      state.mode = state.currentEvent ? 'event' : 'normal'
+    }
+
+    state.currentBattle = null
+    state.pendingBattleFrameIds = null
+    state.logMessage = [...battle.logs, ...settleLogs].filter(Boolean).join('；')
   }
 
   /**
@@ -1536,11 +1554,12 @@ export function useGame(initialPlayer: PlayerState) {
   /**
    * 执行烹饪配方（由 RecipePanel 调用）
    */
-  function executeCookRecipeMode(recipeId: string): CraftResult {
+  function executeCookRecipeMode(recipeId: string, deviceLevel: number = 0): CraftResult {
     const result = engineExecuteCook(
       state.player,
       recipeId,
       getStorageSource(state.currentSubScene?.id) ?? undefined,
+      deviceLevel,
     )
     if (result.success && result.timeUsed > 0) {
       advanceGameTime(result.timeUsed)

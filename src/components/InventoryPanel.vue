@@ -41,17 +41,26 @@
           v-for="item in filteredItems"
           :key="item.instanceId"
           class="item-card"
-          :class="{ 'item-equipped': isEquipped(item.itemId) }"
+          :class="{ 'item-equipped': isEquipped(item) }"
           @click="openDetail(item)"
         >
           <!-- 图标区 -->
           <div class="item-icon">
             <span class="icon-emoji">{{ getItemEmoji(item.itemId) }}</span>
-            <span v-if="isEquipped(item.itemId)" class="icon-equipped">🔒</span>
+            <span v-if="isEquipped(item)" class="icon-equipped">🔒</span>
             <span v-if="item.quantity > 1" class="icon-qty">×{{ item.quantity }}</span>
             <span class="icon-weight">{{ getItemStackWeight(item).toFixed(1) }}</span>
           </div>
           <div class="item-name">{{ getItemName(item.itemId) }}</div>
+          <!-- 耐久度条（仅带耐久的物品显示） -->
+          <div
+            v-if="hasDurability(item)"
+            class="dur-bar"
+            :class="durBarClass(item)"
+            :title="`耐久 ${Math.floor(item.durability)}/${getMaxDurability(item.itemId)}`"
+          >
+            <div class="dur-fill" :style="{ width: durabilityPercent(item) + '%' }"></div>
+          </div>
         </div>
 
         <div v-if="filteredItems.length === 0" class="empty-hint">（没有物品）</div>
@@ -91,7 +100,7 @@
           }}</span>
           <span class="stat-sep">|</span>
           <span class="stat-label" v-for="(def, index) in defenseList" :key="def.key">
-            {{ def.label }} <span class="stat-value">{{ def.value }}</span>
+            {{ def.label }} <span class="stat-value">{{ Math.round(def.value * 100) }}%</span>
             <span v-if="index < defenseList.length - 1" class="stat-sep">|</span>
           </span>
         </div>
@@ -142,14 +151,14 @@
               {{ useActionLabel(detailItem.itemId) }}
             </button>
             <button
-              v-if="isEquippable(detailItem.itemId) && !isEquipped(detailItem.itemId)"
+              v-if="detailItem && isEquippable(detailItem.itemId) && !isEquipped(detailItem)"
               class="action-btn btn-equip"
               @click="onEquipFromDetail"
             >
               装备
             </button>
             <button
-              v-if="isEquipped(detailItem.itemId)"
+              v-if="detailItem && isEquipped(detailItem)"
               class="action-btn btn-unequip"
               @click="onUnequipFromDetail"
             >
@@ -354,8 +363,9 @@ function getCategoryLabel(itemId: string): string {
   return labels[config.category] || '未知'
 }
 
-function isEquipped(itemId: string): boolean {
-  return Object.values(props.playerState.equipment).includes(itemId)
+/** 该物品实例是否已装备（按实例判定：多件同名物品只有装备的那件才算已装备） */
+function isEquipped(item: PlayerInventoryItem): boolean {
+  return !!item.equippedSlot
 }
 
 function hasDurability(item: PlayerInventoryItem): boolean {
@@ -367,6 +377,21 @@ function getMaxDurability(itemId: string): number {
   if (!config || !('durability' in config)) return -1
   const durConfig = (config as { durability?: { maxDurability?: number } }).durability
   return durConfig?.maxDurability ?? -1
+}
+
+/** 耐久剩余百分比（0~100，已破损为 0） */
+function durabilityPercent(item: PlayerInventoryItem): number {
+  const max = getMaxDurability(item.itemId)
+  if (max <= 0) return 0
+  return Math.max(0, Math.min(100, (item.durability / max) * 100))
+}
+
+/** 耐久条状态样式（>60 良好 / >30 警告 / ≤30 危险） */
+function durBarClass(item: PlayerInventoryItem): string {
+  const pct = durabilityPercent(item)
+  if (pct > 60) return 'dur-high'
+  if (pct > 30) return 'dur-mid'
+  return 'dur-low'
 }
 
 // ═══════════════════════════════════════════
@@ -683,6 +708,31 @@ function onUnequipFromDetail(): void {
   word-break: break-all;
 }
 
+/* 耐久度条（卡片底部） */
+.dur-bar {
+  width: 100%;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.dur-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #81c784, #66bb6a);
+  transition: width 0.3s ease;
+}
+
+.dur-bar.dur-mid .dur-fill {
+  background: linear-gradient(90deg, #ffb74d, #ffa726);
+}
+
+.dur-bar.dur-low .dur-fill {
+  background: linear-gradient(90deg, #ff7043, #e53935);
+}
+
 .empty-hint {
   grid-column: 1 / -1;
   text-align: center;
@@ -796,28 +846,31 @@ function onUnequipFromDetail(): void {
   font-size: 11px;
 }
 
-/* 关闭按钮 */
+/* 关闭按钮（整行大按钮） */
 .bottom-close {
   display: flex;
-  justify-content: center;
-  padding: 8px 16px 10px;
+  padding: 10px 16px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .close-btn {
-  padding: 6px 28px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #aaa;
-  font-size: 12px;
+  flex: 1;
+  padding: 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ccc;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-align: center;
   cursor: pointer;
   transition: all 0.15s;
 }
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 /* ═══════════════════════════════════════════

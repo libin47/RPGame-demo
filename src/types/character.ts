@@ -61,9 +61,6 @@ export interface CharacterClass {
   /** 初始已解锁的被动技能ID列表 */
   initialPassiveSkillIds: string[]
 
-  /** 初始生存技能等级 */
-  initialSurvivalSkillLevels: CharacterInitialSkillLevel[]
-
   /** 初始武器熟练度 */
   initialWeaponProficiency: CharacterInitialWeaponProficiency[]
 
@@ -164,18 +161,6 @@ export interface CharacterInitialItem {
 // ============================================================
 // 初始技能
 // ============================================================
-
-/**
- * 初始生存技能等级
- */
-export interface CharacterInitialSkillLevel {
-  /** 技能ID */
-  skillId: string
-  /** 初始等级 */
-  level: number
-  /** 初始经验值（0为从该等级0经验开始） */
-  exp?: number
-}
 
 /**
  * 初始武器熟练度

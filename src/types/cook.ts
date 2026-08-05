@@ -29,9 +29,6 @@ export interface CookRecipe extends BaseRecipe {
   /** 烹饪时间（游戏内分钟数，覆写 requirements.timeMinutes 用于烹饪系统特有计算） */
   cookTimeMinutes: number
 
-  /** 烹饪经验奖励 */
-  experienceReward: CookExperienceReward
-
   /** 烹饪产物品质 */
   qualityLevels?: CookQualityLevel[]
 }
@@ -47,22 +44,8 @@ export enum CookMode {
 }
 
 /**
- * 烹饪经验奖励
- */
-export interface CookExperienceReward {
-  /** 技能ID（通常为cooking） */
-  skillId: string
-  /** 每次烹饪获得的经验 */
-  expPerCook: number
-  /** 完美烹饪额外经验 */
-  perfectBonusExp: number
-  /** 首次烹饪此配方额外经验 */
-  firstTimeBonusExp: number
-}
-
-/**
  * 烹饪品质等级
- * 根据技能等级和随机因素，烹饪可能产出不同品质的食物
+ * 根据建筑等级和随机因素，烹饪可能产出不同品质的食物
  */
 export interface CookQualityLevel {
   /** 品质等级（0=失败，1=普通，2=良好，3=完美） */
@@ -71,9 +54,9 @@ export interface CookQualityLevel {
   name: string
   /** 对应产出的物品ID（不同品质可能是不同物品） */
   productItemId?: string
-  /** 达到此品质所需的最低技能等级 */
-  minSkillLevel: number
-  /** 此品质的概率权重（与技能等级相关，高技能等级高权重） */
+  /** 达到此品质所需的最低设备（建筑）等级 */
+  minDeviceLevel: number
+  /** 此品质的概率权重（与设备等级相关，高设备等级高权重） */
   weight: number
 }
 

@@ -81,7 +81,7 @@ export interface GameInstance {
   /** 执行制作配方 */
   executeCraftRecipe: (recipeId: string, quantity: number) => CraftResult
   /** 执行烹饪配方 */
-  executeCookRecipe: (recipeId: string) => CraftResult
+  executeCookRecipe: (recipeId: string, deviceLevel?: number) => CraftResult
   /** 修复指定物品实例 */
   repairItem: (instanceId: string) => CraftResult
   /** 将背包物品存入当前仓库 */

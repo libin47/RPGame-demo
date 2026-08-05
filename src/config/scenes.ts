@@ -407,7 +407,8 @@ const beach_机翼营地: SubScene = {
       text: '只有半截机翼和沙子，你需要完善它才可以作为营地。',
       textVariations: [
         {
-          content: '地上铺着一层防水布，算是勉强有一个栖身之所了。',
+          content:
+            '地上铺着一层防水布，算是勉强有一个栖身之所了。\n\n但是海风太大，或许这里并不适合旧居。',
           displayFlag: ['event_机翼营地_铺地'],
         },
       ],
@@ -477,6 +478,36 @@ const beach_椰树林: SubScene = {
   name: '椰树林',
   parentSceneId: 'beach',
   descriptions: [
+    {
+      id: 'beach_椰树林_深入_1',
+      priority: 9,
+      text: '你拨开垂落的棕榈叶，走进了这片椰树林。阳光穿过叶片的缝隙洒下斑驳的光影，地上铺满了枯黄的落叶和几个熟透落地的椰子。海风穿过树林，椰叶沙沙作响。\n\n你正要往前走，头顶传来一声尖利的叫声。你抬头——几只{beach_ysl_event_1}正蹲在高处的椰树上，尾巴悬空，眼睛直勾勾地盯着你。\n\n你停下脚步，它们也停下叫声。你往前走一步，领头的那只发出了更响亮的警告声。\n\n它们不想让你过去。\n\n在搞清楚之前，你不能采摘和砍伐。',
+      isAutoTrigger: false,
+      isOneTime: false,
+      hideFlag: ['beach_椰树林_追踪猴群'],
+      eventEntries: [
+        {
+          key: 'beach_ysl_event_1',
+          displayText: '灰褐色的猴子',
+          eventId: 'event_beach_椰树林_灰褐色的猴子',
+        },
+      ],
+    },
+
+    {
+      id: 'beach_椰树林_深入_2',
+      priority: 8,
+      text: '猴群走远了，但你还记得{beach_ysl_event_2}\n\n你现在可以采摘和砍伐了。',
+      isAutoTrigger: false,
+      isOneTime: false,
+      eventEntries: [
+        {
+          key: 'beach_ysl_event_2',
+          displayText: '离去的方向',
+          eventId: 'event_beach_椰树林_追踪猴群',
+        },
+      ],
+    },
     {
       id: 'beach_椰树林_1 ',
       priority: 1,
@@ -554,6 +585,7 @@ const beach_椰树林: SubScene = {
       name: '椰子',
       description: '爬上树去摘椰子，要是有个长杆就好了。',
       descriptionTitle: '摘椰子',
+      displayFlag: ['beach_椰树林_追踪猴群'],
       displayCondition: {
         target: {
           type: ConditionTargetType.ITEM,
@@ -584,6 +616,7 @@ const beach_椰树林: SubScene = {
       name: '椰子',
       description: '用长杆打椰子。',
       descriptionTitle: '打椰子',
+      displayFlag: ['beach_椰树林_追踪猴群'],
       displayCondition: {
         target: {
           type: ConditionTargetType.ITEM,
@@ -614,6 +647,7 @@ const beach_椰树林: SubScene = {
       name: '砍伐',
       description: '砍椰子树，有概率获得椰子',
       descriptionTitle: '砍椰子树',
+      displayFlag: ['beach_椰树林_追踪猴群'],
       costTime: 10,
       costEnergy: 10,
       availableCondition: {

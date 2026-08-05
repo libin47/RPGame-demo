@@ -7,17 +7,12 @@ import type {
   RequiredMaterial,
   RecipeCost,
   RecipeProduct,
-  SkillRequirement,
   AttributeRequirement,
 } from '@/types/recipe'
 import type { CookRecipe, CookQualityLevel } from '@/types/cook'
 import type { DurabilityConfig } from '@/types/item'
 import { RecipeCostType } from '@/types/recipe'
-import { GainExpTarget } from '@/types/effect'
-import type { GainExpEffect } from '@/types/effect'
-import { EffectType } from '@/types/effect'
 import { getRegistry } from './registry'
-import { getEffectResolver } from './effect'
 import { removeItem, addItem } from './inventory'
 
 // ============================================================
@@ -36,8 +31,6 @@ export interface CraftResult {
   consumedMaterials?: Array<{ itemId: string; quantity: number }>
   /** 消耗的游戏内分钟数 */
   timeUsed: number
-  /** 获得的经验 */
-  expGained?: number
 }
 
 // ============================================================
@@ -94,19 +87,9 @@ function checkMaterials(
 function checkRequirements(
   player: PlayerState,
   requirements: {
-    skillRequirements?: SkillRequirement[]
     attributeRequirements?: AttributeRequirement[]
   },
 ): string | null {
-  // 技能等级要求
-  for (const req of requirements.skillRequirements ?? []) {
-    const skill = player.skills.survivalSkills[req.skillId]
-    const level = skill?.level ?? 0
-    if (level < req.minLevel) {
-      return `技能等级不足：需要 ${req.skillId} Lv.${req.minLevel}（当前 Lv.${level}）`
-    }
-  }
-
   // 基础属性要求
   for (const req of requirements.attributeRequirements ?? []) {
     const attrKey = req.attribute as 'strength' | 'agility' | 'intelligence' | 'constitution'
@@ -319,24 +302,6 @@ export function executeCraft(
   // 产出物品
   produceItems(player, recipe.products, actualQty)
 
-  // 获得经验（批量制作每件获得一次）
-  let totalExp = 0
-  if (recipe.experienceReward) {
-    const expPerCraft = recipe.experienceReward.expPerCraft ?? 0
-    const firstBonus = recipe.experienceReward.firstTimeBonusExp ?? 0
-    totalExp = expPerCraft * actualQty + firstBonus
-
-    if (totalExp > 0) {
-      const expEffect: GainExpEffect = {
-        type: EffectType.GAIN_EXP,
-        target: GainExpTarget.SURVIVAL_SKILL,
-        targetId: recipe.experienceReward.skillId,
-        amount: totalExp,
-      }
-      getEffectResolver().executeGainExpEffect(player, expEffect)
-    }
-  }
-
   return {
     success: true,
     message: `制作了 ${recipe.name} ×${actualQty}`,
@@ -349,7 +314,6 @@ export function executeCraft(
       quantity: m.quantity * actualQty,
     })),
     timeUsed: totalTime,
-    expGained: totalExp,
   }
 }
 
@@ -358,33 +322,29 @@ export function executeCraft(
 // ============================================================
 
 /**
- * 根据玩家技能等级计算烹饪品质
+ * 根据烹饪设备（建筑）等级计算烹饪品质
  *
- * @param player - 当前玩家
  * @param recipe - 烹饪配方
+ * @param deviceLevel - 烹饪设备（建筑）等级
  * @returns 选中的品质等级
  */
-export function calculateCookQuality(player: PlayerState, recipe: CookRecipe): CookQualityLevel {
+export function calculateCookQuality(recipe: CookRecipe, deviceLevel: number): CookQualityLevel {
   const qualityLevels = recipe.qualityLevels
   if (!qualityLevels || qualityLevels.length === 0) {
     // 无品质配置时返回默认产物
     return {
       level: 1,
       name: recipe.name,
-      minSkillLevel: 0,
+      minDeviceLevel: 0,
       weight: 1,
     }
   }
 
-  // 获取玩家烹饪技能等级
-  const cookingSkill = player.skills.survivalSkills[recipe.experienceReward.skillId]
-  const skillLevel = cookingSkill?.level ?? 0
-
-  // 筛选玩家可达到的品质（技能等级 >= 品质要求）
-  const availableLevels = qualityLevels.filter((q) => skillLevel >= q.minSkillLevel)
+  // 筛选当前设备可达到的品质（设备等级 >= 品质要求）
+  const availableLevels = qualityLevels.filter((q) => deviceLevel >= q.minDeviceLevel)
 
   if (availableLevels.length === 0) {
-    // 技能等级不够任何品质，取最低品质
+    // 设备等级不够任何品质，取最低品质
     return qualityLevels.sort((a, b) => a.level - b.level)[0]!
   }
 
@@ -405,12 +365,15 @@ export function calculateCookQuality(player: PlayerState, recipe: CookRecipe): C
  *
  * @param player - 当前玩家（会被直接修改）
  * @param recipeId - 烹饪配方ID
+ * @param source - 可选的外部材料来源
+ * @param deviceLevel - 烹饪设备（建筑）等级，用于品质判定
  * @returns 执行结果
  */
 export function executeCook(
   player: PlayerState,
   recipeId: string,
   source?: ItemSource,
+  deviceLevel: number = 0,
 ): CraftResult {
   const registry = getRegistry()
   const recipe = registry.getCookRecipe(recipeId)
@@ -435,31 +398,12 @@ export function executeCook(
   consumeMaterials(player, recipe.materials, source)
 
   // 计算烹饪品质
-  const qualityLevel = calculateCookQuality(player, recipe)
+  const qualityLevel = calculateCookQuality(recipe, deviceLevel)
 
   // 根据品质确定产物
   const productItemId = qualityLevel.productItemId ?? recipe.products[0]?.itemId
   if (productItemId) {
     addItem(player, productItemId, 1)
-  }
-
-  // 获得烹饪经验
-  let totalExp = 0
-  if (recipe.experienceReward) {
-    totalExp = recipe.experienceReward.expPerCook
-    if (qualityLevel.level >= 3) {
-      totalExp += recipe.experienceReward.perfectBonusExp
-    }
-
-    if (totalExp > 0) {
-      const expEffect: GainExpEffect = {
-        type: EffectType.GAIN_EXP,
-        target: GainExpTarget.SURVIVAL_SKILL,
-        targetId: recipe.experienceReward.skillId,
-        amount: totalExp,
-      }
-      getEffectResolver().executeGainExpEffect(player, expEffect)
-    }
   }
 
   const qualityName =
@@ -471,7 +415,6 @@ export function executeCook(
     products: productItemId ? [{ itemId: productItemId, quantity: 1 }] : [],
     consumedMaterials: recipe.materials.map((m) => ({ itemId: m.itemId, quantity: m.quantity })),
     timeUsed: recipe.cookTimeMinutes,
-    expGained: totalExp,
   }
 }
 

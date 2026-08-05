@@ -95,7 +95,7 @@
         <div class="attr-grid cols-3">
           <div v-for="dt in defenseTypes" :key="dt.id" class="attr-item">
             <span class="attr-label">{{ dt.name }}</span>
-            <span class="attr-value def-value">{{ totalDefenses[dt.id] ?? 0 }}</span>
+            <span class="attr-value def-value">{{ formatDefense(totalDefenses[dt.id] ?? 0) }}</span>
           </div>
         </div>
       </section>
@@ -224,6 +224,11 @@ const totalDefenses = computed<Partial<Record<DamageTypeId, number>>>(() => {
   }
   return result
 })
+
+/** 防御比例（0~1，负数=弱点）转百分比显示 */
+function formatDefense(v: number): string {
+  return `${Math.round(v * 100)}%`
+}
 
 // ── 系数 ──
 

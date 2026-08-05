@@ -14,31 +14,20 @@ const cookCrabMeat: CookRecipe = {
   unlockHint: '初始解锁',
   cookMode: CookMode.COOK,
   requiredDeviceLevel: 0,
-  materials: [
-    { itemId: '蟹肉', quantity: 1, isConsumed: true },
-  ],
+  materials: [{ itemId: '蟹肉', quantity: 1, isConsumed: true }],
   requirements: {
-    skillRequirements: [],
     attributeRequirements: [],
     timeMinutes: 10,
   },
   costs: [],
-  products: [
-    { itemId: '蟹肉', baseQuantity: 1 },
-  ],
+  products: [{ itemId: '蟹肉', baseQuantity: 1 }],
   isRepeatable: true,
   cookTimeMinutes: 10,
-  experienceReward: {
-    skillId: 'cooking',
-    expPerCook: 15,
-    perfectBonusExp: 10,
-    firstTimeBonusExp: 30,
-  },
   qualityLevels: [
-    { level: 0, name: '焦糊的蟹肉', minSkillLevel: 0, weight: 10 },
-    { level: 1, name: '普通的烤蟹肉', minSkillLevel: 0, weight: 50 },
-    { level: 2, name: '美味的烤蟹肉', minSkillLevel: 3, weight: 30 },
-    { level: 3, name: '完美的烤蟹肉', minSkillLevel: 7, weight: 10 },
+    { level: 0, name: '焦糊的蟹肉', minDeviceLevel: 0, weight: 10 },
+    { level: 1, name: '普通的烤蟹肉', minDeviceLevel: 0, weight: 50 },
+    { level: 2, name: '美味的烤蟹肉', minDeviceLevel: 2, weight: 30 },
+    { level: 3, name: '完美的烤蟹肉', minDeviceLevel: 3, weight: 10 },
   ],
 }
 
@@ -51,31 +40,20 @@ const cookCoconut: CookRecipe = {
   unlockHint: '初始解锁',
   cookMode: CookMode.COOK,
   requiredDeviceLevel: 0,
-  materials: [
-    { itemId: '椰子', quantity: 1, isConsumed: true },
-  ],
+  materials: [{ itemId: '椰子', quantity: 1, isConsumed: true }],
   requirements: {
-    skillRequirements: [],
     attributeRequirements: [],
     timeMinutes: 5,
   },
   costs: [],
-  products: [
-    { itemId: '椰子', baseQuantity: 1 },
-  ],
+  products: [{ itemId: '椰子', baseQuantity: 1 }],
   isRepeatable: true,
   cookTimeMinutes: 5,
-  experienceReward: {
-    skillId: 'cooking',
-    expPerCook: 8,
-    perfectBonusExp: 5,
-    firstTimeBonusExp: 15,
-  },
   qualityLevels: [
-    { level: 0, name: '焦糊的椰子', minSkillLevel: 0, weight: 10 },
-    { level: 1, name: '温热的椰子', minSkillLevel: 0, weight: 50 },
-    { level: 2, name: '香烤椰子', minSkillLevel: 3, weight: 30 },
-    { level: 3, name: '完美的烤椰子', minSkillLevel: 7, weight: 10 },
+    { level: 0, name: '焦糊的椰子', minDeviceLevel: 0, weight: 10 },
+    { level: 1, name: '温热的椰子', minDeviceLevel: 0, weight: 50 },
+    { level: 2, name: '香烤椰子', minDeviceLevel: 2, weight: 30 },
+    { level: 3, name: '完美的烤椰子', minDeviceLevel: 3, weight: 10 },
   ],
 }
 

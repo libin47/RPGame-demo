@@ -201,15 +201,7 @@ export function createNewPlayerState(
     coefficients,
   }
 
-  // 技能（从职业配置获取初始生存技能等级和武器熟练度）
-  const survivalSkills: Record<string, { level: number; exp: number }> = {}
-  for (const skillInit of classConfig.initialSurvivalSkillLevels) {
-    survivalSkills[skillInit.skillId] = {
-      level: skillInit.level,
-      exp: skillInit.exp ?? 0,
-    }
-  }
-
+  // 技能（从职业配置获取初始武器熟练度和战斗技能）
   const weaponProficiencies: Record<string, { level: number; exp: number }> = {}
   for (const wpInit of classConfig.initialWeaponProficiency) {
     weaponProficiencies[wpInit.weaponTypeId] = {
@@ -219,7 +211,6 @@ export function createNewPlayerState(
   }
 
   const skills: PlayerSkills = {
-    survivalSkills,
     weaponProficiencies,
     battleSkills: {},
     unlockedBattleSkillIds: classConfig.initialBattleSkillIds ?? [],

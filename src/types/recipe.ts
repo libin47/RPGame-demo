@@ -44,9 +44,6 @@ export interface RequiredMaterial {
  * 配方所需条件
  */
 export interface RecipeRequirements {
-  /** 所需生存技能等级 */
-  skillRequirements?: SkillRequirement[]
-
   /** 所需基础属性 */
   attributeRequirements?: AttributeRequirement[]
 
@@ -57,16 +54,6 @@ export interface RecipeRequirements {
 
   /** 所需时间（游戏内分钟数） */
   timeMinutes: number
-}
-
-/**
- * 技能等级要求
- */
-export interface SkillRequirement {
-  /** 技能ID */
-  skillId: string
-  /** 最低等级 */
-  minLevel: number
 }
 
 /**

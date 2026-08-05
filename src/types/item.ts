@@ -199,6 +199,8 @@ export interface WeaponStats {
   criticalChanceModifier: number
   /** 暴击倍率（默认2.0，即暴击时伤害×2） */
   criticalMultiplier: number
+  /** 投掷伤害倍率（战斗中投掷未装备武器时：伤害 = 基础伤害 × 倍率，默认 2） */
+  throwDamageMultiplier?: number
 }
 
 // ============================================================
@@ -265,6 +267,21 @@ export interface ConsumableItem extends BaseItem {
 
   /** 使用消耗品后可能施加的状态 */
   applyStatus?: ConsumableStatusEffect[]
+
+  // 战斗中使用的对敌效果（如伤害、治疗等）,仅consumableTool类型有效
+  applyEnemyStatus?: {
+    // 全部还是单个敌人
+    all: boolean
+    // 施加状态
+    applyStatus?: ConsumableStatusEffect[]
+    // 直接伤害
+    damage?: {
+      /** 基础伤害 */
+      baseDamage: number
+      /** 伤害类型ID（如'slash'、'pierce'、'blunt'等） */
+      damageTypeId: string
+    }
+  }
 
   /** 是否可以多次使用（如某种药膏可以用3次） */
   usesRemaining?: number

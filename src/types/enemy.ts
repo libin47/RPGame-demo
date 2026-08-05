@@ -364,14 +364,6 @@ export interface EnemyLoot {
   minQuantity: number
   /** 最大数量 */
   maxQuantity: number
-  /** 是否受玩家属性/技能影响掉落概率（如剥皮技能提升皮革掉落） */
-  affectedByPlayerSkill?: {
-    skillId: string
-    /** 每级技能增加的概率 */
-    bonusPerLevel: number
-    /** 每级额外增加的最大数量（可选） */
-    quantityBonusPerLevel?: number
-  }
 }
 
 // ============================================================

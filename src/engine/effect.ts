@@ -254,16 +254,6 @@ export class EffectResolver {
 
       // 防御属性（以伤害类型 id 处理，见函数开头）
 
-      // 技能等级（需要 subType 指定技能ID）
-      case AttributeType.SKILL_LEVEL:
-        if (!subType) return null
-        return player.skills.survivalSkills[subType]?.level ?? 0
-
-      // 技能经验（需要 subType 指定技能ID）
-      case AttributeType.SKILL_EXP:
-        if (!subType) return null
-        return player.skills.survivalSkills[subType]?.exp ?? 0
-
       // 系数属性
       case AttributeType.RECOVERY_RATE_COEFFICIENT:
         return player.attributes.coefficients.recoveryRateCoefficient
@@ -378,27 +368,6 @@ export class EffectResolver {
         break
 
       // 防御属性（以伤害类型 id 处理，见函数开头）
-
-      // 技能等级
-      case AttributeType.SKILL_LEVEL:
-        if (subType) {
-          if (!player.skills.survivalSkills[subType]) {
-            player.skills.survivalSkills[subType] = { level: 0, exp: 0 }
-          }
-          player.skills.survivalSkills[subType].level = Math.max(0, Math.min(newValue, 10))
-        }
-        break
-
-      // 技能经验
-      case AttributeType.SKILL_EXP:
-        if (subType) {
-          if (!player.skills.survivalSkills[subType]) {
-            player.skills.survivalSkills[subType] = { level: 0, exp: 0 }
-          }
-          player.skills.survivalSkills[subType].exp = Math.max(0, newValue)
-          this.checkSurvivalSkillLevelUp(player, subType)
-        }
-        break
 
       // 系数属性
       case AttributeType.RECOVERY_RATE_COEFFICIENT:
@@ -515,23 +484,6 @@ export class EffectResolver {
 
       // 递归检查是否连续升级
       this.checkAttributeLevelUp(player, attribute)
-    }
-  }
-
-  /**
-   * 检查生存技能是否升级
-   * 升级所需经验 = 当前等级 × 100
-   */
-  private checkSurvivalSkillLevelUp(player: PlayerState, skillId: string): void {
-    const skill = player.skills.survivalSkills[skillId]
-    if (!skill) return
-    if (skill.level >= 10) return
-
-    const requiredExp = skill.level * 100
-    if (skill.exp >= requiredExp) {
-      skill.level += 1
-      skill.exp -= requiredExp
-      this.checkSurvivalSkillLevelUp(player, skillId)
     }
   }
 
@@ -795,15 +747,6 @@ export class EffectResolver {
     const { target, targetId, amount } = effect
 
     switch (target) {
-      case 'survivalSkill': {
-        if (!player.skills.survivalSkills[targetId]) {
-          player.skills.survivalSkills[targetId] = { level: 0, exp: 0 }
-        }
-        player.skills.survivalSkills[targetId].exp += amount
-        this.checkSurvivalSkillLevelUp(player, targetId)
-        return `获得 ${targetId} 经验 +${amount}`
-      }
-
       case 'weaponProficiency': {
         if (!player.skills.weaponProficiencies[targetId]) {
           player.skills.weaponProficiencies[targetId] = { level: 0, exp: 0 }
