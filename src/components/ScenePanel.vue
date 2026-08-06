@@ -211,10 +211,10 @@ import type {
   SubScene,
 } from '@/types/scene'
 import type { ButtonOption } from '@/types/option'
-import { evaluateCondition, getResolvedDescriptionText } from '@/engine'
+import { evaluateConditions, getResolvedDescriptionText } from '@/engine'
 import type { PlayerState } from '@/types/player'
 import { paramRegistry } from '@/config/params'
-import type { Condition } from '@/types/effect'
+import type { Conditions } from '@/types/effect'
 
 /**
  * 营地建筑基本信息
@@ -291,18 +291,11 @@ function isInteractionVisible(
   inter: ButtonOption & {
     isOneTime?: boolean
     usedFlag?: string
-    hideFlag?: string[]
-    displayFlag?: string[]
-    displayCondition?: Condition
+    displayCondition?: Conditions
   },
 ): boolean {
   if (inter.isOneTime && inter.usedFlag && props.playerState.flags[inter.usedFlag]) return false
-  if (inter.hideFlag && inter.hideFlag.some((f) => props.playerState.flags[f] === true))
-    return false
-  if (inter.displayFlag && !inter.displayFlag.every((f) => props.playerState.flags[f] === true))
-    return false
-  if (inter.displayCondition && !evaluateCondition(inter.displayCondition, props.playerState))
-    return false
+  if (!evaluateConditions(inter.displayCondition, props.playerState)) return false
   return true
 }
 

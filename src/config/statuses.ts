@@ -116,8 +116,43 @@ const poisoned: StatusConfig = {
   removeOnRest: true,
 }
 
+const 恐惧: StatusConfig = {
+  id: 'fear',
+  name: '恐惧',
+  description: '恐惧，减少力量和敏捷',
+  iconId: 'icon_status_fear',
+  statusType: StatusType.DEBUFF,
+  defaultDuration: { value: 30, unit: 'minute' },
+  stackingRule: StatusStackingRule.REFRESH,
+  effects: [
+    {
+      interval: 30,
+      attributeChanges: [
+        {
+          attribute: StatusAffectedAttribute.STRENGTH,
+          operation: 'add',
+          value: -5,
+        },
+        {
+          attribute: StatusAffectedAttribute.AGILITY,
+          operation: 'add',
+          value: -5,
+        },
+      ],
+      triggerChance: 1.0,
+      scalesWithStacks: false,
+    },
+  ],
+  onApplyEffects: [],
+  onRemoveEffects: [],
+  isDispellable: true,
+  removeOnBattleEnd: false,
+  removeOnRest: false,
+}
+
 export const statusRegistry: StatusRegistry = {
   statuses: {
+    恐惧,
     bleeding,
     strength_boost: strengthBoost,
     poisoned,

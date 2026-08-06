@@ -56,6 +56,7 @@ export enum AttributeType {
   AGILITY = 'agility', // 敏捷
   INTELLIGENCE = 'intelligence', //智力
   CONSTITUTION = 'constitution', // 体质
+  LUCK = 'luck', // 幸运
 
   // 经验值
   STRENGTH_EXP = 'strengthExp',
@@ -291,6 +292,12 @@ export enum LogicOperator {
   AND = 'and',
   OR = 'or',
   NOT = 'not',
+}
+
+export interface Conditions {
+  flag?: string[]
+  hideFlag?: string[]
+  condition?: Condition
 }
 
 export interface Condition {

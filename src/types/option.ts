@@ -1,4 +1,4 @@
-import type { Condition } from './effect'
+import type { Conditions } from './effect'
 
 /**
  * 交互按钮基类
@@ -15,16 +15,14 @@ export interface ButtonOption {
 
   // ========== 显示控制 ==========
   // 显示条件（满足条件时此交互按钮才显示）
-  displayCondition?: Condition
-  displayFlag?: string[]
-  hideFlag?: string[]
+  displayCondition?: Conditions
   // 此交互是否只能使用一次
   isOneTime?: boolean
   // 使用后设置的标志位
   usedFlag?: string
   usedCountFlag?: string
   // 可用条件（满足条件时此按钮才可点击，不满足时灰显）
-  availableCondition?: Condition
+  availableCondition?: Conditions
   // 不可用时的提示文本
   unavailableTooltip?: string
   // 确认弹窗文本
@@ -56,9 +54,7 @@ export interface textVariation {
   /** 变体文本 */
   content: string
   /** 显示条件 */
-  condition?: Condition
-  displayFlag?: string[]
-  hideFlag?: string[]
+  displayCondition?: Conditions
 }
 
 /**

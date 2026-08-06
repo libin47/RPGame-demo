@@ -42,6 +42,13 @@
               {{ conMod > 0 ? '+' : '' }}{{ conMod }}
             </span>
           </div>
+          <div class="attr-item">
+            <span class="attr-label">幸运</span>
+            <span class="attr-value">{{ baseLuk }}</span>
+            <span v-if="lukMod !== 0" class="attr-mod" :class="modClass(lukMod)">
+              {{ lukMod > 0 ? '+' : '' }}{{ lukMod }}
+            </span>
+          </div>
         </div>
       </section>
 
@@ -197,11 +204,13 @@ const baseStr = computed(() => props.playerState.attributes.strength)
 const baseAgi = computed(() => props.playerState.attributes.agility)
 const baseInt = computed(() => props.playerState.attributes.intelligence)
 const baseCon = computed(() => props.playerState.attributes.constitution)
+const baseLuk = computed(() => props.playerState.attributes.luck)
 
 const strMod = computed(() => props.playerState.attributes.strengthModifier)
 const agiMod = computed(() => props.playerState.attributes.agilityModifier)
 const intMod = computed(() => props.playerState.attributes.intelligenceModifier)
 const conMod = computed(() => props.playerState.attributes.constitutionModifier)
+const lukMod = computed(() => props.playerState.attributes.luckModifier)
 
 function modClass(val: number): string {
   return val > 0 ? 'mod-positive' : 'mod-negative'

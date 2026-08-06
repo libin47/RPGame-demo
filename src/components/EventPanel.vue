@@ -25,7 +25,10 @@
         :disabled="!isAvailable(option.id)"
         @click="onOptionClick(option.id)"
       >
-        {{ option.name }}
+        <span class="option-name">{{ option.name }}</span
+        ><span v-if="optionResultIcon(option)" class="option-result-icon">{{
+          optionResultIcon(option)
+        }}</span>
       </button>
     </div>
   </div>
@@ -34,6 +37,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { EventFrame, EventOption, EventTextVariation } from '@/types/event'
+import { getOptionResultIcon } from '@/engine'
 
 // ============================================================
 // 组件属性
@@ -95,6 +99,11 @@ function onOptionClick(optionId: string): void {
 /** 判断选项是否可用（满足 availableCondition） */
 function isAvailable(optionId: string): boolean {
   return props.optionAvailability[optionId] !== false
+}
+
+/** 获取选项结果类型图标（条件判断⚖️ / 掷骰🎲 / 概率🎰，直接执行无图标） */
+function optionResultIcon(option: EventOption): string {
+  return getOptionResultIcon(option)
 }
 </script>
 
@@ -178,35 +187,52 @@ function isAvailable(optionId: string): boolean {
 .option-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.7rem 1.2rem;
+  gap: 0.7rem;
+  padding: 0.9rem 1.2rem 1.1rem;
   border-top: 1px solid var(--border-weak);
   background: rgba(0, 0, 0, 0.2);
 }
 
 .option-btn {
-  padding: 0.45rem 1.1rem;
+  min-height: 48px;
+  padding: 0.6rem 1.15rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text-secondary);
   font-size: var(--font-md);
+  letter-spacing: 0.03em;
   cursor: pointer;
   text-align: left;
-  transition: all var(--transition-fast);
+  transition:
+    all var(--transition-fast),
+    transform 0.12s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+/* 结果类型图标（⚖️🎲🎰） */
+.option-result-icon {
+  font-size: 1.05em;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.9;
 }
 
 .option-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
   color: var(--text-primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
 }
 
 .option-btn:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* 默认选项 */

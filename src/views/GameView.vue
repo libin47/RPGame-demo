@@ -63,6 +63,16 @@
       />
 
       <!-- 事件模式 -->
+      <RollResultPanel
+        v-else-if="
+          game.state.mode === 'event' &&
+          game.state.currentFrame?.id === 'roll_result_frame' &&
+          game.state.rollResultInfo
+        "
+        :info="game.state.rollResultInfo"
+        @continue="game.selectEventOption('roll_continue')"
+      />
+
       <EventPanel
         v-else-if="game.state.mode === 'event' && game.state.currentFrame"
         :frame="game.state.currentFrame"
@@ -183,6 +193,7 @@ import { useRouter } from 'vue-router'
 import StatusBar from '@/components/StatusBar.vue'
 import ScenePanel from '@/components/ScenePanel.vue'
 import EventPanel from '@/components/EventPanel.vue'
+import RollResultPanel from '@/components/RollResultPanel.vue'
 import BattlePanel from '@/components/BattlePanel.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
 import SystemMenu from '@/components/SystemMenu.vue'

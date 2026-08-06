@@ -165,6 +165,8 @@ export interface PlayerAttributes {
   agility: number
   intelligence: number
   constitution: number
+  // 幸运值（-100~100，默认0，影响资源采集/狩猎的扩展命中概率）
+  luck: number
 
   // 经验值
   strengthExp: number
@@ -177,6 +179,8 @@ export interface PlayerAttributes {
   agilityModifier: number
   intelligenceModifier: number
   constitutionModifier: number
+  // 幸运临时修正（来自装备、状态、效果等，可为负数）
+  luckModifier: number
 
   // 防御属性（基础值 + 装备加成 + 状态修正）
   defenses: PlayerDefenses

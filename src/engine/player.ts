@@ -189,6 +189,7 @@ export function createNewPlayerState(
     agility: baseAgility,
     intelligence: baseIntelligence,
     constitution: baseConstitution,
+    luck: 0,
     strengthExp: 0,
     agilityExp: 0,
     intelligenceExp: 0,
@@ -197,6 +198,7 @@ export function createNewPlayerState(
     agilityModifier: 0,
     intelligenceModifier: 0,
     constitutionModifier: 0,
+    luckModifier: 0,
     defenses: calculateDefenses(),
     coefficients,
   }

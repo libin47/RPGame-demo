@@ -420,6 +420,9 @@ function applyAttributeChange(
     case StatusAffectedAttribute.CONSTITUTION:
       player.attributes.constitutionModifier += value
       break
+    case StatusAffectedAttribute.LUCK:
+      player.attributes.luckModifier += value
+      break
     case StatusAffectedAttribute.RECOVERY_RATE_COEFFICIENT:
       player.attributes.coefficients.recoveryRateCoefficient += value
       break

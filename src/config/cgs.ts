@@ -185,7 +185,8 @@ const openingCG: CGScene = {
       ],
       options: [
         {
-          text: '睁开眼睛',
+          id: 'open_eyes',
+          name: '睁开眼睛',
           result: {
             type: 'enterScene',
             sceneInfo: {

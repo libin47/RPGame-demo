@@ -4,7 +4,7 @@
 // 使用方法：MainMenuView 中 startNewGame → 路由跳转；GameView 中 getGameInstance → 获取状态
 
 import { useGame } from './useGame'
-import type { CampsiteBuildingInfo } from './useGame'
+import type { CampsiteBuildingInfo, RollResultInfo } from './useGame'
 import { createNewPlayerState } from '@/engine'
 import { getRegistry } from '@/engine'
 import { addItem } from '@/engine'
@@ -31,6 +31,7 @@ export interface GameInstance {
     readonly currentDescriptionConfig: import('@/types/scene').SceneDescription | null
     readonly currentEvent: import('@/types/event').GameEvent | null
     readonly currentFrame: import('@/types/event').EventFrame | null
+    readonly rollResultInfo: RollResultInfo | null
     readonly currentBattle: import('@/engine').BattleState | null
     readonly frameTextPrefix: string
     readonly sceneTextPrefix: string
@@ -94,6 +95,8 @@ export interface GameInstance {
   advanceCG: () => boolean
   /** 结束CG，返回正常场景模式 */
   endCG: () => void
+  /** 选择CG选项 */
+  selectCGOption: (optionId: string) => void
   /** 退出建造模式 */
   exitBuildMode: () => void
   /** 打开背包 */
@@ -191,6 +194,7 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     repairBuilding: game.handleRepairBuilding,
     advanceCG: game.advanceCG,
     endCG: game.endCG,
+    selectCGOption: game.selectCGOption,
     exitBuildMode: game.exitBuildMode,
     openInventory: game.openInventory,
     closeInventory: game.closeInventory,
@@ -254,6 +258,7 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     repairBuilding: game.handleRepairBuilding,
     advanceCG: game.advanceCG,
     endCG: game.endCG,
+    selectCGOption: game.selectCGOption,
     exitBuildMode: game.exitBuildMode,
     openInventory: game.openInventory,
     closeInventory: game.closeInventory,

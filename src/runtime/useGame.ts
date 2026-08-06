@@ -19,7 +19,7 @@ import {
   getRegistry,
   getEffectResolver,
   advanceTime,
-  evaluateCondition,
+  evaluateConditions,
   addItem,
   onItemAdded,
   selectSceneDescription,
@@ -27,7 +27,7 @@ import {
   checkAutoTrigger,
   markDescriptionEventSeen,
 } from '@/engine'
-import { getVisibleOptions, findFirstVisibleFrame } from '@/engine'
+import { getVisibleOptions, findFirstVisibleFrame, resolveTextVariation } from '@/engine'
 import { findMapRoute } from '@/engine'
 import {
   createBattle,
@@ -35,6 +35,7 @@ import {
   executePlayerAction,
   settleBattle,
   selectBattleTarget,
+  applyBattleStartStatuses,
 } from '@/engine'
 import { BattlePhase, BattleResult, PlayerActionType } from '@/engine'
 import type { BattleState } from '@/engine'
@@ -55,11 +56,73 @@ import {
 import { addToStorage, removeFromStorage, getStorageItems } from '@/engine'
 import { getSubSceneStorageItemCount, removeFromSubSceneStorage } from '@/engine'
 import { removeItem, getItemCount } from '@/engine'
-import { nextCGFrame } from '@/engine'
+import { nextCGFrame, jumpToCGFrame } from '@/engine'
 import type { CraftResult, ItemSource } from '@/engine'
 import type { ButtonOption } from '@/types/option'
 import type { buildOption } from '@/types/build'
 import type { GameMap } from '@/types/map'
+
+/** 掷骰判定结果 */
+type RollOutcome = 'bigSuccess' | 'success' | 'fail' | 'bigFail'
+
+/** 掷骰检定使用的属性（中文，与 rollResult.attribute 一致） */
+type RollAttribute = '力量' | '智力' | '敏捷' | '体质' | 'SAN'
+
+/** 掷骰判定结果中文标签 */
+const ROLL_OUTCOME_LABELS: Record<RollOutcome, string> = {
+  bigSuccess: '大成功',
+  success: '成功',
+  fail: '失败',
+  bigFail: '大失败',
+}
+
+/** 掷骰判定展示信息（供 RollResultPanel 渲染） */
+export interface RollResultInfo {
+  /** 检定的属性（中文） */
+  attribute: string
+  /** 属性总值（基础 + 修正） */
+  attributeValue: number
+  /** 属性修正值 */
+  modifier: number
+  /** d20 投掷结果 */
+  d20: number
+  /** 合计（d20 + 修正） */
+  total: number
+  /** 难度值 */
+  dc: number
+  /** 判定结果 */
+  outcome: RollOutcome
+  /** 满足条件的修正原因 */
+  modifierReasons: string[]
+  /** 选项描述（顶部展示） */
+  description: string
+}
+
+/**
+ * 带幸运加成的概率判定（用于资源采集/狩猎的扩展命中）
+ * @param probability - 基础概率（0-1）
+ * @param luck - 幸运系数（未设置则忽略玩家幸运值）
+ * @param playerLuck - 玩家幸运值（-100~100）
+ */
+function rollLuckAdjusted(
+  probability: number,
+  luck: number | undefined,
+  playerLuck: number,
+): boolean {
+  const p = luck === undefined ? probability : probability + (luck * playerLuck) / 100
+  return Math.random() < p
+}
+
+/**
+ * 解析数量（支持固定值或 [min, max] 范围）
+ */
+function resolveQuantity(quantity: number | [number, number]): number {
+  if (Array.isArray(quantity)) {
+    const [min, max] = quantity
+    return min + Math.floor(Math.random() * (max - min + 1))
+  }
+  return quantity
+}
 
 /**
  * 游戏界面模式
@@ -104,6 +167,9 @@ interface GameRuntimeState {
 
   /** 当前事件帧（仅在 mode === 'event' 时有值） */
   currentFrame: EventFrame | null
+
+  /** 当前掷骰判定展示信息（判定帧 roll_result_frame 时有值） */
+  rollResultInfo: RollResultInfo | null
 
   /** 当前战斗状态（仅在 mode === 'battle' 时有值） */
   currentBattle: BattleState | null
@@ -185,6 +251,7 @@ function createGameState(initialPlayer: PlayerState) {
     currentDescriptionConfig: selectedDesc || null,
     currentEvent: null,
     currentFrame: null,
+    rollResultInfo: null,
     currentBattle: null,
     frameTextPrefix: '',
     sceneTextPrefix: '',
@@ -263,9 +330,18 @@ export function useGame(initialPlayer: PlayerState) {
     state.mode = 'event'
     state.currentEvent = event
     state.currentFrame = firstFrame
+    state.rollResultInfo = null
     state.frameTextPrefix = ''
     state.sceneTextPrefix = ''
     state.sceneTextAfter = ''
+    // 设置事件触发标志位
+    if (event.triggeredFlag) {
+      state.player.flags[event.triggeredFlag] = true
+    }
+    // 设置第一个帧显示标志位
+    if (firstFrame.seenFlag) {
+      state.player.flags[firstFrame.seenFlag] = true
+    }
 
     // 执行事件级 onEnterEffects
     executeEffects(event.onEnterEffects)
@@ -274,50 +350,185 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   // ============================================================
-  // 事件选项加权选择
+  // 事件选项结果解析（直接执行 / 条件判断 / 掷骰判定）
   // ============================================================
 
   /**
-   * 从选项的结果列表中按条件过滤 + 权重概率选取一个结果
-   * 规则：
-   *  1. 根据 condition 过滤出可用结果
-   *  2. 如果仅一个满足条件，直接返回（无视权重）
-   *  3. 如果多个满足条件，按 weight 比例随机选取
+   * 获取用于检定的属性值（基础值 + 临时修正）
+   */
+  function getRollAttribute(player: PlayerState, attribute: RollAttribute): number {
+    switch (attribute) {
+      case '力量':
+        return player.attributes.strength + player.attributes.strengthModifier
+      case '敏捷':
+        return player.attributes.agility + player.attributes.agilityModifier
+      case '智力':
+        return player.attributes.intelligence + player.attributes.intelligenceModifier
+      case '体质':
+        return player.attributes.constitution + player.attributes.constitutionModifier
+      case 'SAN':
+        return player.survival.san
+      default:
+        return 10
+    }
+  }
+
+  /**
+   * 解析事件选项的最终结果
+   * 四种模式：
+   *  1. rollResult - 掷骰判定：生成判定帧展示过程，返回 null（分支结果由"继续"按钮触发）
+   *  2. conditionResult - 条件判断：条件满足返回 successResult，否则 failResult
+   *  3. probabilityResult - 概率判断：extend 中条件满足且概率命中（含幸运加成）的第一个生效，否则使用默认 result
+   *  4. results - 直接执行
    *
    * @param option - 被选中的选项
    * @param player - 玩家状态
-   * @returns 选中的结果
+   * @returns 最终要执行的结果；掷骰判定时返回 null
    */
-  function pickWeightedResult(
+  function resolveEventOptionResult(
     option: NonNullable<(typeof state)['currentFrame']>['options'][number],
     player: PlayerState,
-  ): EventOptionResult {
-    const results = option.results
+  ): EventOptionResult | null {
+    // 1. 掷骰判定
+    if (option.rollResult) {
+      const roll = option.rollResult
 
-    // 1. 按条件过滤
-    const candidates = results.filter((r): r is EventOptionResult =>
-      evaluateCondition(r.condition, player),
-    )
+      // 计算属性修正（DND规则：(属性-10)/2，向下取整）
+      let modifier = Math.floor((getRollAttribute(player, roll.attribute) - 10) / 2)
 
-    // 至少选一个——即使候选列表为空，也直接从原列表中取第一个（兜底）
-    if (candidates.length === 0) {
-      console.warn(`选项 ${option.id} 的结果全部不符合条件，取第一个`)
-      return results[0]!
+      // 附加修正：modifier 中满足条件的项累加 value，并记录原因文本（用于判定界面展示）
+      const modifierReasons: string[] = []
+      if (roll.modifier) {
+        for (const m of roll.modifier) {
+          if (evaluateConditions(m.condition, player)) {
+            modifier += m.value
+            if (m.text) modifierReasons.push(m.text)
+          }
+        }
+      }
+
+      // 掷d20
+      const d20 = Math.floor(Math.random() * 20) + 1
+      const total = d20 + modifier
+      const dc = roll.dc ?? 10
+
+      // 判定：自然20大成功、自然1大失败、合计>=DC成功、否则失败
+      const outcome: RollOutcome =
+        d20 === 20 ? 'bigSuccess' : d20 === 1 ? 'bigFail' : total >= dc ? 'success' : 'fail'
+
+      // 取对应分支结果（大成功/大失败未配置时回退到成功/失败）
+      const branchResult: EventOptionResult | undefined =
+        outcome === 'bigSuccess'
+          ? (roll.bigSuccessResult ?? roll.successResult)
+          : outcome === 'bigFail'
+            ? (roll.bigFailResult ?? roll.failResult)
+            : outcome === 'success'
+              ? roll.successResult
+              : roll.failResult
+
+      // 生成判定帧展示判定过程，分支结果由"继续"按钮执行
+      createRollResultFrame(
+        option,
+        { d20, modifier, total, dc, outcome, modifierReasons },
+        branchResult,
+      )
+      return null
     }
 
-    // 2. 仅一个候选 → 直接返回
-    if (candidates.length === 1) return candidates[0]!
-
-    // 3. 多个候选 → 加权随机
-    const totalWeight = candidates.reduce((sum, r) => sum + (r.weight ?? 1), 0)
-    let roll = Math.random() * totalWeight
-    for (const candidate of candidates) {
-      roll -= candidate.weight ?? 1
-      if (roll <= 0) return candidate
+    // 2. 条件判断
+    if (option.conditionResult) {
+      const cr = option.conditionResult
+      return evaluateConditions(cr.condition, player) ? cr.successResult : cr.failResult
     }
 
-    // 兜底（浮点精度原因）
-    return candidates[candidates.length - 1]!
+    // 3. 概率判断
+    if (option.probabilityResult) {
+      const pr = option.probabilityResult
+      // 依次检查 extend：条件满足且概率命中（含幸运加成）的第一个生效，否则使用默认 result
+      if (pr.extend) {
+        const playerLuck = player.attributes.luck + player.attributes.luckModifier
+        for (const ext of pr.extend) {
+          if (ext.condition && !evaluateConditions(ext.condition, player)) continue
+          if (rollLuckAdjusted(ext.probability, ext.luck, playerLuck)) {
+            return ext.result
+          }
+        }
+      }
+      return pr.result
+    }
+
+    // 4. 直接执行
+    return option.results ?? null
+  }
+
+  /**
+   * 生成掷骰判定帧
+   * 帧文本展示判定过程与结果，顶部显示选项描述（frameTextPrefix），固定一个"继续"按钮执行分支结果
+   */
+  function createRollResultFrame(
+    option: NonNullable<(typeof state)['currentFrame']>['options'][number],
+    info: {
+      d20: number
+      modifier: number
+      total: number
+      dc: number
+      outcome: RollOutcome
+      modifierReasons: string[]
+    },
+    branchResult: EventOptionResult | undefined,
+  ): void {
+    if (!branchResult) {
+      state.logMessage = `掷骰判定缺少${ROLL_OUTCOME_LABELS[info.outcome]}分支结果`
+      return
+    }
+
+    const roll = option.rollResult
+    if (!roll) return
+    const attributeLabel = roll.attribute
+    const attributeValue = getRollAttribute(state.player, roll.attribute)
+    const modifierText = info.modifier >= 0 ? `+${info.modifier}` : `${info.modifier}`
+
+    // 判定过程文本
+    const lines = [
+      `【${attributeLabel}检定】`,
+      `属性：${attributeLabel} ${attributeValue}（修正 ${modifierText}）`,
+      ...info.modifierReasons.map((t) => `· ${t}`),
+      `掷骰：d20 → ${info.d20}`,
+      `合计：${info.total}（难度 DC ${info.dc}）`,
+      `判定结果：${ROLL_OUTCOME_LABELS[info.outcome]}`,
+    ]
+
+    // 顶部显示选项描述
+    const description = option.description
+      ? typeof option.description === 'string'
+        ? option.description
+        : resolveTextVariation(option.description, '', state.player)
+      : ''
+
+    // 保存判定展示信息（供 RollResultPanel 渲染）
+    state.rollResultInfo = {
+      attribute: attributeLabel,
+      attributeValue,
+      modifier: info.modifier,
+      d20: info.d20,
+      total: info.total,
+      dc: info.dc,
+      outcome: info.outcome,
+      modifierReasons: info.modifierReasons,
+      description,
+    }
+    state.frameTextPrefix = description
+    state.currentFrame = {
+      id: 'roll_result_frame',
+      text: lines.join('\n'),
+      options: [
+        {
+          id: 'roll_continue',
+          name: '继续',
+          results: branchResult,
+        },
+      ],
+    }
   }
 
   /**
@@ -333,15 +544,13 @@ export function useGame(initialPlayer: PlayerState) {
     // 选择选项消耗5分钟游戏时间
     advanceGameTime(5)
 
-    const result = pickWeightedResult(option, state.player)
+    const result = resolveEventOptionResult(option, state.player)
+    if (!result) return
     const resolver = getEffectResolver()
 
     // 标记选项已选（用于 isOneTime 追踪）
     if (option.usedFlag) {
       state.player.flags[option.usedFlag] = true
-      // 打印已选标志位
-      console.log(`已选标志位: ${option.usedFlag}`)
-      console.log(`已选标志位值: ${state.player.flags[option.usedFlag]}`)
     }
 
     // 先执行选项的消耗（后续实现）
@@ -494,6 +703,8 @@ export function useGame(initialPlayer: PlayerState) {
         state.currentBattle = battle
         state.mode = 'battle'
         startBattle(battle)
+        // 战斗开始时为敌人施加开场状态（TriggerBattleResult.buffs）
+        applyBattleStartStatuses(battle, result.buffs)
         state.logMessage = battle.logs.filter(Boolean).join('；')
         break
       }
@@ -546,6 +757,9 @@ export function useGame(initialPlayer: PlayerState) {
         break
       }
     }
+
+    // 判定帧已被消费，清除判定展示信息
+    state.rollResultInfo = null
   }
   /**
    * 处理场景交互按钮点击
@@ -755,7 +969,7 @@ export function useGame(initialPlayer: PlayerState) {
    */
   function handleCollect(collect: ResourceInteraction): void {
     // 检查可用条件
-    if (!evaluateCondition(collect.availableCondition, state.player)) {
+    if (!evaluateConditions(collect.availableCondition, state.player)) {
       setSceneTextAfter(collect.unavailableTooltip || '该操作当前不可用')
       return
     }
@@ -784,18 +998,38 @@ export function useGame(initialPlayer: PlayerState) {
       setSceneTextAfter(collect.text)
     }
 
-    // 如果是敌人类型 → 进入战斗（按 quantity 展开，同一敌人可出现多个）
-    if (collect.resourceType === 'enemy' && collect.enemyConfig && collect.enemyConfig.length > 0) {
-      const enemyIds: string[] = []
-      for (const e of collect.enemyConfig) {
-        // 条件不满足或概率未触发 → 跳过该组
-        if (e.condition && !evaluateCondition(e.condition, state.player)) continue
-        const prob = e.probability ?? 1
-        if (Math.random() >= prob) continue
-        const quantity = Math.max(1, Math.floor(e.quantity ?? 1))
-        for (let i = 0; i < quantity; i++) {
-          enemyIds.push(e.enemyId)
+    // 敌人类型 → 按配置解析敌人组并进入战斗
+    if (collect.resourceType === 'enemy' && collect.enemyConfig) {
+      const cfg = collect.enemyConfig
+      // 依次检查 extend：条件满足且概率命中（含幸运加成）的第一个生效，否则使用基础配置
+      let hitText: string | undefined
+      let groups = cfg.enemy
+      if (cfg.extend) {
+        const playerLuck = state.player.attributes.luck + state.player.attributes.luckModifier
+        for (const ext of cfg.extend) {
+          if (ext.condition && !evaluateConditions(ext.condition, state.player)) continue
+          if (rollLuckAdjusted(ext.probability, ext.luck, playerLuck)) {
+            groups = ext.enemy
+            hitText = ext.text
+            break
+          }
         }
+      }
+
+      // 按解析出的敌人组展开敌人ID
+      const enemyIds: string[] = []
+      for (const g of groups) {
+        const quantity = resolveQuantity(g.quantity)
+        for (let i = 0; i < quantity; i++) {
+          enemyIds.push(g.enemyId)
+        }
+      }
+
+      // 根据命中情况显示对应文本
+      if (hitText) {
+        setSceneTextAfter(hitText)
+      } else if (cfg.text) {
+        setSceneTextAfter(cfg.text)
       }
 
       if (enemyIds.length > 0) {
@@ -807,16 +1041,32 @@ export function useGame(initialPlayer: PlayerState) {
         state.logMessage = '没有遇到敌人'
       }
     } else if (collect.resourceType === 'item' && collect.itemConfig) {
-      // 物品类型 → 直接获得
-      for (const itemCfg of collect.itemConfig) {
-        const prob = itemCfg.probability ?? 1
-        if (Math.random() < prob) {
-          const added = addItem(state.player, itemCfg.itemId, itemCfg.quantity)
-          if (added > 0) {
-            // 场景文本追加由物品获得监听器统一处理，这里只更新底部日志
-            state.logMessage = `采集到 ${registry.getItemName(itemCfg.itemId)} ×${added}`
+      const cfg = collect.itemConfig
+      // 依次检查 extend：条件满足且概率命中（含幸运加成）的第一个生效，否则使用基础配置
+      let hitText: string | undefined
+      let groups = cfg.item
+      if (cfg.extend) {
+        const playerLuck = state.player.attributes.luck + state.player.attributes.luckModifier
+        for (const ext of cfg.extend) {
+          if (ext.condition && !evaluateConditions(ext.condition, state.player)) continue
+          if (rollLuckAdjusted(ext.probability, ext.luck, playerLuck)) {
+            groups = ext.item
+            hitText = ext.text
+            break
           }
         }
+      }
+
+      // 按解析出的物品组获得物品（获得提示由 onItemAdded 监听器统一追加）
+      for (const g of groups) {
+        addItem(state.player, g.itemId, resolveQuantity(g.quantity))
+      }
+
+      // 根据命中情况显示对应文本
+      if (hitText) {
+        setSceneTextAfter(hitText)
+      } else if (cfg.text) {
+        setSceneTextAfter(cfg.text)
       }
     }
 
@@ -1305,6 +1555,27 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 战斗结束后跳转到结果帧（事件帧或CG帧）
+   * @returns 是否成功跳转
+   */
+  function jumpToBattleResultFrame(frameId: string): boolean {
+    if (state.currentEvent) {
+      jumpToEventFrame(frameId)
+      return true
+    }
+    if (state.currentCG) {
+      if (jumpToCGFrame(state.currentCG, frameId)) {
+        state.mode = 'cg'
+        return true
+      }
+      // CG帧不存在：结束CG返回场景
+      state.currentCG = null
+      state.mode = 'normal'
+    }
+    return false
+  }
+
+  /**
    * 执行玩家战斗操作
    *
    * @param actionType - 操作类型
@@ -1336,10 +1607,10 @@ export function useGame(initialPlayer: PlayerState) {
       // 战斗胜利：保留战斗界面，隐藏操作栏，等待玩家点击"结束战斗"按钮结算奖励并退出
       state.logMessage = battle.logs.filter(Boolean).join('；')
     } else if (battle.result === BattleResult.DEFEAT) {
-      // 尝试跳转到战败帧
+      // 尝试跳转到战败帧（事件帧或CG帧）
       const defeatFrameId = state.pendingBattleFrameIds?.defeatFrameId
-      if (defeatFrameId && state.currentEvent) {
-        jumpToEventFrame(defeatFrameId)
+      if (defeatFrameId && (state.currentEvent || state.currentCG)) {
+        jumpToBattleResultFrame(defeatFrameId)
         state.currentBattle = null
         state.pendingBattleFrameIds = null
         state.logMessage = battle.logs.filter(Boolean).join('；')
@@ -1354,12 +1625,12 @@ export function useGame(initialPlayer: PlayerState) {
         state.logMessage = battle.logs.filter(Boolean).join('；')
       }
     } else if (battle.result === BattleResult.ESCAPED) {
-      // 尝试跳转到逃跑帧
+      // 尝试跳转到逃跑帧（事件帧或CG帧）
       const escapeFrameId = state.pendingBattleFrameIds?.escapeFrameId
-      if (escapeFrameId && state.currentEvent) {
-        jumpToEventFrame(escapeFrameId)
+      if (escapeFrameId && (state.currentEvent || state.currentCG)) {
+        jumpToBattleResultFrame(escapeFrameId)
       } else {
-        state.mode = state.currentEvent ? 'event' : 'normal'
+        state.mode = state.currentEvent ? 'event' : state.currentCG ? 'cg' : 'normal'
       }
 
       state.currentBattle = null
@@ -1380,12 +1651,12 @@ export function useGame(initialPlayer: PlayerState) {
     const battle = state.currentBattle
     const settleLogs = settleBattle(state.player, battle)
 
-    // 尝试跳转到胜利帧
+    // 尝试跳转到胜利帧（事件帧或CG帧）
     const victoryFrameId = state.pendingBattleFrameIds?.victoryFrameId
-    if (victoryFrameId && state.currentEvent) {
-      jumpToEventFrame(victoryFrameId)
+    if (victoryFrameId && (state.currentEvent || state.currentCG)) {
+      jumpToBattleResultFrame(victoryFrameId)
     } else {
-      state.mode = state.currentEvent ? 'event' : 'normal'
+      state.mode = state.currentEvent ? 'event' : state.currentCG ? 'cg' : 'normal'
     }
 
     state.currentBattle = null
@@ -1668,6 +1939,122 @@ export function useGame(initialPlayer: PlayerState) {
     state.currentCG = null
   }
 
+  /**
+   * 选择CG选项（由 CGView 调用）
+   * 根据选项结果执行：跳帧 / 跳CG / 进入场景 / 触发事件 / 触发战斗 / 进入结局
+   */
+  function selectCGOption(optionId: string): void {
+    if (!state.currentCG) return
+
+    const frame = state.currentCG.currentFrame
+    const option = frame.options?.find((o) => o.id === optionId)
+    if (!option) return
+
+    // 标记选项已选（isOneTime 追踪）
+    if (option.usedFlag) {
+      state.player.flags[option.usedFlag] = true
+    }
+
+    const result = option.result
+
+    // 执行效果
+    executeEffects(result.effects)
+
+    // 设置标志位（number 存入 flagsNum，其余存入 flags）
+    if (result.setFlags) {
+      for (const [flagId, value] of Object.entries(result.setFlags)) {
+        if (typeof value === 'number') {
+          state.player.flagsNum[flagId] = value
+        } else {
+          state.player.flags[flagId] = value as boolean
+        }
+      }
+    }
+
+    switch (result.type) {
+      case 'nextFrame': {
+        // 跳转到CG内指定帧
+        if (!jumpToCGFrame(state.currentCG, result.nextFrameId)) {
+          state.logMessage = `CG帧 ${result.nextFrameId} 未找到`
+        }
+        break
+      }
+
+      case 'nextCG': {
+        // 切换到另一个CG
+        const cgPlay = startCG(result.nextCGId)
+        if (cgPlay) {
+          state.currentCG = cgPlay
+        } else {
+          state.logMessage = `CG ${result.nextCGId} 未找到`
+        }
+        break
+      }
+
+      case 'enterScene': {
+        // 切换场景
+        const newScene = registry.getScene(result.sceneInfo.sceneId)
+        if (newScene) {
+          state.currentScene = newScene
+          state.currentSubScene = result.sceneInfo.subSceneId
+            ? (registry.getSubScene(result.sceneInfo.subSceneId) ?? null)
+            : null
+
+          const target = state.currentSubScene || state.currentScene
+          const selectedDesc = selectSceneDescription(target, state.player)
+          state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
+          state.currentDescriptionConfig = selectedDesc || null
+          if (selectedDesc) {
+            markDescriptionSeen(selectedDesc, state.player)
+          }
+
+          state.player.currentLocation.sceneId = result.sceneInfo.sceneId
+          state.player.currentLocation.subSceneId = result.sceneInfo.subSceneId ?? null
+        }
+
+        state.currentCG = null
+        state.mode = 'normal'
+        break
+      }
+
+      case 'triggerEvent': {
+        // 结束CG，进入事件
+        state.currentCG = null
+        enterEvent(result.eventId)
+        break
+      }
+
+      case 'triggerBattle': {
+        // 存储战斗结果待跳转的CG帧ID
+        state.pendingBattleFrameIds = {
+          victoryFrameId: result.victoryFrameId,
+          defeatFrameId: result.defeatFrameId,
+          escapeFrameId: result.escapeFrameId,
+        }
+
+        // 创建并开始战斗
+        const battle = createBattle(state.player, [result.enemyId])
+        state.currentBattle = battle
+        state.mode = 'battle'
+        startBattle(battle)
+        state.logMessage = battle.logs.filter(Boolean).join('；')
+        break
+      }
+
+      case 'ending': {
+        const ending = registry.getEnding(result.endingId)
+        if (ending) {
+          triggerEnding(ending, 'CG结局')
+        } else {
+          state.logMessage = `结局 ${result.endingId} 未找到`
+          state.currentCG = null
+          state.mode = 'normal'
+        }
+        break
+      }
+    }
+  }
+
   return {
     state: readonly(state) as GameRuntimeState,
     enterEvent,
@@ -1696,6 +2083,7 @@ export function useGame(initialPlayer: PlayerState) {
     handleRepairBuilding,
     advanceCG,
     endCG,
+    selectCGOption,
     exitBuildMode,
     openInventory,
     closeInventory,

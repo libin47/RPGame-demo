@@ -1,6 +1,6 @@
 // event.ts - 事件数据结构
 
-import type { Condition } from './effect'
+import type { AttributeType, Conditions } from './effect'
 import type { EffectResult } from './effect'
 import type { ButtonOption } from './option'
 
@@ -32,9 +32,6 @@ export interface GameEvent {
   /** 事件开始时自动触发的效果（进入事件时立即执行） */
   onEnterEffects?: EffectResult[]
 
-  /** 事件类型 */
-  eventType: EventType
-
   /** 事件是否可重复触发（false表示只能触发一次） */
   isRepeatable?: boolean
   /** 触发后设置的标志位（用于追踪是否已触发过） */
@@ -49,33 +46,13 @@ export interface GameEvent {
 }
 
 /**
- * 事件类型
- */
-export enum EventType {
-  /** 普通事件 */
-  NORMAL = 'normal',
-  /** 战斗事件（可直接进入战斗） */
-  BATTLE = 'battle',
-  /** 交易事件 */
-  TRADE = 'trade',
-  /** CG事件（播放CG） */
-  CG = 'cg',
-  /** 遭遇事件（移动途中触发的随机事件） */
-  ENCOUNTER = 'encounter',
-  /** 梦境事件（低SAN值时触发） */
-  DREAM = 'dream',
-  /** 特殊事件（结局、关键剧情等） */
-  SPECIAL = 'special',
-}
-
-/**
  * 事件图片变体
  */
 export interface EventImageVariation {
   /** 图片资源ID */
   imageId: string
   /** 显示条件 */
-  condition: Condition
+  displayCondition?: Conditions
   /** 过渡效果 */
   transitionEffect?: 'fade' | 'glitch' | 'instant'
 }
@@ -92,8 +69,6 @@ export interface EventImageVariation {
 export interface EventFrame {
   /** 帧ID（事件内唯一） */
   id: string
-  /** 帧序号（用于排序） */
-  order: number
 
   /** 帧文本（展示给玩家的内容，支持换行） */
   text: string
@@ -107,9 +82,9 @@ export interface EventFrame {
   options: EventOption[]
 
   /** 帧显示条件（满足条件时才显示此帧，否则跳过） */
-  displayCondition?: Condition
-  // 帧显示条件-标志位，用于判断是否显示此帧
-  displayFlag?: string[]
+  displayCondition?: Conditions
+  // 帧显示设置标志位
+  seenFlag?: string
 
   /** 进入此帧时自动触发的效果 */
   onEnterEffects?: EffectResult[]
@@ -124,9 +99,7 @@ export interface EventTextVariation {
   /** 变体文本 */
   content: string
   /** 显示条件 */
-  condition?: Condition
-  displayFlag?: string[]
-  hideFlag?: string[]
+  displayCondition?: Conditions
 }
 
 // ============================================================
@@ -147,31 +120,45 @@ export interface EventTextVariation {
  */
 export interface EventOption extends ButtonOption {
   /** 选项结果列表（按权重概率触发，支持条件过滤） */
-  results: EventOptionResult[]
+  results?: EventOptionResult
+  // 通过条件判断分支
+  conditionResult?: {
+    /** 条件判断结果 */
+    condition: Conditions
+    successResult: EventOptionResult
+    failResult: EventOptionResult
+  }
+  // 通过roll来判断分支
+  rollResult?: {
+    // 属性
+    attribute: '力量' | '智力' | '敏捷' | '体质' | 'SAN'
+    // 难度（DC），默认10
+    dc?: number
+    // 修正
+    modifier?: { value: number; condition: Conditions; text?: string }[]
+
+    // 结果
+    successResult: EventOptionResult
+    failResult: EventOptionResult
+    bigSuccessResult?: EventOptionResult
+    bigFailResult?: EventOptionResult
+  }
+  // 通过概率判断分支
+  probabilityResult?: {
+    result: EventOptionResult
+    /** 概率判断结果 */
+    extend?: {
+      probability: number
+      luck?: number
+      result: EventOptionResult
+      condition?: Conditions
+    }[]
+  }
 }
 
 // ============================================================
 // 事件选项结果
 // ============================================================
-
-/**
- * 事件选项结果的公共基类字段
- * 所有结果类型共享：概率权重、触发条件、效果、标志位
- */
-export interface EventResultBase {
-  /**
-   * 触发权重（概率比值）
-   * 当多个结果满足条件时，按权重比例选择
-   * 默认 1。权重越大，被选中的概率越高
-   */
-  weight?: number
-  /** 结果触发条件（满足条件才可能触发此结果，不填则总是可触发） */
-  condition?: Condition
-  /** 执行的效果列表 */
-  effects?: EffectResult[]
-  /** 设置标志位 */
-  setFlags?: Record<string, boolean>
-}
 
 /**
  * 事件选项结果（联合类型）
@@ -183,6 +170,10 @@ export interface EventResultBase {
  * - 进入交易
  * - 切换场景
  * - 触发另一个事件
+ *
+ * 所有结果类型共享两个可选字段：
+ * - effects: 执行的效果列表
+ * - setFlags: 设置标志位
  */
 export type EventOptionResult =
   | NextFrameResult
@@ -196,30 +187,44 @@ export type EventOptionResult =
 /**
  * 跳转到同一事件的另一个帧
  */
-export interface NextFrameResult extends EventResultBase {
+export interface NextFrameResult {
   type: 'nextFrame'
   /** 目标帧ID（同一事件内） */
   targetFrameId: string
   // 描述文本
   text?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, boolean>
 }
 
 /**
  * 结束事件，返回场景
  */
-export interface EndEventResult extends EventResultBase {
+export interface EndEventResult {
   type: 'endEvent'
   /** 返回场景后显示的文字（可选，如"你离开了小屋"） */
   exitText?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, boolean>
 }
 
 /**
  * 触发战斗
  */
-export interface TriggerBattleResult extends EventResultBase {
+export interface TriggerBattleResult {
   type: 'triggerBattle'
   /** 敌人配置ID */
   enemyId: string[]
+  buffs?: {
+    /** 状态ID */
+    statusId: string
+    /** 持续时间（游戏内分钟数，-1表示永久直到被移除） */
+    durationMinutes: number
+  }[]
   /** 战斗胜利后跳转的帧ID（同一事件内） */
   victoryFrameId?: string
   /** 战斗失败后跳转的帧ID（不填则战斗失败进入结局判定） */
@@ -230,34 +235,46 @@ export interface TriggerBattleResult extends EventResultBase {
   canEscape?: boolean
   /** 是否有初见加成（初见时逃跑概率翻倍） */
   firstEncounterBonus?: boolean
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, boolean>
 }
 
 /**
  * 播放CG
  */
-export interface PlayCGResult extends EventResultBase {
+export interface PlayCGResult {
   type: 'playCG'
   /** CG配置ID */
   cgId: string
   /** CG结束后跳转的帧ID（不填则CG结束后返回场景） */
   returnFrameId?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, boolean>
 }
 
 /**
  * 进入交易界面
  */
-export interface OpenTradeResult extends EventResultBase {
+export interface OpenTradeResult {
   type: 'openTrade'
   /** 交易对象ID */
   traderId: string
   /** 交易结束后跳转的帧ID（不填则交易结束后返回场景） */
   returnFrameId?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, boolean>
 }
 
 /**
  * 切换场景
  */
-export interface SwitchSceneResult extends EventResultBase {
+export interface SwitchSceneResult {
   type: 'switchScene'
   /** 目标场景ID */
   sceneId: string
@@ -265,17 +282,25 @@ export interface SwitchSceneResult extends EventResultBase {
   subSceneId?: string
   /** 进入新场景后显示的文字（可选） */
   enterText?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, boolean>
 }
 
 /**
  * 触发另一个事件
  */
-export interface TriggerEventResult extends EventResultBase {
+export interface TriggerEventResult {
   type: 'triggerEvent'
   /** 目标事件ID */
   eventId: string
   /** 目标事件结束后跳转的帧ID（不填则返回场景） */
   returnFrameId?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, boolean>
 }
 
 // ============================================================

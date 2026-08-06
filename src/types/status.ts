@@ -195,6 +195,7 @@ export enum StatusAffectedAttribute {
   AGILITY = 'agility',
   INTELLIGENCE = 'intelligence',
   CONSTITUTION = 'constitution',
+  LUCK = 'luck',
 
   // 系数属性
   RECOVERY_RATE_COEFFICIENT = 'recoveryRateCoefficient',

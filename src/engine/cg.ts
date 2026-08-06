@@ -2,9 +2,9 @@
 // CG播放引擎：根据事件结果播放CG过场
 
 import type { PlayerState } from '@/types/player'
-import type { CGScene, CGFrame } from '@/types/cg'
+import type { CGScene, CGFrame, CGOption } from '@/types/cg'
 import { getRegistry } from './registry'
-import { evaluateCondition } from './event'
+import { evaluateCondition, evaluateConditions } from './event'
 
 /** CG播放状态 */
 export interface CGPlayState {
@@ -69,5 +69,33 @@ export function nextCGFrame(state: CGPlayState): boolean {
 
   state.currentFrameIndex = nextIndex
   state.currentFrame = nextFrame
+  return true
+}
+
+/**
+ * 获取CG帧中所有可见选项
+ * 按配置列表顺序返回，过滤 displayCondition 与 isOneTime/usedFlag
+ */
+export function getVisibleCGOptions(frame: CGFrame, player: PlayerState): CGOption[] {
+  if (!frame.options || frame.options.length === 0) return []
+  return frame.options.filter((option) => {
+    // 检查显示条件
+    if (!evaluateConditions(option.displayCondition, player)) return false
+    // 检查 isOneTime：已选过则隐藏
+    if (option.isOneTime && option.usedFlag && player.flags[option.usedFlag]) return false
+    return true
+  })
+}
+
+/**
+ * 跳转到CG内指定帧（按帧ID查找，找不到返回 false）
+ */
+export function jumpToCGFrame(state: CGPlayState, frameId: string): boolean {
+  const index = state.scene.frames.findIndex((f) => f.id === frameId)
+  if (index < 0) return false
+  const frame = state.scene.frames[index]
+  if (!frame) return false
+  state.currentFrameIndex = index
+  state.currentFrame = frame
   return true
 }

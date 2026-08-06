@@ -128,6 +128,124 @@ const 大螃蟹: Enemy = {
   maxCorruption: 80,
 }
 
+const 变异猴王: Enemy = {
+  id: '变异猴王',
+  name: '变异猴王',
+  description: '一只体型巨大的猴王，体色异常，有不规则的尖刺，爪钳异常发达',
+  imageId: 'enemy_mutated_monkey_king',
+  enemyType: EnemyType.MUTATED,
+  hp: 200,
+  strength: 15,
+  agility: 6,
+  // 减免比例（0~1，1=完全免疫）；键为伤害类型ID
+  defenses: {
+    slash: 0.4,
+    blunt: 0.5,
+    ranged: 0.3,
+    poison: 0,
+    fire: -1,
+  },
+  skills: [
+    {
+      id: 'crab_claw_slash',
+      name: '螯钳挥击',
+      description: '用巨大的螯钳猛烈挥击',
+      priority: 1,
+      weight: 70,
+      maxUses: -1,
+      damageTypeId: 'slash',
+      stats: {
+        baseDamage: 8,
+        damageVariance: 0.2,
+        strengthScaling: 0.8,
+        agilityScaling: 0.0,
+        accuracyModifier: 0.0,
+        criticalChance: 0.1,
+        criticalMultiplier: 1.8,
+      },
+      cooldown: 0,
+      targetType: EnemySkillTargetType.SINGLE_PLAYER,
+      chargeTime: 0,
+      useTextTemplate: '大螃蟹挥动巨螯，向你猛击过来',
+    },
+    {
+      id: 'crab_foam_spray',
+      name: '毒沫喷射',
+      description: '从口中喷出带有腐蚀性的泡沫',
+      priority: 2,
+      weight: 30,
+      useCondition: {
+        minTurn: 2,
+      },
+      maxUses: 3,
+      damageTypeId: 'poison',
+      stats: {
+        baseDamage: 5,
+        damageVariance: 0.1,
+        strengthScaling: 0.3,
+        agilityScaling: 0.0,
+        accuracyModifier: 0.1,
+        criticalChance: 0.05,
+        criticalMultiplier: 1.5,
+      },
+      cooldown: 3,
+      targetType: EnemySkillTargetType.SINGLE_PLAYER,
+      chargeTime: 0,
+      onHitEffects: [
+        {
+          effect: {
+            type: EffectType.STATUS,
+            statusId: 'poisoned',
+            apply: true,
+            duration: 15,
+          },
+          probability: 0.4,
+          description: '有概率使玩家中毒',
+        },
+      ],
+      useTextTemplate: '大螃蟹向你喷射出一股绿色毒沫',
+    },
+  ],
+  behavior: {
+    aggression: 0.6,
+    desperationThreshold: 0.3,
+    desperationBehavior: {
+      type: 'enrage',
+      params: {
+        damageMultiplier: 1.5,
+      },
+      triggerText: '大螃蟹受到重创，变得更加狂暴',
+    },
+  },
+  corruptionScaling: {
+    hpPerCorruption: 0.5,
+    damagePerCorruption: 0.3,
+  },
+  escapeDifficultyModifier: 1.0,
+  canNotEscape: false,
+  loot: [
+    {
+      itemId: '蟹肉',
+      probability: 1,
+      minQuantity: 1,
+      maxQuantity: 3,
+    },
+  ],
+  spawnCondition: {
+    logic: LogicOperator.AND,
+    subConditions: [
+      {
+        target: { type: ConditionTargetType.CORRUPTION },
+        operator: ComparisonOperator.GREATER_EQUAL,
+        value: 30,
+      },
+    ],
+  },
+  spawnWeight: 50,
+  minCorruption: 20,
+  maxCorruption: 80,
+}
+
 const dreamStalker: Enemy = {
   id: 'dream_stalker',
   name: '梦魇潜行者',
@@ -246,6 +364,7 @@ const dreamStalker: Enemy = {
 export const enemyRegistry: EnemyRegistry = {
   enemies: {
     大螃蟹: 大螃蟹,
+    变异猴王: 变异猴王,
     dream_stalker: dreamStalker,
   },
 }

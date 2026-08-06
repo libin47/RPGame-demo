@@ -4,7 +4,7 @@
 import type { PlayerState } from '@/types/player'
 import type { Scene, SubScene, SceneDescription, SceneEventEntry } from '@/types/scene'
 import { TimeOfDay, WeatherType } from '@/types/seasonWeather'
-import { evaluateCondition } from './event'
+import { evaluateConditions } from './event'
 import { weightedSelect } from './dice'
 import type { SceneTextVariation } from '@/types/scene'
 
@@ -69,18 +69,8 @@ function isDescriptionEligible(desc: SceneDescription, player: PlayerState): boo
       return false
     }
   }
-  // displayFlag快捷flag判断
-  if (
-    desc.displayFlag &&
-    !desc.displayFlag.every((flag) => player.flags[flag] === true )
-  ) {
-    return false
-  }
-  // hideFlag快捷flag判断
-  if (
-    desc.hideFlag &&
-    desc.hideFlag.some((flag) => player.flags[flag] === true )
-  ) {
+  // 显示条件（displayCondition 统一包含 flag/hideFlag/condition）
+  if (!evaluateConditions(desc.displayCondition, player)) {
     return false
   }
 
@@ -125,11 +115,6 @@ function isDescriptionEligible(desc: SceneDescription, player: PlayerState): boo
     }
   }
 
-  // displayCondition
-  if (!evaluateCondition(desc.displayCondition, player)) {
-    return false
-  }
-
   return true
 }
 
@@ -146,7 +131,7 @@ export function getVisibleEventEntries(
   player: PlayerState,
 ): SceneEventEntry[] {
   const entries = desc.eventEntries ?? []
-  return entries.filter((entry) => evaluateCondition(entry.displayCondition, player))
+  return entries.filter((entry) => evaluateConditions(entry.displayCondition, player))
 }
 
 /**
@@ -169,8 +154,7 @@ export function getResolvedDescriptionText(desc: SceneDescription, player: Playe
  */
 export function markDescriptionSeen(desc: SceneDescription, player: PlayerState): void {
   if (desc.seenFlag) {
-
-      player.flags[desc.seenFlag] = true
+    player.flags[desc.seenFlag] = true
   }
   if (desc.seenCountFlag) {
     const currentVal = player.flagsNum[desc.seenCountFlag]
@@ -264,36 +248,10 @@ export function resolveTextVariation(
 ): string {
   if (!variations || variations.length === 0) return defaultText
 
-  const matched = variations.filter(
-    (v) => evaluateCondition(v.condition, player) && evaluateTextVariationFlag(v, player),
-  )
+  const matched = variations.filter((v) => evaluateConditions(v.displayCondition, player))
   if (matched.length === 0) return defaultText
 
   // 如果matched不为空，则将matched中每一项的content拼接起来，否则返回defaultText
 
   return matched.map((v) => v.content).join('\n\n')
-}
-
-// 场景描述文本变体-快捷条件判断
-export function evaluateTextVariationFlag(
-  textVariations: SceneTextVariation,
-  player: PlayerState,
-): boolean {
-  // displayFlag快捷flag判断
-  if (
-    textVariations.displayFlag &&
-    !textVariations.displayFlag.every(
-      (flag) => player.flags[flag] === true ,
-    )
-  ) {
-    return false
-  }
-  // hideFlag快捷flag判断
-  if (
-    textVariations.hideFlag &&
-    textVariations.hideFlag.some((flag) => player.flags[flag] === true )
-  ) {
-    return false
-  }
-  return true
 }

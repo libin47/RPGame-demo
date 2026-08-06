@@ -3,7 +3,7 @@
 
 import type { PlayerState } from '@/types/player'
 import type { GameEvent, EventFrame, EventOption, EventTextVariation } from '@/types/event'
-import type { Condition, ConditionTarget } from '@/types/effect'
+import type { Condition, Conditions, ConditionTarget } from '@/types/effect'
 import { ConditionTargetType, ComparisonOperator, LogicOperator } from '@/types/effect'
 import { Season, SeasonPhase } from '@/types/seasonWeather'
 import { getRegistry } from './registry'
@@ -97,6 +97,7 @@ function resolveConditionTarget(
         return player.attributes.intelligence + player.attributes.intelligenceModifier
       if (attrType === 'constitution')
         return player.attributes.constitution + player.attributes.constitutionModifier
+      if (attrType === 'luck') return player.attributes.luck + player.attributes.luckModifier
 
       // 武器熟练度（需要 subType）
       if (attrType === 'weaponProficiency' && target.subType) {
@@ -125,7 +126,7 @@ function resolveConditionTarget(
       if (typeof value === 'boolean') return value
       if (typeof value === 'number') return value
       return String(value)
-    }    
+    }
     // -------- 参数 --------
     case ConditionTargetType.PARAM: {
       const paramId = target.id
@@ -238,8 +239,6 @@ function resolveConditionTarget(
     // -------- 负重率 --------
     case ConditionTargetType.CARRY_WEIGHT_RATE:
       return calcCarryWeightRate(player.survival.carryWeight, player.survival.maxCarryWeight)
-    
-
 
     default:
       return undefined
@@ -339,20 +338,41 @@ function compareValues(
 // 事件帧选择
 // ============================================================
 
-// 比较函数
-// 通过displayFlag判断是否可见
-export function evaluateDisplayFlag(frame: EventFrame, player: PlayerState): boolean {
-  // 检查 displayFlag
-  if (frame.displayFlag) {
-    return frame.displayFlag.every((flag) => player.flags[flag] === true)
-  } else {
-    return true
+/**
+ * 统一评估可见性/可用性条件（Conditions）
+ * 依次判断：
+ *  1. flag：所有标志位必须为 true（全部满足才显示）
+ *  2. hideFlag：任一标志位为 true 即隐藏
+ *  3. condition：复杂条件表达式
+ *
+ * @param conditions - 条件集合（可为空，空视为满足）
+ * @param player - 当前玩家状态
+ * @returns 条件是否满足
+ */
+export function evaluateConditions(
+  conditions: Conditions | undefined,
+  player: PlayerState,
+): boolean {
+  if (!conditions) return true
+
+  if (conditions.flag && !conditions.flag.every((flag) => player.flags[flag] === true)) {
+    return false
   }
+
+  if (conditions.hideFlag && conditions.hideFlag.some((flag) => player.flags[flag] === true)) {
+    return false
+  }
+
+  if (!evaluateCondition(conditions.condition, player)) {
+    return false
+  }
+
+  return true
 }
 
 /**
  * 从事件帧列表中获取应显示的帧
- * �param frames - 事件帧列表（按 order 排序）
+ * @param frames - 事件帧列表（按数组顺序，即配置书写顺序）
  * @param player - 当前玩家状态
  * @returns 找到的帧，或 undefined（无满足条件的帧）
  */
@@ -360,12 +380,7 @@ export function findFirstVisibleFrame(
   frames: EventFrame[],
   player: PlayerState,
 ): EventFrame | undefined {
-  const sorted = [...frames].sort((a, b) => a.order - b.order)
-
-  return sorted.find(
-    (frame) =>
-      evaluateDisplayFlag(frame, player) && evaluateCondition(frame.displayCondition, player),
-  )
+  return frames.find((frame) => evaluateConditions(frame.displayCondition, player))
 }
 
 /**
@@ -378,12 +393,8 @@ export function findFirstVisibleFrame(
  */
 export function getVisibleOptions(frame: EventFrame, player: PlayerState): EventOption[] {
   return frame.options.filter((option) => {
-    // 检查 displayFlag
-    if (option.displayFlag && !option.displayFlag.every((flag) => player.flags[flag])) {
-      return false
-    }
     // 检查 displayCondition
-    if (!evaluateCondition(option.displayCondition, player)) {
+    if (!evaluateConditions(option.displayCondition, player)) {
       return false
     }
     // 检查 isOneTime：若已选过则隐藏
@@ -398,7 +409,7 @@ export function getVisibleOptions(frame: EventFrame, player: PlayerState): Event
 
 /**
  * 获取帧中所有可见的文本变体
- * 根据变体的 condition 和 displayFlag 过滤
+ * 根据变体的 displayCondition 过滤
  *
  * @param frame - 当前事件帧
  * @param player - 当前玩家状态
@@ -407,21 +418,7 @@ export function getVisibleOptions(frame: EventFrame, player: PlayerState): Event
 export function getVisibleVariations(frame: EventFrame, player: PlayerState): EventTextVariation[] {
   if (!frame.textVariations || frame.textVariations.length === 0) return []
 
-  return frame.textVariations.filter((v) => {
-    // 检查 displayFlag
-    if (v.displayFlag && !v.displayFlag.every((flag) => player.flags[flag] === true)) {
-      return false
-    }
-    // 检查 hideFlag
-    if (v.hideFlag && v.hideFlag.some((flag) => player.flags[flag] === true)) {
-      return false
-    }
-    // 检查 condition
-    if (!evaluateCondition(v.condition, player)) {
-      return false
-    }
-    return true
-  })
+  return frame.textVariations.filter((v) => evaluateConditions(v.displayCondition, player))
 }
 
 /**
@@ -433,7 +430,21 @@ export function getVisibleVariations(frame: EventFrame, player: PlayerState): Ev
  * @returns 是否可用
  */
 export function isOptionAvailable(option: EventOption, player: PlayerState): boolean {
-  return evaluateCondition(option.availableCondition, player)
+  return evaluateConditions(option.availableCondition, player)
+}
+
+/**
+ * 获取事件选项的结果类型图标（显示在按钮名称后）
+ * 优先级：条件判断 > 掷骰判定 > 概率判断（理论上同一选项只会出现一种）
+ *
+ * @param option - 事件选项
+ * @returns 图标字符；直接执行（results）时返回空字符串
+ */
+export function getOptionResultIcon(option: EventOption): string {
+  if (option.conditionResult) return '⚖️'
+  if (option.rollResult) return '🎲'
+  if (option.probabilityResult) return '🎰'
+  return ''
 }
 
 // ============================================================

@@ -1,6 +1,6 @@
 // enemy.ts - 敌人数据结构
 
-import type { Condition } from './effect'
+import type { Condition, Conditions } from './effect'
 import type { EffectResult } from './effect'
 import type { DamageTypeId } from './damage'
 
@@ -161,7 +161,7 @@ export interface EnemyImageVariation {
   /** 图片资源ID */
   imageId: string
   /** 显示条件 */
-  condition: Condition
+  displayCondition?: Conditions
   /** 过渡效果 */
   transitionEffect?: 'fade' | 'glitch' | 'instant'
 }

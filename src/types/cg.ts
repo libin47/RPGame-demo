@@ -1,6 +1,7 @@
 // cg.ts - CG场景数据结构
-import type { EffectResult } from './effect'
+import type { Conditions, EffectResult } from './effect'
 import type { Condition } from './effect'
+import type { ButtonOption } from './option'
 
 // CG场景配置
 export interface CGScene {
@@ -62,7 +63,7 @@ export interface CGFrame {
   options?: CGOption[]
 
   // 帧显示条件，如果不满足，按照序号自动顺延下一个帧显示
-  displayCondition?: Condition
+  displayCondition?: Conditions
 }
 
 // CG文本
@@ -71,7 +72,7 @@ export interface CGText {
   content: string
 
   // 显示条件
-  condition?: Condition
+  displayCondition?: Conditions
 
   // 显示延迟（毫秒）
   displayDelay?: number
@@ -125,7 +126,7 @@ export interface CGTextVariation {
   // 变体文本
   content: string
   // 显示条件（如SAN值范围）
-  condition: Condition
+  displayCondition?: Conditions
   // 变体样式
   style?: CGTextStyle
 }
@@ -147,7 +148,7 @@ export interface CGSprite {
   // 透明度 (0-1)
   opacity?: number
   // 显示条件
-  condition?: Condition
+  displayCondition?: Conditions
   // 图层顺序
   zIndex?: number
 }
@@ -163,7 +164,7 @@ export interface CGScreenEffect {
   // 延迟（毫秒）
   delay?: number
   // 效果条件
-  condition?: Condition
+  displayCondition?: Conditions
 }
 
 // 屏幕效果类型
@@ -181,27 +182,11 @@ export enum CGScreenEffectType {
 }
 
 // CG选项
-export interface CGOption {
-  // 选项文本
-  text: string
-  // 选项描述（可选）
-  description?: string
-  // 选项文本变体（根据条件）
-  textVariations?: CGTextVariation[]
-  // 选项可用条件
-  availableCondition?: Condition
-  // 选项不可用时的文本
-  unavailableText?: string
-  // 选项结果
+// 基于通用交互按钮（ButtonOption），仅额外携带CG跳转结果
+// 选项显示顺序按配置列表顺序；可用性由 ButtonOption.availableCondition 控制
+export interface CGOption extends ButtonOption {
+  // 选项结果（跳转帧/CG/场景/事件/战斗/结局）
   result: CGOptionResult
-  // 选项显示的优先级顺序
-  priority?: number
-  // 是否隐藏（不满足条件时）
-  hideWhenUnavailable?: boolean
-  // 选项样式
-  style?: 'default' | 'danger' | 'special' | 'hidden'
-  // 选项提示
-  tooltip?: string
 }
 
 // CG选项结果（联合类型版本）

@@ -231,6 +231,8 @@ export class EffectResolver {
         return player.attributes.intelligence
       case AttributeType.CONSTITUTION:
         return player.attributes.constitution
+      case AttributeType.LUCK:
+        return player.attributes.luck
 
       // 经验值
       case AttributeType.STRENGTH_EXP:
@@ -326,6 +328,9 @@ export class EffectResolver {
         player.attributes.constitution = Math.max(0, Math.min(newValue, 100))
         // 体质变动会影响生命值上限
         this.recalculateMaxHp(player)
+        break
+      case AttributeType.LUCK:
+        player.attributes.luck = Math.max(-100, Math.min(newValue, 100))
         break
 
       // 经验值

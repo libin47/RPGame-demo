@@ -25,10 +25,12 @@ export * from './formula'
 // 事件系统
 export {
   evaluateCondition,
+  evaluateConditions,
   findFirstVisibleFrame,
   getVisibleOptions,
   getVisibleVariations,
   isOptionAvailable,
+  getOptionResultIcon,
   canTriggerEvent,
 } from './event'
 
@@ -42,7 +44,6 @@ export {
   checkAutoTrigger,
   getTimeOfDay,
   resolveTextVariation,
-  evaluateTextVariationFlag,
 } from './exploration'
 
 // 背包系统
@@ -86,6 +87,7 @@ export {
   executePlayerAction,
   settleBattle,
   selectBattleTarget,
+  applyBattleStartStatuses,
   BattlePhase,
   BattleResult,
   PlayerActionType,
@@ -141,5 +143,5 @@ export {
 } from './storage'
 
 // 场景系统CG系统
-export { canTriggerCG, startCG, nextCGFrame } from './cg'
+export { canTriggerCG, startCG, nextCGFrame, getVisibleCGOptions, jumpToCGFrame } from './cg'
 export type { CGPlayState } from './cg'

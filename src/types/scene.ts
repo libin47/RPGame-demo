@@ -1,6 +1,6 @@
 // scene.ts - 场景数据结构
 
-import type { Condition } from './effect'
+import type { Condition, Conditions } from './effect'
 import type { EffectResult } from './effect'
 import type { TimeOfDay, WeatherType, SeasonPhase } from './seasonWeather'
 import type { ButtonOption } from './option'
@@ -118,11 +118,7 @@ export interface SceneDescription {
   // 权重（同优先级时按权重比例选择）
   weight?: number
   // 显示条件（满足条件时此描述才可能被选中展示）
-  displayCondition?: Condition
-  // 显示条件-简化版
-  displayFlag?: string[]
-  // 不显示标志位
-  hideFlag?: string[]
+  displayCondition?: Conditions
 
   // 文本内容（展示给玩家的主文本）
   // 使用 {eventKey} 占位符标记事件入口位置，例如：
@@ -143,7 +139,7 @@ export interface SceneDescription {
 
   // ========== 自动触发配置 ==========
   // 是否可自动触发（满足条件时自动进入某个事件）
-  isAutoTrigger: boolean
+  isAutoTrigger?: boolean
   // 自动触发对应的事件入口 key（若不填则取 eventEntries 中的第一个）
   autoTriggerEventKey?: string
 
@@ -153,7 +149,7 @@ export interface SceneDescription {
 
   // ========== 展示频率控制 ==========
   // 此描述是否只能被看到一次
-  isOneTime: boolean
+  isOneTime?: boolean
   // 看过此描述后设置的标志位（用于后续判定是否已看过）
   seenFlag?: string
   seenCountFlag?: string
@@ -187,9 +183,9 @@ export interface SceneEventEntry {
   // 事件ID（点击后进入此事件）
   eventId: string
   // 显示条件（满足条件时此入口才显示并可点击）
-  displayCondition?: Condition
+  displayCondition?: Conditions
   // 可用条件（满足条件时此入口才可点击，不满足时仅显示文本但不渲染蓝色）
-  availableCondition?: Condition
+  availableCondition?: Conditions
   // 点击后是否移除此入口（下次展示此描述时不再出现）
   removeAfterClick?: boolean
   // 点击后设置的标志位
@@ -206,10 +202,7 @@ export interface SceneTextVariation {
   // 变体文本内容（同样支持 {eventKey} 占位符）
   content: string
   // 显示条件
-  condition?: Condition
-  // 快捷条件
-  displayFlag?: string[]
-  hideFlag?: string[]
+  displayCondition?: Conditions
   // 变体样式（覆盖默认样式）
   style?: SceneTextStyle
   // 变体对应的事件入口列表（覆盖 SceneDescription 的 eventEntries）
@@ -241,7 +234,7 @@ export interface SceneImageVariation {
   // 图片资源ID
   imageId: string
   // 显示条件
-  condition: Condition
+  displayCondition?: Conditions
   // 过渡效果
   transitionEffect?: 'fade' | 'glitch' | 'instant'
   // 过渡持续时间（毫秒）
@@ -280,31 +273,51 @@ export interface ResourceInteraction extends ButtonOption {
   // 资源点类型
   resourceType?: 'enemy' | 'item'
   // 资源点敌人配置
-  enemyConfig?: EnemyConfig[]
+  enemyConfig?: EnemyConfig
   // 资源点物品配置
-  itemConfig?: ItemConfig[]
+  itemConfig?: ItemConfig
   // 资源收获描述
   text?: string
   // 概率未命中描述
   missText?: string
 }
 // 敌人配置
-export interface EnemyConfig {
+export interface EnemyGroup {
   enemyId: string
-  quantity: number
-  // 概率，默认1
-  probability?: number
-  // 条件
-  condition?: Condition
+  quantity: number | [number, number]
+}
+
+export interface EnemyConfig {
+  enemy: EnemyGroup[]
+  // 默认描述
+  text?: string
+  // 扩展配置
+  extend?: {
+    enemy: EnemyGroup[]
+    text?: string
+    condition?: Conditions
+    probability: number
+    luck?: number
+  }[]
 }
 // 物品配置
-export interface ItemConfig {
+export interface ItemGroup {
+  // 物品ID
   itemId: string
-  quantity: number
-  // 概率，默认1
-  probability?: number
-  // 条件
-  condition?: Condition
+  quantity: number | [number, number]
+}
+export interface ItemConfig {
+  item: ItemGroup[]
+  // 默认描述
+  text?: string
+  // 扩展配置
+  extend?: {
+    item: ItemGroup[]
+    text?: string
+    condition?: Conditions
+    probability: number
+    luck?: number
+  }[]
 }
 
 // 人物交互按钮配置
@@ -325,9 +338,7 @@ export interface DialogConfig {
   // 关联事件ID
   dialogEventId?: string
   // 对话显示条件
-  dialogDisplayFlag?: string[]
-  dialogHideFlag?: string[]
-  dialogCondition?: Condition
+  displayCondition?: Conditions
 }
 
 /**

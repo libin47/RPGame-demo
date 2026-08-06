@@ -391,6 +391,25 @@ function applyEnemyStatuses(
 }
 
 /**
+ * 战斗开始时为敌人施加开场状态（对应 TriggerBattleResult.buffs）
+ * 对全体敌人生效，必定命中；日志直接追加到 battle.logs
+ */
+export function applyBattleStartStatuses(
+  battle: BattleState,
+  buffs?: { statusId: string; durationMinutes: number }[],
+): void {
+  if (!buffs || buffs.length === 0) return
+  const statusEffects: ConsumableStatusEffect[] = buffs.map((b) => ({
+    statusId: b.statusId,
+    durationMinutes: b.durationMinutes,
+    probability: 1,
+  }))
+  for (const enemy of battle.enemies) {
+    applyEnemyStatuses(battle, enemy, statusEffects, '战斗开始时')
+  }
+}
+
+/**
  * 敌方回合开始时结算其身上的状态：
  * 按 StatusEffectConfig.interval 触发（HP/力量/敏捷类变动），随后递减剩余回合，到期移除
  */

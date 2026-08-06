@@ -2,12 +2,12 @@
 // 背包系统：物品增删查改、堆叠、负重计算、装备管理
 
 import type { PlayerState, PlayerInventoryItem } from '@/types/player'
-import type { Item, EquippableItem } from '@/types/item'
+import type { Item, EquippableItem, AttributeModifier } from '@/types/item'
 import { ItemCategory } from '@/types/item'
 import { getRegistry } from './registry'
 import { calcMaxCarryWeight, calcCarryWeightRate } from './formula'
 import { getEffectResolver } from './effect'
-import { EffectType, ItemChangeType } from '@/types/effect'
+import { EffectType, ItemChangeType, AttributeType } from '@/types/effect'
 import type { Effect } from '@/types/effect'
 
 // ============================================================
@@ -193,6 +193,47 @@ export function getItemsByCategory(
 // ============================================================
 
 /**
+ * 应用/撤销一件装备提供的属性修正（写入对应的 *Modifier 字段）
+ * 仅支持加法型修正；乘法型（multiply）暂不处理
+ *
+ * @param player - 玩家状态（会被直接修改）
+ * @param itemConfig - 装备配置（武器/防具）
+ * @param sign - 1 表示装备时应用，-1 表示卸下时撤销
+ */
+function applyEquipmentAttributeModifiers(
+  player: PlayerState,
+  itemConfig: Item,
+  sign: 1 | -1,
+): void {
+  if (itemConfig.category !== ItemCategory.WEAPON && itemConfig.category !== ItemCategory.ARMOR) {
+    return
+  }
+  // 收窄到武器/防具类型（两者才有 attributeModifiers 字段）
+  if (!('attributeModifiers' in itemConfig)) return
+  for (const m of itemConfig.attributeModifiers ?? []) {
+    if (m.modifierType !== 'add') continue
+    const value = m.value * sign
+    switch (m.attribute) {
+      case AttributeType.STRENGTH:
+        player.attributes.strengthModifier += value
+        break
+      case AttributeType.AGILITY:
+        player.attributes.agilityModifier += value
+        break
+      case AttributeType.INTELLIGENCE:
+        player.attributes.intelligenceModifier += value
+        break
+      case AttributeType.CONSTITUTION:
+        player.attributes.constitutionModifier += value
+        break
+      case AttributeType.LUCK:
+        player.attributes.luckModifier += value
+        break
+    }
+  }
+}
+
+/**
  * 装备物品
  *
  * @param player - 玩家状态（会被直接修改）
@@ -224,6 +265,9 @@ export function equipItem(player: PlayerState, instanceId: string): boolean {
   // 装备：装备栏存物品ID，背包实例标记槽位（物品仍留在背包，不互斥）
   player.equipment[slot] = invItem.itemId
   invItem.equippedSlot = slot
+
+  // 应用装备提供的属性修正
+  applyEquipmentAttributeModifiers(player, itemConfig, 1)
 
   return true
 }
@@ -277,6 +321,13 @@ export function isEquippedInstance(player: PlayerState, instanceId: string): boo
 export function unequipSlot(player: PlayerState, slot: keyof PlayerState['equipment']): boolean {
   const itemId = player.equipment[slot]
   if (!itemId) return false
+
+  // 撤销装备提供的属性修正
+  const registry = getRegistry()
+  const itemConfig = registry.getItem(itemId)
+  if (itemConfig) {
+    applyEquipmentAttributeModifiers(player, itemConfig, -1)
+  }
 
   // 清除背包中对应实例的装备标记（装备栏存 itemId，通过 itemId+槽位反查实例）
   const equippedInst = player.inventory.find((i) => i.itemId === itemId && i.equippedSlot === slot)
