@@ -27,7 +27,7 @@ const 石斧: WeaponItem = {
   weaponTypeId: 'axe',
   equipmentSlot: EquipmentSlot.WEAPON,
   weaponStats: {
-    baseDamage: 27,
+    baseDamage: 270,
     attackDistance: 1,
     damageTypeId: 'slash',
     damageVariance: 0.15,

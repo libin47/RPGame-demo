@@ -318,6 +318,7 @@ export enum ConditionTargetType {
   STATUS = 'status',
   SCENE = 'scene',
   TIME = 'time',
+  ALLTIME = 'allTime',
   WEATHER = 'weather',
   SEASON = 'season',
   SAN_LEVEL = 'sanLevel',

@@ -1,9 +1,9 @@
 // src/engine/map.ts
 // 地图寻路：沿 MapPath 计算可行路线（供移动结算与地图动画共用）
 
-import type { GameMap, MapPath } from '@/types/map'
+import type { GameMap, MapNode, MapPath } from '@/types/map'
 import type { PlayerState } from '@/types/player'
-import { evaluateCondition } from './event'
+import { evaluateConditions } from './event'
 
 /** 地图路径段（BFS 结果中的一段） */
 export interface MapRouteLeg {
@@ -45,7 +45,7 @@ export function findMapRoute(
     adj.set(from, list)
   }
   for (const p of paths) {
-    if (p.condition && !evaluateCondition(p.condition, player)) continue
+    if (p.condition && !evaluateConditions(p.condition, player)) continue
     addEdge(p.from, p.to, p)
     if (!p.oneWay) addEdge(p.to, p.from, p)
   }
@@ -64,4 +64,14 @@ export function findMapRoute(
     }
   }
   return null
+}
+
+/**
+ * 地图节点是否已解锁（可见且可前往）
+ * - 配置了 condition 时实时评估（与 MapPath.condition 同一套判定，如 flag 判断）
+ * - 未配置 condition 视为已解锁
+ */
+export function isMapNodeUnlocked(node: MapNode, player: PlayerState): boolean {
+  if (!node.condition) return true
+  return evaluateConditions(node.condition, player)
 }

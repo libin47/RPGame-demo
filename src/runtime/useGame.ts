@@ -11,6 +11,7 @@ import type {
   InteractionBehaviorParams,
   ResourceInteraction,
   MoveInteraction,
+  PassiveEventSource,
 } from '@/types/scene'
 import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
 import type { EffectResult } from '@/types/effect'
@@ -24,11 +25,11 @@ import {
   onItemAdded,
   selectSceneDescription,
   markDescriptionSeen,
-  checkAutoTrigger,
+  getScenePassiveEvent,
   markDescriptionEventSeen,
 } from '@/engine'
 import { getVisibleOptions, findFirstVisibleFrame, resolveTextVariation } from '@/engine'
-import { findMapRoute } from '@/engine'
+import { findMapRoute, isMapNodeUnlocked } from '@/engine'
 import {
   createBattle,
   startBattle,
@@ -61,6 +62,7 @@ import type { CraftResult, ItemSource } from '@/engine'
 import type { ButtonOption } from '@/types/option'
 import type { buildOption } from '@/types/build'
 import type { GameMap } from '@/types/map'
+import { isSceneDescriptionEligible } from '@/engine/exploration'
 
 /** 掷骰判定结果 */
 type RollOutcome = 'bigSuccess' | 'success' | 'fail' | 'bigFail'
@@ -182,6 +184,9 @@ interface GameRuntimeState {
   /** 场景文本后缀（从事件返回场景时，显示 exitText/enterText 在场景描述后） */
   sceneTextAfter: string
 
+  /** 当前场景描述中的事件入口是否已被点击（点击后该入口渲染为纯文本；场景描述被刷新/切换后恢复可点击） */
+  eventEntryClicked: boolean
+
   /** 游戏日志（底部提示信息） */
   logMessage: string
 
@@ -256,6 +261,7 @@ function createGameState(initialPlayer: PlayerState) {
     frameTextPrefix: '',
     sceneTextPrefix: '',
     sceneTextAfter: '',
+    eventEntryClicked: false,
     logMessage: '',
     currentEnding: null,
     endingReason: '',
@@ -289,6 +295,9 @@ export function useGame(initialPlayer: PlayerState) {
   const state = createGameState(initialPlayer)
   const registry = getRegistry()
 
+  // 初始场景被动事件检查（命中则直接进入事件）
+  tryTriggerPassiveEvents()
+
   /**
    * 执行一组效果，并将日志输出到底部消息栏
    */
@@ -306,7 +315,7 @@ export function useGame(initialPlayer: PlayerState) {
    * 从场景交互按钮或事件入口触发
    *
    * @param eventId - 事件ID
-   * @param fromEventEntry - 是否由场景描述中的事件入口点击触发（用于 removeAfterInteraction 判断）
+   * @param fromEventEntry - 是否由场景描述中的事件入口点击触发（标记入口已点击转为纯文本、removeAfterInteraction 判断）
    */
   function enterEvent(eventId: string, fromEventEntry = false): void {
     const event = registry.getEvent(eventId)
@@ -318,6 +327,11 @@ export function useGame(initialPlayer: PlayerState) {
     // 由场景描述事件入口触发时，检查是否需要标记描述为已使用
     if (fromEventEntry && state.currentDescriptionConfig?.eventFlag) {
       markDescriptionEventSeen(state.currentDescriptionConfig, state.player)
+    }
+
+    // 从描述事件入口进入：该入口转为纯文本（场景描述刷新/切换后恢复可点击）
+    if (fromEventEntry) {
+      state.eventEntryClicked = true
     }
 
     // 获取第一个可见帧（按 order 顺序，满足 displayFlag 和 displayCondition 的帧）
@@ -542,7 +556,7 @@ export function useGame(initialPlayer: PlayerState) {
     if (!option) return
 
     // 选择选项消耗5分钟游戏时间
-    advanceGameTime(5)
+    // advanceGameTime(5)
 
     const result = resolveEventOptionResult(option, state.player)
     if (!result) return
@@ -613,6 +627,14 @@ export function useGame(initialPlayer: PlayerState) {
           }
         }
 
+        // 刷新场景？
+        const currentDesc = state.currentDescriptionConfig
+        const currentStillValid =
+          !currentDesc || isSceneDescriptionEligible(currentDesc, state.player)
+        if (result.refreshScene || !currentStillValid) {
+          refreshSceneDescription()
+        }
+
         // 结束事件
         state.mode = 'normal'
         state.currentEvent = null
@@ -640,32 +662,19 @@ export function useGame(initialPlayer: PlayerState) {
           }
         }
 
-        // 切换场景
-        const newScene = registry.getScene(result.sceneId)
-        if (newScene) {
-          state.currentScene = newScene
-          state.currentSubScene = result.subSceneId
-            ? (registry.getSubScene(result.subSceneId) ?? null)
-            : null
-
-          const target = state.currentSubScene || state.currentScene
-          const selectedDesc = selectSceneDescription(target, state.player)
-          state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-          state.currentDescriptionConfig = selectedDesc || null
-          if (selectedDesc) {
-            markDescriptionSeen(selectedDesc, state.player)
-          }
-
-          state.player.currentLocation.sceneId = result.sceneId
-          state.player.currentLocation.subSceneId = result.subSceneId ?? null
-        }
-
+        // 先重置事件状态，再切换场景（enterScene 内部会检测被动事件）
         state.mode = 'normal'
         state.currentEvent = null
         state.currentFrame = null
 
         if (result.enterText) {
           state.sceneTextPrefix = result.enterText
+        }
+
+        // 切换场景
+        const newScene = registry.getScene(result.sceneId)
+        if (newScene) {
+          enterScene(newScene, result.subSceneId ?? null)
         }
         break
       }
@@ -770,6 +779,11 @@ export function useGame(initialPlayer: PlayerState) {
     if (!target.interactions) return
     const interaction = target.interactions.find((i) => i.id === interactionId)
     if (!interaction) return
+    // 检查可用条件
+    if (!evaluateConditions(interaction.availableCondition, state.player)) {
+      setSceneTextAfter(interaction.unavailableTooltip || '该操作当前不可用')
+      return
+    }
 
     // 根据交互类型执行不同操作
     const interactionType = interaction.interactionType
@@ -777,12 +791,10 @@ export function useGame(initialPlayer: PlayerState) {
 
     switch (interactionType) {
       case 'explore': {
-        state.sceneTextAfter = ''
-        // 探索：推进10分钟，刷新场景描述
-        advanceGameTime(10)
-        refreshSceneDescription()
-        state.logMessage = '你在周围仔细探索了一番'
-        break
+        // 探索：推进10分钟，刷新场景描述，完成后检测被动事件（复用 handleExplore）
+        // 注意：handleExplore 内部已调用 handleFlag，故此处 return 避免与末尾 handleFlag 重复执行
+        handleExplore(interaction)
+        return
       }
 
       case 'event': {
@@ -797,41 +809,21 @@ export function useGame(initialPlayer: PlayerState) {
       case 'enterSubScene': {
         state.sceneTextAfter = ''
         if (params?.interactionType === 'enterSubScene') {
-          // 进入子场景（消耗5分钟）
-          const subScene = registry.getSubScene(params.subSceneId)
-          if (subScene) {
-            advanceGameTime(5)
-            state.currentSubScene = subScene
-            state.player.currentLocation.subSceneId = params.subSceneId
-            const selectedDesc = selectSceneDescription(subScene, state.player)
-            state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-            state.currentDescriptionConfig = selectedDesc || null
-            if (selectedDesc) {
-              markDescriptionSeen(selectedDesc, state.player)
-            }
-          }
+          enterSubSceneById(params.subSceneId, 5)
           break
         }
       }
 
       case 'exitSubScene': {
         state.sceneTextAfter = ''
-        // 离开子场景返回母场景（消耗5分钟）
-        advanceGameTime(5)
-        state.currentSubScene = null
-        state.player.currentLocation.subSceneId = null
-        const selectedDesc = selectSceneDescription(state.currentScene, state.player)
-        state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-        state.currentDescriptionConfig = selectedDesc || null
-        if (selectedDesc) {
-          markDescriptionSeen(selectedDesc, state.player)
-        }
+        exitSubSceneToParent(5)
         break
       }
 
       case 'rest': {
-        // 休息：消耗60分钟（1小时），执行被动效果
+        // 休息：消耗60分钟（1小时），恢复体力/HP/SAN，移除休息状态
         advanceGameTime(60)
+        applyRestRecovery(1, 1)
         state.logMessage = '你休息了一会儿，恢复了一些体力'
         break
       }
@@ -856,6 +848,9 @@ export function useGame(initialPlayer: PlayerState) {
 
       case 'move': {
         state.sceneTextAfter = ''
+        if (tryTriggerPassiveEvents('leave')) {
+          return
+        }
         if (params?.interactionType === 'move') {
           // 方向移动：消耗10分钟
           advanceGameTime(10)
@@ -867,21 +862,16 @@ export function useGame(initialPlayer: PlayerState) {
       case 'moveToScene': {
         state.sceneTextAfter = ''
         if (params?.interactionType === 'moveToScene') {
+          // 离开当前场景前被动事件拦截（触发后覆盖移动操作）
+          if (tryTriggerPassiveEvents('leave')) {
+            return
+          }
           // 场景间移动：消耗指定的旅行时间
           advanceGameTime(params.travelTimeMinutes || 15)
           const targetScene = registry.getScene(params.targetSceneId)
           if (targetScene) {
-            state.currentScene = targetScene
-            state.currentSubScene = null
-            const selectedDesc = selectSceneDescription(targetScene, state.player)
-            state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-            state.currentDescriptionConfig = selectedDesc || null
-            if (selectedDesc) {
-              markDescriptionSeen(selectedDesc, state.player)
-            }
-            state.player.currentLocation.sceneId = params.targetSceneId
-            state.player.currentLocation.subSceneId = null
             state.logMessage = params.pathDescription
+            enterScene(targetScene, null)
           }
           break
         }
@@ -909,35 +899,39 @@ export function useGame(initialPlayer: PlayerState) {
   // 建筑相关操作
   // ============================================================
 
-  function handleRest(timeHours: number, option: buildOption | undefined): void {
-    // 1. 推进游戏时间
-    advanceGameTime(timeHours * 60)
-
-    // 2. 恢复体力（沿用原休息公式：每休息 10 分钟恢复 1 点体力）
+  /**
+   * 休息恢复（建筑休息 handleRest 与场景休息 rest case 共用）
+   * 每休息 10 分钟恢复 buildLevel 点体力/HP，SAN 恢复 (buildLevel - 1) 点，并移除休息时应移除的状态
+   */
+  function applyRestRecovery(timeHours: number, buildLevel: number): void {
+    // 恢复体力（沿用原休息公式：每休息 10 分钟恢复 1 点 × buildLevel）
     state.player.survival.stamina = Math.min(
       state.player.survival.maxStamina,
-      state.player.survival.stamina + Math.round((timeHours * 60) / 10) * (option?.buildLevel || 1),
+      state.player.survival.stamina + Math.round((timeHours * 60) / 10) * buildLevel,
     )
     // 回复HP
     state.player.survival.hp = Math.min(
       state.player.survival.maxHp,
-      state.player.survival.hp + Math.round((timeHours * 60) / 10) * (option?.buildLevel || 1),
+      state.player.survival.hp + Math.round((timeHours * 60) / 10) * buildLevel,
     )
-    // 回复san
+    // 回复SAN（buildLevel - 1）
     state.player.survival.san = Math.min(
       state.player.survival.maxSan,
-      state.player.survival.san +
-        Math.round((timeHours * 60) / 10) * ((option?.buildLevel || 1) - 1),
+      state.player.survival.san + Math.round((timeHours * 60) / 10) * (buildLevel - 1),
     )
-
-    // 3. 移除休息时应移除的状态
+    // 移除休息时应移除的状态
     removeRestStatuses(state.player)
+  }
 
-    // 4、记录日志
+  function handleRest(timeHours: number, option: buildOption | undefined): void {
+    // 1. 推进游戏时间
+    advanceGameTime(timeHours * 60)
+    // 2. 恢复体力/HP/SAN，移除休息状态（共用恢复逻辑）
+    applyRestRecovery(timeHours, option?.buildLevel || 1)
+    // 3. 记录日志
     setSceneTextAfter((option?.description || '').replace(/\{time\}/g, timeHours.toString()))
     setLogMessage(`你休息了 ${timeHours} 小时，恢复了一些体力`)
-
-    // 5. 返回场景界面（退出建筑交互模式）
+    // 4. 返回场景界面（退出建筑交互模式）
     exitBuilding()
   }
 
@@ -949,6 +943,7 @@ export function useGame(initialPlayer: PlayerState) {
    * 探索：推进时间、刷新描述
    */
   function handleExplore(explore: ButtonOption): void {
+    if (tryTriggerPassiveEvents('explore')) return
     state.sceneTextAfter = ''
     advanceGameTime(10)
     refreshSceneDescription()
@@ -968,6 +963,7 @@ export function useGame(initialPlayer: PlayerState) {
    * 资源采集/战斗
    */
   function handleCollect(collect: ResourceInteraction): void {
+    if (tryTriggerPassiveEvents('collect')) return
     // 检查可用条件
     if (!evaluateConditions(collect.availableCondition, state.player)) {
       setSceneTextAfter(collect.unavailableTooltip || '该操作当前不可用')
@@ -1081,11 +1077,82 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 切换进入目标场景（选择描述 + 标记已见 + 更新位置 + 被动事件判定）
+   * 注意：不修改 mode，由调用方负责模式切换
+   */
+  function enterScene(scene: Scene, subSceneId?: string | null): void {
+    // 切换场景后，事件入口恢复可点击
+    state.eventEntryClicked = false
+    state.currentScene = scene
+    state.currentSubScene = subSceneId ? (registry.getSubScene(subSceneId) ?? null) : null
+    state.player.currentLocation.sceneId = scene.id
+    state.player.currentLocation.subSceneId = state.currentSubScene?.id ?? null
+    const target = state.currentSubScene || scene
+    const selectedDesc = selectSceneDescription(target, state.player)
+    state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
+    state.currentDescriptionConfig = selectedDesc || null
+    if (selectedDesc) {
+      markDescriptionSeen(selectedDesc, state.player)
+    }
+    // 检测目标场景被动事件
+    tryTriggerPassiveEvents('enter')
+  }
+  /**
+   * 进入场景（handleSceneMove 与 handleInteraction 共用）
+   * 离开场景前先拦截被动事件（触发则覆盖进入操作）
+   */
+  function enterSceneById(SceneId: string, subSceneId?: string, costMinutes?: number): void {
+    // 离开当前场景（母场景）进入子场景前被动事件拦截（触发后覆盖离开操作）
+    if (tryTriggerPassiveEvents('leave')) {
+      return
+    }
+
+    const scene = registry.getScene(SceneId)
+    advanceGameTime(costMinutes ?? 5)
+    if (scene) {
+      enterScene(scene, subSceneId)
+    }
+  }
+  /**
+   * 进入子场景（handleSceneMove 与 handleInteraction 共用）
+   * 离开母场景前先拦截被动事件（触发则覆盖进入操作）
+   */
+  function enterSubSceneById(subSceneId: string, costMinutes?: number): void {
+    // 离开当前场景（母场景）进入子场景前被动事件拦截（触发后覆盖离开操作）
+    if (tryTriggerPassiveEvents('leave')) {
+      return
+    }
+
+    advanceGameTime(costMinutes ?? 5)
+    if (registry.getSubScene(subSceneId)) {
+      enterScene(state.currentScene, subSceneId)
+    }
+  }
+
+  /**
+   * 离开子场景返回母场景（handleSceneMove 与 handleInteraction 共用）
+   * 离开前先拦截被动事件（触发则覆盖离开操作）
+   */
+  function exitSubSceneToParent(costMinutes?: number): void {
+    // 离开子场景前被动事件拦截（触发后覆盖离开操作）
+    if (tryTriggerPassiveEvents('leave')) {
+      return
+    }
+    advanceGameTime(costMinutes ?? 5)
+    enterScene(state.currentScene, null)
+  }
+
+  /**
    * 场景移动（enterSubScene / exitSubScene / move）
    */
   function handleSceneMove(moveAction: MoveInteraction): void {
     const moveType = moveAction.moveType ?? 'move'
     state.sceneTextAfter = ''
+    // 检查可用条件
+    if (!evaluateConditions(moveAction.availableCondition, state.player)) {
+      setSceneTextAfter(moveAction.unavailableTooltip || '该操作当前不可用')
+      return
+    }
 
     // 前置校验：体力是否充足
     const costEnergy = moveAction.costEnergy ?? 0
@@ -1095,31 +1162,17 @@ export function useGame(initialPlayer: PlayerState) {
     }
 
     if (moveType === 'enterSubScene' && moveAction.subSceneId) {
-      advanceGameTime(moveAction.costTime ?? 5)
-      const subScene = registry.getSubScene(moveAction.subSceneId)
-      if (subScene) {
-        state.currentSubScene = subScene
-        state.player.currentLocation.subSceneId = moveAction.subSceneId
-        const selectedDesc = selectSceneDescription(subScene, state.player)
-        state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-        state.currentDescriptionConfig = selectedDesc || null
-        if (selectedDesc) {
-          markDescriptionSeen(selectedDesc, state.player)
-        }
-      }
+      enterSubSceneById(moveAction.subSceneId, moveAction.costTime)
     } else if (moveType === 'exitSubScene') {
-      advanceGameTime(moveAction.costTime ?? 5)
-      state.currentSubScene = null
-      state.player.currentLocation.subSceneId = null
-      const selectedDesc = selectSceneDescription(state.currentScene, state.player)
-      state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-      state.currentDescriptionConfig = selectedDesc || null
-      if (selectedDesc) {
-        markDescriptionSeen(selectedDesc, state.player)
-      }
+      exitSubSceneToParent(moveAction.costTime)
+    } else if (moveType === 'enterScene' && moveAction.sceneId) {
+      enterSceneById(moveAction.sceneId, moveAction.subSceneId, moveAction.costTime)
     } else {
       // 普通 move 类型：打开大地图界面（不消耗时间，移动时再结算）
       state.sceneTextAfter = ''
+      if (tryTriggerPassiveEvents('leave')) {
+        return
+      }
       state.logMessage = ''
       state.mode = 'map'
     }
@@ -1193,6 +1246,14 @@ export function useGame(initialPlayer: PlayerState) {
       state.mode = 'normal'
       return
     }
+
+    // 节点解锁校验（未解锁的目标节点不应出现在大地图上，此处为防御 UI 绕过）
+    const targetNode = currentMap.nodes.find((n) => n.sceneId === sceneId)
+    if (targetNode && !isMapNodeUnlocked(targetNode, state.player)) {
+      state.logMessage = `「${targetNode.displayName ?? targetScene.name}」尚未解锁，无法前往`
+      return
+    }
+
     const cost = calculateMoveCost(currentMap, state.currentScene, targetScene, state.player)
 
     // 无可行路径 → 无法移动（仅影响配置了 paths 的地图）
@@ -1207,6 +1268,11 @@ export function useGame(initialPlayer: PlayerState) {
       return
     }
 
+    // 离开前被动事件拦截（触发后覆盖离开操作，不消耗时间/体力）
+    if (tryTriggerPassiveEvents('leave')) {
+      return
+    }
+
     // 扣除体力并推进时间
     if (cost.staminaCost > 0) {
       state.player.survival.stamina = Math.max(0, state.player.survival.stamina - cost.staminaCost)
@@ -1216,17 +1282,8 @@ export function useGame(initialPlayer: PlayerState) {
     // 移动到目标场景
     state.sceneTextAfter = ''
     state.sceneTextPrefix = ''
-    state.currentScene = targetScene
-    state.currentSubScene = null
-    const selectedDesc = selectSceneDescription(targetScene, state.player)
-    state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-    state.currentDescriptionConfig = selectedDesc || null
-    if (selectedDesc) {
-      markDescriptionSeen(selectedDesc, state.player)
-    }
-    state.player.currentLocation.sceneId = sceneId
-    state.player.currentLocation.subSceneId = null
     state.mode = 'normal'
+    enterScene(targetScene, null)
   }
 
   /**
@@ -1674,28 +1731,44 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 尝试触发当前场景/子场景的被动事件
+   * 命中（条件满足 + 概率通过）时进入对应事件并标记一次性事件的 seenFlag
+   * 若配置了该来源的承接文案（enterTexts），注入到事件首帧文本之前显示
+   *
+   * 统一语义：被动事件在各动作（探索/采集/离开/进入）执行前判定，
+   * 触发后调用方应 return 中止当前动作——不消耗时间/体力，不标记动作 usedFlag。
+   *
+   * @param source - 触发来源（进入场景 / 采集 / 离开场景 / 探索）
+   * @returns 是否触发了被动事件（触发后调用方中止当前动作）
+   */
+  function tryTriggerPassiveEvents(source: PassiveEventSource = 'enter'): boolean {
+    const target = state.currentSubScene || state.currentScene
+    const passiveEvent = getScenePassiveEvent(target, state.player)
+    if (!passiveEvent) return false
+    if (passiveEvent.isOneTime && passiveEvent.seenFlag) {
+      state.player.flags[passiveEvent.seenFlag] = true
+    }
+    enterEvent(passiveEvent.id)
+    // 注入触发来源承接文案（enterEvent 会清空 frameTextPrefix，因此在此之后设置）
+    const bridge = passiveEvent.enterTexts?.[source]
+    if (bridge) state.frameTextPrefix = bridge
+    return true
+  }
+
+  /**
    * 刷新当前场景描述
    * 使用 exploration.selectSceneDescription 根据条件选取描述
-   * 同时检测描述中的自动触发事件
+   * （被动事件判定由各动作入口前置触发，此处不再检测）
    */
   function refreshSceneDescription(): void {
+    // 重新选取描述后，事件入口恢复可点击
+    state.eventEntryClicked = false
     const target = state.currentSubScene || state.currentScene
     const selectedDesc = selectSceneDescription(target, state.player)
     if (selectedDesc) {
       state.sceneDescription = selectedDesc.text
       state.currentDescriptionConfig = selectedDesc
       markDescriptionSeen(selectedDesc, state.player)
-
-      // 检测场景描述中的自动触发事件
-      const autoTriggerResult = checkAutoTrigger(selectedDesc, state.player)
-      if (autoTriggerResult.shouldTrigger && autoTriggerResult.eventKey) {
-        // 查找事件入口对应的 eventId
-        const entry = selectedDesc.eventEntries?.find((e) => e.key === autoTriggerResult.eventKey)
-        if (entry) {
-          enterEvent(entry.eventId, true) // 自动触发也视为事件入口触发
-          return // 自动触发事件后不再显示场景
-        }
-      }
     }
   }
   // 处理标志位

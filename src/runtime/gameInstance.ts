@@ -36,6 +36,7 @@ export interface GameInstance {
     readonly frameTextPrefix: string
     readonly sceneTextPrefix: string
     readonly sceneTextAfter: string
+    readonly eventEntryClicked: boolean
     readonly logMessage: string
     readonly currentEnding: EndingConfig | null
     readonly endingReason: string

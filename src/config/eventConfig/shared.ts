@@ -74,16 +74,22 @@ export const nextFrame = (
 })
 
 /** 结束事件返回场景（exitText 为返回场景后显示的文字，effects 可选） */
-export const endEvent = (exitText?: string, effects?: EffectResult[]): EventOptionResult => ({
+export const endEvent = (
+  exitText?: string,
+  effects?: EffectResult[],
+  refreshScene?: boolean,
+): EventOptionResult => ({
   type: 'endEvent',
+  refreshScene,
   ...(exitText ? { exitText } : {}),
   ...(effects && effects.length > 0 ? { effects } : {}),
 })
 
 /** 触发另一个事件 */
-export const triggerEvent = (eventId: string): EventOptionResult => ({
+export const triggerEvent = (eventId: string, enterTexts?: string): EventOptionResult => ({
   type: 'triggerEvent',
   eventId,
+  ...(enterTexts ? { enterTexts } : {}),
 })
 
 /** 触发战斗 */

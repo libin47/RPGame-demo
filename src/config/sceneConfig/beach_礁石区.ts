@@ -13,35 +13,30 @@ const beach_礁石区: SubScene = {
       id: 'beach_礁石区_1 ',
       priority: 1,
       text: '黑色的礁石杂乱地堆砌在海岸线上，像某种巨大生物的脊骨。海浪在礁石间穿行，发出沉闷的轰鸣声。石面上布满锋利的藤壶壳，在阳光下泛着微光。\n\n一些礁石围成的浅水坑里，有小鱼和螃蟹的踪影。更深处的岩缝中，似乎附着些贻贝。',
-      isAutoTrigger: false,
       isOneTime: false,
     },
     {
       id: 'beach_礁石区_2 ',
       priority: 1,
       text: '黑色的礁石。',
-      isAutoTrigger: false,
       isOneTime: false,
     },
     {
       id: 'beach_礁石区_3 ',
       priority: 1,
       text: '好多石头。',
-      isAutoTrigger: false,
       isOneTime: false,
     },
     {
       id: 'beach_礁石区_4 ',
       priority: 1,
       text: '黑色的礁石。',
-      isAutoTrigger: false,
       isOneTime: false,
     },
     {
       id: 'beach_礁石区_5 ',
       priority: 1,
       text: '礁(jiao)石。',
-      isAutoTrigger: false,
       isOneTime: false,
     },
   ],
@@ -58,12 +53,12 @@ const beach_礁石区: SubScene = {
     {
       id: 'beach_礁石区_采集',
       name: '采集',
-      description: '在礁石上寻找可以食用的贻贝',
-      descriptionTitle: '贻贝',
+      description: '在礁石上寻找贝壳',
+      descriptionTitle: '贝壳',
       costTime: 10,
       costEnergy: 10,
       resourceType: 'item',
-      paramId: 'beach_贻贝',
+      paramId: 'beach_贝壳',
       itemConfig: {
         item: [
           {

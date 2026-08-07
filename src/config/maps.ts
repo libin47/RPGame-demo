@@ -13,8 +13,6 @@ const mainIsland: GameMap = {
       displayName: '海滩',
       unexploredIconId: 'map_icon_question',
       exploredIconId: 'map_icon_beach',
-      isInitiallyVisible: true,
-      isInitiallyExplored: true,
     },
     {
       id: 'node_forest',
@@ -23,8 +21,6 @@ const mainIsland: GameMap = {
       displayName: '森林',
       unexploredIconId: 'map_icon_question',
       exploredIconId: 'map_icon_forest',
-      isInitiallyVisible: true,
-      isInitiallyExplored: false,
     },
     {
       id: 'node_mountain',
@@ -33,8 +29,6 @@ const mainIsland: GameMap = {
       displayName: '山区',
       unexploredIconId: 'map_icon_question',
       exploredIconId: 'map_icon_mountain',
-      isInitiallyVisible: true,
-      isInitiallyExplored: false,
     },
     {
       id: 'node_ruins',
@@ -43,12 +37,14 @@ const mainIsland: GameMap = {
       displayName: '遗迹',
       unexploredIconId: 'map_icon_question',
       exploredIconId: 'map_icon_ruins',
-      isInitiallyVisible: false,
-      isInitiallyExplored: false,
+      // 节点解锁条件（与 MapPath.condition 同类型）：满足前节点不可见、不可前往
+      // 解锁方式：事件结果里配置 flag 效果 { type: 'flag', flagId: 'ruins_unlocked', operation: 'set', value: true }
+      condition: { flag: ['ruins_unlocked'] },
     },
   ],
   // 节点间移动路径：移动沿路径逐段累计耗时/体力
   // （可选 condition 限制通行，如渡海需要船；oneWay 可配置单向路径）
+  // 注意：节点解锁后但路径不可达（如本条 condition 未满足）时，节点仍可见、但不能从大地图移动过去（仍可通过事件移动）
   paths: [
     { from: 'node_beach', to: 'node_forest', travelMinutes: 20, staminaCost: 5 },
     { from: 'node_forest', to: 'node_mountain', travelMinutes: 90, staminaCost: 15 },

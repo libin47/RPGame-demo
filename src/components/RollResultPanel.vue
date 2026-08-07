@@ -26,7 +26,9 @@
     <!-- 合计与结果（骰子定格后出现） -->
     <transition name="pop">
       <div v-if="settled" class="roll-footer">
-        <div class="total-line">合计 <b>{{ info.total }}</b> ／ 难度 DC {{ info.dc }}</div>
+        <div class="total-line">
+          合计 <b>{{ info.total }}</b> ／ 难度 DC {{ info.dc }}
+        </div>
         <div class="roll-result" :class="'result-' + info.outcome">{{ outcomeText }}</div>
       </div>
     </transition>
@@ -76,8 +78,8 @@ function startRoll(): void {
   const start = performance.now()
   const tick = () => {
     displayNum.value = String(Math.floor(Math.random() * 20) + 1)
-    if (performance.now() - start < 1000) {
-      rollTimer = window.setTimeout(tick, 60)
+    if (performance.now() - start < 300) {
+      rollTimer = window.setTimeout(tick, 10)
     } else {
       displayNum.value = String(props.info.d20)
       settled.value = true
@@ -268,22 +270,30 @@ onBeforeUnmount(() => {
 
 .result-bigSuccess {
   color: #ffd54f;
-  text-shadow: 0 0 18px rgba(255, 213, 79, 0.6), 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow:
+    0 0 18px rgba(255, 213, 79, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .result-success {
   color: #81c784;
-  text-shadow: 0 0 14px rgba(102, 187, 106, 0.55), 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow:
+    0 0 14px rgba(102, 187, 106, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .result-fail {
   color: #ef5350;
-  text-shadow: 0 0 12px rgba(239, 83, 80, 0.5), 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow:
+    0 0 12px rgba(239, 83, 80, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .result-bigFail {
   color: #ce93d8;
-  text-shadow: 0 0 16px rgba(171, 71, 188, 0.6), 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow:
+    0 0 16px rgba(171, 71, 188, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* 继续按钮（与 EventPanel 风格一致） */

@@ -40,6 +40,9 @@ export interface BaseScene {
   // 场景 固定交互按钮
   interactions?: SceneInteraction[]
 
+  // 场景被动事件（满足条件且概率命中时自动触发，与描述无关）
+  passiveEvents?: SceneEvent[]
+
   // 是否为地牢场景
   isDungeon: boolean
 
@@ -137,12 +140,6 @@ export interface SceneDescription {
   // key 对应 text 中的 {key} 占位符
   eventEntries?: SceneEventEntry[]
 
-  // ========== 自动触发配置 ==========
-  // 是否可自动触发（满足条件时自动进入某个事件）
-  isAutoTrigger?: boolean
-  // 自动触发对应的事件入口 key（若不填则取 eventEntries 中的第一个）
-  autoTriggerEventKey?: string
-
   // 是否在任意事件入口触发后清除此描述（通过设置seenFlag实现）
   // removeAfterInteraction?: boolean
   // eventFlag?: string
@@ -169,6 +166,35 @@ export interface SceneDescription {
     min: number
     max: number
   }
+}
+/**
+ * 被动事件触发来源
+ * enter - 进入/刷新场景时触发
+ * collect - 采集完成后触发
+ * leave - 离开场景时触发（拦截离开操作）
+ */
+export type PassiveEventSource = 'enter' | 'collect' | 'leave' | 'explore'
+
+/**
+ * 场景被动事件
+ */
+export interface SceneEvent {
+  // 事件ID
+  id: string
+  // 事件名称
+  name: string
+  // 事件显示条件
+  displayCondition?: Conditions
+  // 触发概率
+  probability?: number
+  // 是否受幸运影响
+  isLucky?: boolean
+  // 是否只触发一次
+  isOneTime?: boolean
+  // 触发后设置的标志位（用于后续判定是否已触发）
+  seenFlag?: string
+  // 触发来源承接文案（显示在事件首帧文本之前，按来源分别编写）
+  enterTexts?: Partial<Record<PassiveEventSource, string>>
 }
 
 /**
@@ -260,11 +286,13 @@ export interface SceneInteraction extends ButtonOption {
 // 移动交互按钮配置
 export interface MoveInteraction extends ButtonOption {
   // 移动类型
-  moveType?: 'move' | 'exitSubScene' | 'enterSubScene'
+  moveType?: 'move' | 'exitSubScene' | 'enterSubScene' | 'enterScene'
   // 子场景ID
   subSceneId?: string
   // 母场景ID
   parentSceneId?: string
+  // 场景ID
+  sceneId?: string
 }
 // 资源点按钮配置
 export interface ResourceInteraction extends ButtonOption {

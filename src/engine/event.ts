@@ -166,6 +166,11 @@ function resolveConditionTarget(
     // -------- 时间 --------
     case ConditionTargetType.TIME: {
       // 返回当前游戏分钟数
+      return player.progress.timeMinutes
+    }
+    // -------- 总时间 --------
+    case ConditionTargetType.ALLTIME: {
+      // 返回当前游戏分钟数
       return player.progress.day * 1440 + player.progress.timeMinutes
     }
 

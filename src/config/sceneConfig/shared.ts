@@ -54,6 +54,10 @@ interface EnterSubSceneMoveOptions {
   subSceneId: string
   /** 显示条件标志位（满足 flag 时才显示） */
   flag?: string
+  /** 显示条件 */
+  availableCondition?: Conditions
+  /** 未显示时的提示 */
+  unavailableTooltip?: string
 }
 
 /** 前往子场景移动按钮（默认消耗10分钟/10体力） */
@@ -66,6 +70,8 @@ export function enterSubSceneMove(opts: EnterSubSceneMoveOptions): MoveInteracti
     costTime: 10,
     costEnergy: 10,
     ...(opts.flag ? { displayCondition: { flag: [opts.flag] } } : {}),
+    ...(opts.availableCondition ? { availableCondition: opts.availableCondition } : {}),
+    ...(opts.unavailableTooltip ? { unavailableTooltip: opts.unavailableTooltip } : {}),
     moveType: 'enterSubScene',
     subSceneId: opts.subSceneId,
   }

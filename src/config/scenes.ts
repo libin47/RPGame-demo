@@ -7,6 +7,8 @@ import beach_飞机残骸 from './sceneConfig/beach_飞机残骸'
 import beach_机翼营地 from './sceneConfig/beach_机翼营地'
 import beach_椰树林 from './sceneConfig/beach_椰树林'
 import beach_礁石区 from './sceneConfig/beach_礁石区'
+import beach_海岸哨岩 from './sceneConfig/beach_海岸哨岩'
+import beach_潮汐洞穴 from './sceneConfig/beach_潮汐洞穴'
 import { forest, mountain, ruins } from './sceneConfig/placeholders'
 
 export const sceneRegistry: SceneRegistry = {
@@ -21,6 +23,8 @@ export const sceneRegistry: SceneRegistry = {
     beach_机翼营地,
     beach_椰树林,
     beach_礁石区,
+    beach_海岸哨岩,
+    beach_潮汐洞穴,
   },
   initialSceneId: 'beach',
 }

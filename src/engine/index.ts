@@ -4,7 +4,7 @@ export { initRegistry, getRegistry } from './registry'
 export { createNewPlayerState } from './player'
 export { getEffectResolver } from './effect'
 export { advanceTime, calculateTemperature } from './world'
-export { findMapRoute } from './map'
+export { findMapRoute, isMapNodeUnlocked } from './map'
 export type { MapRouteLeg } from './map'
 
 // 随机工具
@@ -41,7 +41,7 @@ export {
   getResolvedDescriptionText,
   markDescriptionSeen,
   markDescriptionEventSeen,
-  checkAutoTrigger,
+  getScenePassiveEvent,
   getTimeOfDay,
   resolveTextVariation,
 } from './exploration'

@@ -206,6 +206,8 @@ export interface EndEventResult {
   type: 'endEvent'
   /** 返回场景后显示的文字（可选，如"你离开了小屋"） */
   exitText?: string
+  // 刷新场景？
+  refreshScene?: boolean
   /** 执行的效果列表 */
   effects?: EffectResult[]
   /** 设置标志位 */
@@ -295,6 +297,7 @@ export interface TriggerEventResult {
   type: 'triggerEvent'
   /** 目标事件ID */
   eventId: string
+  enterTexts?: string
   /** 目标事件结束后跳转的帧ID（不填则返回场景） */
   returnFrameId?: string
   /** 执行的效果列表 */

@@ -1,6 +1,6 @@
 // map.ts - 大地图数据结构
 
-import type { Condition } from './effect'
+import type { Conditions } from './effect'
 
 // ============================================================
 // 大地图配置
@@ -19,8 +19,8 @@ export interface MapPath {
   travelMinutes: number
   /** 移动消耗体力（可选，默认 0） */
   staminaCost?: number
-  /** 可通行条件（可选，复用 Condition 系统，如渡海需要船） */
-  condition?: Condition
+  /** 可通行条件（可选，复用 Conditions 系统，如渡海需要船） */
+  condition?: Conditions
   /** 是否单向路径（默认 false 表示双向通行） */
   oneWay?: boolean
 }
@@ -89,13 +89,11 @@ export interface MapNode {
   }
 
   // ============================================================
-  // 探索机制
+  // 解锁机制
   // ============================================================
 
-  /** 此节点是否初始可见（即使在迷雾中也显示为"???"标记） */
-  isInitiallyVisible: boolean
-  /** 此节点是否初始已探索（游戏开始时即可前往） */
-  isInitiallyExplored: boolean
+  /** 解锁条件（与 MapPath.condition 同一类型，复用 Conditions 体系；满足后节点才可见且可前往，未配置视为已解锁） */
+  condition?: Conditions
 }
 
 /**
@@ -115,7 +113,7 @@ export interface MapNodeNameVariation {
   /** 变体名称 */
   name: string
   /** 显示条件 */
-  condition: Condition
+  condition: Conditions
 }
 
 // ============================================================

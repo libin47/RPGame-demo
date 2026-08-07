@@ -30,7 +30,7 @@
         :background-color="backgroundColor"
         :player-state="game.state.player"
         :expanded-category="expandedCategory"
-        :is-event-clicked="isEventClicked"
+        :is-event-clicked="game.state.eventEntryClicked"
         @update:expanded-category="expandedCategory = $event"
         @enter-event="onEnterEventFromEntry"
         @explore="onExplore"
@@ -363,9 +363,6 @@ watch(currentSceneForPanel, () => {
   expandedCategory.value = null
 })
 
-/** 描述中事件是否点击 */
-const isEventClicked = ref(false)
-
 // ============================================================
 // 条件显示道具检测
 // ============================================================
@@ -424,7 +421,6 @@ const optionAvailability = computed<Record<string, boolean>>(() => {
 /** 从场景描述事件入口点击进入事件（传递 fromEventEntry=true） */
 function onEnterEventFromEntry(eventId: string): void {
   game.value.enterEvent(eventId, true)
-  isEventClicked.value = true
 }
 
 function onBattleAction(
@@ -477,13 +473,11 @@ function onOpenAttributes(): void {
 
 /** 探索 */
 function onExplore(explore: ButtonOption): void {
-  isEventClicked.value = false
   game.value.handleExplore(explore)
 }
 
 /** 建造 */
 function onBuild(): void {
-  isEventClicked.value = false
   game.value.handleBuild()
 }
 
@@ -499,7 +493,6 @@ function onSceneInteraction(interactionId: string): void {
 
 /** 移动 */
 function onMoveAction(moveAction: import('@/types/scene').MoveInteraction): void {
-  isEventClicked.value = false
   game.value.handleSceneMove(moveAction)
 }
 

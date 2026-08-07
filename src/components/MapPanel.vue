@@ -14,13 +14,13 @@
         <img ref="mapImgEl" :src="mapImage" alt="大地图" class="mp-image" @load="onImageLoad" />
         <!-- 路径线（与节点同一坐标系；viewBox 0-100 拉伸到画布，等价于百分比坐标） -->
         <svg
-          v-if="map.paths && map.paths.length > 0"
+          v-if="visiblePaths.length > 0"
           class="mp-paths"
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
         >
           <line
-            v-for="(path, i) in map.paths"
+            v-for="(path, i) in visiblePaths"
             :key="i"
             :x1="nodePercent(path.from).x"
             :y1="nodePercent(path.from).y"
@@ -30,7 +30,7 @@
           />
         </svg>
         <button
-          v-for="node in map.nodes"
+          v-for="node in visibleNodes"
           :key="node.id"
           class="mp-node"
           :class="{
@@ -64,7 +64,7 @@
 import { computed, ref, watch } from 'vue'
 import type { GameMap, MapNode } from '@/types/map'
 import type { PlayerState } from '@/types/player'
-import { getRegistry, findMapRoute } from '@/engine'
+import { getRegistry, findMapRoute, isMapNodeUnlocked } from '@/engine'
 
 const props = defineProps<{
   /** 当前大地图配置 */
@@ -136,6 +136,21 @@ function nodePercent(nodeId: string): { x: number; y: number } {
 function currentNodeId(): string | null {
   return props.map.nodes.find((n) => n.sceneId === props.currentSceneId)?.id ?? null
 }
+
+/** 已解锁（可见且可前往）的节点：未解锁节点不渲染 */
+const visibleNodes = computed<MapNode[]>(() =>
+  props.map.nodes.filter((n) => isMapNodeUnlocked(n, props.playerState)),
+)
+
+/** 可见节点ID集合（路径线过滤用：任一端节点未解锁的路径不渲染） */
+const visibleNodeIds = computed<Set<string>>(() => new Set(visibleNodes.value.map((n) => n.id)))
+
+/** 可见路径：两端节点都已解锁的路径才渲染 */
+const visiblePaths = computed(() =>
+  (props.map.paths ?? []).filter(
+    (p) => visibleNodeIds.value.has(p.from) && visibleNodeIds.value.has(p.to),
+  ),
+)
 
 /** 初始化玩家标记位置到当前节点 */
 function initPlayerPos(): void {

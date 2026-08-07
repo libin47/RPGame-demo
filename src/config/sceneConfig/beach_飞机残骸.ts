@@ -34,7 +34,6 @@ const beach_飞机残骸: SubScene = {
           displayCondition: { flag: ['beach_飞机残骸_搜索幸存者'] },
         },
       ],
-      isAutoTrigger: false,
       isOneTime: false,
     },
     {
@@ -42,7 +41,6 @@ const beach_飞机残骸: SubScene = {
       priority: 10,
       text: '残骸散落半个沙滩。\n\n硝烟已经散去，你也许可以在废墟中找到点儿有用的东西。',
       displayCondition: { flag: ['beach_抵达机翼营地'] },
-      isAutoTrigger: false,
       isOneTime: false,
     },
   ],

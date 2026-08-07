@@ -18,6 +18,8 @@ import {
   event_beach_椰树林_追踪猴群,
   event_beach_椰树林_猴王的领地,
   event_beach_椰树林_发现荒野,
+  event_beach_椰树林_猴王攻击,
+  event_beach_椰树林_击败猴王_未追踪,
 } from './eventConfig/椰树林'
 
 export const eventRegistry: EventRegistry = {
@@ -39,5 +41,7 @@ export const eventRegistry: EventRegistry = {
     event_beach_椰树林_追踪猴群,
     event_beach_椰树林_猴王的领地,
     event_beach_椰树林_灰褐色的猴子,
+    event_beach_椰树林_猴王攻击,
+    event_beach_椰树林_击败猴王_未追踪,
   },
 }

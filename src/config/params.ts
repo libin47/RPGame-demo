@@ -43,8 +43,8 @@ const beach_椰子树: Param = {
     max: 20,
   },
 }
-const beach_贻贝: Param = {
-  id: 'beach_贻贝',
+const beach_贝壳: Param = {
+  id: 'beach_贝壳',
   defaultValue: 10,
   timeVarying: {
     mode: 'reset_daily',
@@ -70,7 +70,7 @@ export const paramRegistry: ParamRegistry = {
     beach_飞机残骸_残骸: beach_飞机残骸_残骸,
     beach_椰子: beach_椰子,
     beach_椰子树: beach_椰子树,
-    beach_贻贝: beach_贻贝,
+    beach_贝壳: beach_贝壳,
     beach_潮汐池: beach_潮汐池,
   },
 }

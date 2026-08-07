@@ -2,10 +2,10 @@
 // 探索逻辑：根据条件从场景描述列表中选取合适的描述
 
 import type { PlayerState } from '@/types/player'
-import type { Scene, SubScene, SceneDescription, SceneEventEntry } from '@/types/scene'
+import type { Scene, SubScene, SceneDescription, SceneEventEntry, SceneEvent } from '@/types/scene'
 import { TimeOfDay, WeatherType } from '@/types/seasonWeather'
 import { evaluateConditions } from './event'
-import { weightedSelect } from './dice'
+import { weightedSelect, chance } from './dice'
 import type { SceneTextVariation } from '@/types/scene'
 
 /**
@@ -25,7 +25,7 @@ export function selectSceneDescription(
   player: PlayerState,
 ): SceneDescription | undefined {
   const eligibleDescs = target.descriptions.filter((desc) => {
-    return isDescriptionEligible(desc, player)
+    return isSceneDescriptionEligible(desc, player)
   })
 
   if (eligibleDescs.length === 0) return undefined
@@ -62,7 +62,7 @@ export function selectSceneDescription(
  * 判断描述条目是否满足显示条件
  * 包括：displayCondition、seenFlag、viewLimit、环境限制
  */
-function isDescriptionEligible(desc: SceneDescription, player: PlayerState): boolean {
+export function isSceneDescriptionEligible(desc: SceneDescription, player: PlayerState): boolean {
   // 已看过且是一次性描述 → 不再显示
   if (desc.isOneTime && desc.seenFlag) {
     if (player.flags[desc.seenFlag]) {
@@ -180,22 +180,31 @@ export function markDescriptionEventSeen(desc: SceneDescription, player: PlayerS
 }
 
 /**
- * 判断场景描述是否需要自动触发事件
+ * 获取场景被动事件中第一个应触发的事件
+ * 依次检查每个被动事件：一次性已触发跳过 → 显示条件 → 概率命中
+ * 概率为 isLucky 时叠加玩家幸运值（实际概率 = 概率 + 幸运值/100）
  *
- * @param desc - 场景描述
+ * @param target - 当前场景或子场景
  * @param player - 当前玩家状态
- * @returns 是否需要自动触发及目标事件入口 key
+ * @returns 应触发的被动事件（无则返回 undefined）
  */
-export function checkAutoTrigger(
-  desc: SceneDescription,
+export function getScenePassiveEvent(
+  target: Scene | SubScene,
   player: PlayerState,
-): { shouldTrigger: boolean; eventKey?: string } {
-  if (!desc.isAutoTrigger) {
-    return { shouldTrigger: false }
+): SceneEvent | undefined {
+  const events = target.passiveEvents ?? []
+  const playerLuck = player.attributes.luck + player.attributes.luckModifier
+  for (const pe of events) {
+    // 一次性事件已触发过 → 跳过
+    if (pe.isOneTime && pe.seenFlag && player.flags[pe.seenFlag]) continue
+    // 显示条件
+    if (!evaluateConditions(pe.displayCondition, player)) continue
+    // 概率判定（isLucky 时叠加玩家幸运值）
+    const probability = pe.probability ?? 1
+    const p = pe.isLucky ? probability + playerLuck / 100 : probability
+    if (chance(p)) return pe
   }
-
-  const eventKey = desc.autoTriggerEventKey || desc.eventEntries?.[0]?.key
-  return { shouldTrigger: true, eventKey }
+  return undefined
 }
 
 /**
