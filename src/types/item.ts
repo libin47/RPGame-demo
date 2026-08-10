@@ -88,7 +88,7 @@ export interface BaseItem {
   /** 是否可在交易中出售 */
   isSellable: boolean
   /** 基础售价（货币单位） */
-  basePrice: number
+  basePrice?: number
   priceMultiplier?: number
 
   /** 使用/装备条件 */

@@ -13,28 +13,35 @@ const beach_潮汐洞穴: SubScene = {
     {
       id: 'beach_潮汐洞穴_首次进入',
       priority: 10,
-      text: '退潮后，礁石群尽头露出一道低矮的岩缝。你侧身挤进去，里面是一个被海水冲刷得光滑的火山岩洞穴。洞顶不高，你得微微低头才能站稳。\n\n洞壁上附着成片的发光藻类，蓝绿色的冷光把整面岩壁变成了一片星空。光线虽然微弱，但足够你辨认洞内的轮廓。\n\n洞穴深处有一个常年积水的石池，池水随着外海的潮涌缓慢起伏。石池对面，一具{beach_cave_event_1}被钟乳石半包裹着，在冷光中投下模糊的阴影。\n\n骸骨旁边还有一个被钙化封住的{beach_cave_event_2}。',
+      text: '退潮后，礁石群尽头露出一道低矮的岩缝。你侧身挤进去，里面是一个被海水冲刷得光滑的火山岩洞穴。洞顶不高，你得微微低头才能站稳。\n\n洞壁上附着成片的发光藻类，蓝绿色的冷光把整面岩壁变成了一片星空。光线虽然微弱，但足够你辨认洞内的轮廓。\n\n洞穴深处有一个常年积水的石池，池水随着外海的潮涌缓慢起伏。石池对面，一具{beach_cave_event_1}被钟乳石半包裹着，在冷光中投下模糊的阴影。',
       isOneTime: false,
-      displayCondition: { hideFlag: ['flag_潮汐洞穴_骸骨已调查'] },
+      displayCondition: { hideFlag: ['flag_潮汐洞穴_骸骨_已调查铭牌'] },
       eventEntries: [
         {
           key: 'beach_cave_event_1',
           displayText: '人类的骸骨',
           eventId: 'event_beach_潮汐洞穴_骸骨',
         },
+      ],
+    },
+    {
+      id: 'beach_潮汐洞穴_已调查',
+      priority: 9,
+      text: '那具骸骨安静地躺在钟乳石包裹中，你已经翻找过了他的遗物。\n\n在他所指的方向，一个{beach_cave_event_2}静静躺在那里。',
+      isOneTime: false,
+      eventEntries: [
         {
           key: 'beach_cave_event_2',
           displayText: '防水箱',
           eventId: 'event_beach_潮汐洞穴_防水箱',
         },
       ],
+      displayCondition: { hideFlag: ['flag_潮汐洞穴_箱子已开启'] },
     },
     {
-      id: 'beach_潮汐洞穴_已调查',
-      priority: 9,
-      text: '潮汐洞穴恢复了宁静。发光藻类在岩壁上缓缓明灭，石池的水依旧随着远方的潮汐起伏。\n\n那具骸骨安静地躺在钟乳石包裹中，你已经翻找过他的遗物。防水箱被你撬开了，里面的东西也带走了。\n\n洞壁上那些发光的藻类倒是值得再来——如果能找到合适的工具，也许可以刮一些下来。',
-      isOneTime: false,
-      displayCondition: { flag: ['flag_潮汐洞穴_骸骨已调查'] },
+      id: 'beach_潮汐洞穴_日常_1',
+      priority: 1,
+      text: '洞穴恢复了宁静，水池周围环绕着一圈发光的藻类，你可以用刀片刮下一些。',
     },
     {
       id: 'beach_潮汐洞穴_日常_1',
@@ -67,7 +74,7 @@ const beach_潮汐洞穴: SubScene = {
       name: '发光藻类',
       description: '洞壁上附着成片的发光藻类，蓝绿色的冷光在手边明灭。刮下来应该能收集不少。',
       descriptionTitle: '刮取发光藻类',
-      displayCondition: { flag: ['flag_潮汐洞穴_骸骨已调查'] },
+      displayCondition: { flag: ['flag_潮汐洞穴_箱子已开启'] },
       costTime: 15,
       costEnergy: 10,
       resourceType: 'item',

@@ -150,4 +150,43 @@ const 多功能战术刀: WeaponItem = {
   tags: ['tool', 'knife', 'multitool', 'survival'],
 }
 
-export { 石斧, 木矛, 石刀, 多功能战术刀 }
+/** 合金匕首 */
+const 合金匕首: WeaponItem = {
+  id: '合金匕首',
+  name: '合金匕首',
+  description: '一把锋利的合金匕首，你在潮汐洞穴某人的遗物中找到。',
+  category: ItemCategory.WEAPON,
+  iconId: 'icon_multitool_knife',
+  weight: 0.4,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 30,
+  isKeyItem: false,
+  toolCapabilities: {
+    toolTypeId: 'multitool',
+    toolLevel: 2,
+  },
+  durability: {
+    maxDurability: 80,
+    initialDurability: 80,
+    isRepairable: true,
+    repairMaterials: [{ itemId: '合金', quantity: 1 }],
+    repairWorkbenchLevel: 1,
+    destroyOnBreak: false,
+    brokenItemId: '损坏的合金匕首',
+  },
+  weaponTypeId: 'knife',
+  equipmentSlot: EquipmentSlot.WEAPON,
+  weaponStats: {
+    baseDamage: 20,
+    attackDistance: 1,
+    damageTypeId: 'slash',
+    damageVariance: 0.1,
+    accuracyModifier: 0.05,
+    criticalChanceModifier: 0.1,
+    criticalMultiplier: 2.0,
+  },
+  tags: ['tool', 'knife', 'multitool', 'survival'],
+}
+
+export { 石斧, 木矛, 石刀, 多功能战术刀, 合金匕首 }

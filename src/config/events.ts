@@ -21,6 +21,8 @@ import {
   event_beach_椰树林_猴王攻击,
   event_beach_椰树林_击败猴王_未追踪,
 } from './eventConfig/椰树林'
+import * as event_海岸哨岩 from './eventConfig/海岸哨岩'
+import * as event_潮汐洞穴 from './eventConfig/潮汐洞穴'
 
 export const eventRegistry: EventRegistry = {
   events: {
@@ -43,5 +45,7 @@ export const eventRegistry: EventRegistry = {
     event_beach_椰树林_灰褐色的猴子,
     event_beach_椰树林_猴王攻击,
     event_beach_椰树林_击败猴王_未追踪,
+    ...event_海岸哨岩,
+    ...event_潮汐洞穴,
   },
 }

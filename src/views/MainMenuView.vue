@@ -35,7 +35,7 @@
     </div>
 
     <!-- ═══════ 第二屏：角色选择 ═══════ -->
-    <div v-else class="class-screen">
+    <div v-else-if="screen === 'classSelect'" class="class-screen">
       <!-- 顶栏：返回 + 标题 -->
       <div class="class-topbar">
         <button class="back-btn" @click="screen = 'main'">
@@ -90,6 +90,47 @@
         </div>
       </transition>
     </div>
+
+    <!-- ═══════ 第三屏：读档（选择存档槽位） ═══════ -->
+    <div v-else-if="screen === 'loadSelect'" class="class-screen">
+      <!-- 顶栏：返回 + 标题 -->
+      <div class="class-topbar">
+        <button class="back-btn" @click="screen = 'main'">
+          <span class="back-arrow">←</span> 返回
+        </button>
+        <h2 class="class-screen-title">选择存档</h2>
+      </div>
+
+      <!-- 存档槽位列表 -->
+      <div class="class-scroll">
+        <div class="class-list">
+          <button
+            v-for="(meta, idx) in saveMetas"
+            :key="idx"
+            class="load-card"
+            :class="{ 'load-card-empty': !meta }"
+            :disabled="!meta"
+            @click="onLoadSlot(idx)"
+          >
+            <div class="load-slot-num">存档 {{ idx + 1 }}</div>
+            <template v-if="meta">
+              <div class="load-info">
+                <div class="load-day">第 {{ meta.day }} 天</div>
+                <div class="load-sub">
+                  {{ meta.playerName }} · {{ fmtTime(meta.timeMinutes) }} ·
+                  {{ fmtDate(meta.savedAt) }}
+                </div>
+              </div>
+              <span class="load-hint">读取</span>
+            </template>
+            <span v-else class="load-empty">无存档</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 提示消息 -->
+      <div v-if="loadMsg" class="load-msg">{{ loadMsg }}</div>
+    </div>
   </div>
 </template>
 
@@ -108,7 +149,7 @@ const registry = getRegistry()
 // 屏幕状态
 // ============================================================
 
-const screen = ref<'main' | 'classSelect'>('main')
+const screen = ref<'main' | 'classSelect' | 'loadSelect'>('main')
 
 // ============================================================
 // 职业选择
@@ -147,18 +188,43 @@ function startGame(): void {
   router.push({ name: 'game' })
 }
 
+// ============================================================
+// 读档
+// ============================================================
+
+/** 各槽位的存档元数据（进入读档界面时刷新，localStorage 非响应式） */
+const saveMetas = ref<ReturnType<typeof getAllSaveMeta>>([null, null, null])
+
+/** 读档提示 */
+const loadMsg = ref<string>('')
+
+/** 点击"继续游戏"：进入读档界面选择槽位 */
 function onContinue(): void {
-  const metas = getAllSaveMeta()
-  for (let slot = metas.length - 1; slot >= 0; slot--) {
-    if (metas[slot]) {
-      const playerState = loadGame(slot)
-      if (playerState) {
-        restoreGame(playerState)
-        router.push({ name: 'game' })
-        return
-      }
-    }
+  saveMetas.value = getAllSaveMeta()
+  loadMsg.value = ''
+  screen.value = 'loadSelect'
+}
+
+/** 格式化游戏内时间（分钟 → HH:MM） */
+function fmtTime(timeMinutes: number): string {
+  return `${String(Math.floor(timeMinutes / 60)).padStart(2, '0')}:${String(timeMinutes % 60).padStart(2, '0')}`
+}
+
+/** 格式化保存时间 */
+function fmtDate(timestamp: number): string {
+  const d = new Date(timestamp)
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** 读取指定槽位存档 */
+function onLoadSlot(slot: number): void {
+  const playerState = loadGame(slot)
+  if (!playerState) {
+    loadMsg.value = '该存档已损坏或不存在'
+    return
   }
+  restoreGame(playerState)
+  router.push({ name: 'game' })
 }
 
 function onExit(): void {
@@ -452,6 +518,88 @@ function onExit(): void {
   font-size: 12px;
   color: #aaa;
   line-height: 1.6;
+}
+
+/* ── 读档槽位 ── */
+.load-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: #c0c0c0;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.load-card:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.load-card-empty {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.load-slot-num {
+  width: 64px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #aaa;
+}
+
+.load-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.load-day {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d0d0d0;
+}
+
+.load-sub {
+  font-size: 12px;
+  color: #888;
+}
+
+.load-hint {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #64b5f6;
+  padding: 3px 10px;
+  border: 1px solid rgba(100, 181, 246, 0.3);
+  border-radius: 4px;
+  background: rgba(100, 181, 246, 0.06);
+}
+
+.load-card:hover:not(:disabled) .load-hint {
+  background: rgba(100, 181, 246, 0.14);
+  border-color: #64b5f6;
+}
+
+.load-empty {
+  flex: 1;
+  font-size: 13px;
+  color: #555;
+  font-style: italic;
+}
+
+.load-msg {
+  flex-shrink: 0;
+  padding: 0 0 24px;
+  text-align: center;
+  font-size: 13px;
+  color: #e57373;
 }
 
 /* ── 底部 ── */

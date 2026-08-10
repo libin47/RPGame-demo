@@ -94,7 +94,9 @@
               >
               <span class="sub-cost-inline">
                 <span class="cost-icon">⏱</span>{{ collect.costTime ?? 0 }}m
-                <span class="cost-icon">⚡</span>{{ collect.costEnergy ?? 0 }}
+                <template v-if="collect.costEnergy">
+                  <span class="cost-icon">⚡</span>{{ collect.costEnergy }}
+                </template>
               </span>
             </span>
             <span class="sub-desc">{{ collect.description }}</span>
@@ -135,9 +137,11 @@
           <div class="sub-info">
             <span class="sub-title">
               <span class="sub-title-text">{{ mv.descriptionTitle ?? mv.name }}</span>
-              <span v-if="mv.costTime != null || mv.costEnergy != null" class="sub-cost-inline">
+              <span v-if="mv.costTime != null || mv.costEnergy" class="sub-cost-inline">
                 <span class="cost-icon">⏱</span>{{ mv.costTime ?? 0 }}m
-                <span class="cost-icon">⚡</span>{{ mv.costEnergy ?? 0 }}
+                <template v-if="mv.costEnergy">
+                  <span class="cost-icon">⚡</span>{{ mv.costEnergy }}
+                </template>
               </span>
             </span>
             <span class="sub-desc">{{ mv.description ?? '' }}</span>

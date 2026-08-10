@@ -34,7 +34,6 @@ export const moveButton: MoveInteraction = {
   id: 'move',
   name: '移动',
   costTime: 10,
-  costEnergy: 10,
   moveType: 'move',
 }
 
@@ -68,7 +67,6 @@ export function enterSubSceneMove(opts: EnterSubSceneMoveOptions): MoveInteracti
     description: opts.description ?? opts.descriptionTitle,
     descriptionTitle: opts.descriptionTitle,
     costTime: 10,
-    costEnergy: 10,
     ...(opts.flag ? { displayCondition: { flag: [opts.flag] } } : {}),
     ...(opts.availableCondition ? { availableCondition: opts.availableCondition } : {}),
     ...(opts.unavailableTooltip ? { unavailableTooltip: opts.unavailableTooltip } : {}),
@@ -95,7 +93,6 @@ export function exitSubSceneMove(opts: ExitSubSceneMoveOptions): MoveInteraction
     ...(opts.description ? { description: opts.description } : {}),
     ...(opts.descriptionTitle ? { descriptionTitle: opts.descriptionTitle } : {}),
     costTime: 10,
-    costEnergy: 10,
     ...(opts.flag ? { displayCondition: { flag: [opts.flag] } } : {}),
     moveType: 'exitSubScene',
   }
@@ -132,7 +129,6 @@ export function eventInteraction(opts: EventInteractionOptions): SceneInteractio
       eventId: opts.eventId,
     },
     costTime: 10,
-    costEnergy: 10,
     ...(opts.displayCondition ? { displayCondition: opts.displayCondition } : {}),
     ...(opts.isOneTime ? { isOneTime: true, usedFlag: opts.usedFlag ?? opts.id } : {}),
     // 仅传 usedFlag（未设 isOneTime）时也生效

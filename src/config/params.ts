@@ -63,6 +63,16 @@ const beach_潮汐池: Param = {
     max: 10,
   },
 }
+const beach_发光藻类: Param = {
+  id: 'beach_发光藻类',
+  defaultValue: 10,
+  timeVarying: {
+    mode: 'accumulate',
+    deltaPerDay: 5,
+    min: 0,
+    max: 10,
+  },
+}
 
 export const paramRegistry: ParamRegistry = {
   params: {
@@ -72,5 +82,6 @@ export const paramRegistry: ParamRegistry = {
     beach_椰子树: beach_椰子树,
     beach_贝壳: beach_贝壳,
     beach_潮汐池: beach_潮汐池,
+    beach_发光藻类: beach_发光藻类,
   },
 }

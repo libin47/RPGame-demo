@@ -3,6 +3,7 @@
 // 职责：在视图切换（主菜单→游戏、CG→游戏等）之间保持游戏运行状态
 // 使用方法：MainMenuView 中 startNewGame → 路由跳转；GameView 中 getGameInstance → 获取状态
 
+import { shallowRef } from 'vue'
 import { useGame } from './useGame'
 import type { CampsiteBuildingInfo, RollResultInfo } from './useGame'
 import { createNewPlayerState } from '@/engine'
@@ -130,8 +131,8 @@ export interface GameInstance {
   unequipItem: (itemId: string) => void
 }
 
-/** 全局唯一的游戏运行实例（未开始时为 null） */
-let currentInstance: GameInstance | null = null
+/** 全局唯一的游戏运行实例（未开始时为 null；使用 shallowRef 以便读档替换实例时触发响应式更新） */
+const currentInstance = shallowRef<GameInstance | null>(null)
 
 /**
  * 开始新游戏
@@ -167,7 +168,7 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
 
   // 初始化游戏运行时
   const game = useGame(playerState)
-  currentInstance = {
+  currentInstance.value = {
     state: game.state,
     enterEvent: game.enterEvent,
     selectEventOption: game.selectEventOption,
@@ -211,7 +212,7 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     unequipItem: game.handleUnequipItem,
   }
 
-  return currentInstance
+  return currentInstance.value
 }
 
 /**
@@ -219,7 +220,7 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
  * @returns 游戏实例，若游戏未开始则返回 null
  */
 export function getGameInstance(): GameInstance | null {
-  return currentInstance
+  return currentInstance.value
 }
 
 /**
@@ -231,7 +232,7 @@ export function getGameInstance(): GameInstance | null {
  */
 export function restoreGame(playerState: PlayerState): GameInstance {
   const game = useGame(playerState)
-  currentInstance = {
+  currentInstance.value = {
     state: game.state,
     enterEvent: game.enterEvent,
     selectEventOption: game.selectEventOption,
@@ -274,5 +275,5 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     equipItem: game.handleEquipItem,
     unequipItem: game.handleUnequipItem,
   }
-  return currentInstance
+  return currentInstance.value
 }

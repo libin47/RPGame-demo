@@ -19,6 +19,7 @@ import * as consumableItems from './items/消耗品'
 import * as weaponItems from './items/武器'
 import * as itemItems from './items/物品'
 import * as documentItems from './items/文档'
+import * as importantItems from './items/重要物品'
 
 export const itemRegistry: ItemRegistry = {
   items: {
@@ -29,5 +30,6 @@ export const itemRegistry: ItemRegistry = {
     ...weaponItems,
     ...itemItems,
     ...documentItems,
+    ...importantItems,
   },
 }

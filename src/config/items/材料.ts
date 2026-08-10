@@ -133,7 +133,19 @@ const 燧石: MaterialItem = {
   isKeyItem: false,
   tags: ['material', 'stone'],
 }
+/** 发光藻类 */
+const 发光藻类: MaterialItem = {
+  id: '发光藻类',
+  name: '发光藻类',
+  description: '一块发光藻类，发光原理暂未确定。',
+  category: ItemCategory.MATERIAL,
+  iconId: 'icon_glowing_algae',
+  weight: 0.1,
+  maxStackSize: -1,
+  isSellable: true,
+  basePrice: 4,
+  isKeyItem: false,
+  tags: ['material', 'algae', 'glow'],
+}
 
-
-
-export { 镜子, 防水布, 尼龙绳, 木头, 金属碎片, 石头, 布料, 贝壳, 燧石 }
+export { 镜子, 防水布, 尼龙绳, 木头, 金属碎片, 石头, 布料, 贝壳, 燧石, 发光藻类 }

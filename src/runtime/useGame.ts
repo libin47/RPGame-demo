@@ -60,6 +60,7 @@ import { removeItem, getItemCount } from '@/engine'
 import { nextCGFrame, jumpToCGFrame } from '@/engine'
 import type { CraftResult, ItemSource } from '@/engine'
 import type { ButtonOption } from '@/types/option'
+import { OptionCostType } from '@/types/option'
 import type { buildOption } from '@/types/build'
 import type { GameMap } from '@/types/map'
 import { isSceneDescriptionEligible } from '@/engine/exploration'
@@ -546,6 +547,92 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 执行按钮交互的花费（快捷字段 costTime/costEnergy/costSan/costHp 与 costs[] 叠加扣减）
+   * 先校验体力/饱食度/生命/物品是否充足，不足则拦截（交互不执行）
+   * 用于事件选项与场景交互按钮统一结算。
+   *
+   * @param button - 交互按钮（事件选项或场景交互）
+   * @param defaultMinutes - 未配置 costTime 时的默认消耗分钟数
+   * @param extraStamina - 额外的体力消耗（如 moveToScene 的 staminaCost）
+   * @returns 是否消耗成功（false = 资源不足，调用方应中止交互）
+   */
+  function consumeButtonCosts(button: ButtonOption, defaultMinutes = 0, extraStamina = 0): boolean {
+    const survival = state.player.survival
+
+    // 汇总各类资源总消耗
+    let needStamina = (button.costEnergy ?? 0) + extraStamina
+    let needSatiety = 0
+    let needSan = button.costSan ?? 0
+    let needHp = button.costHp ?? 0
+    const itemCosts: { itemId: string; quantity: number }[] = []
+    if (button.costs) {
+      for (const c of button.costs) {
+        const value = c.value
+        switch (c.costType) {
+          case OptionCostType.STAMINA:
+            needStamina += value
+            break
+          case OptionCostType.SATIETY:
+            needSatiety += value
+            break
+          case OptionCostType.SAN:
+            needSan += value
+            break
+          case OptionCostType.HP:
+            needHp += value
+            break
+          case OptionCostType.ITEM:
+            if (c.itemId) {
+              itemCosts.push({ itemId: c.itemId, quantity: c.itemQuantity ?? 1 })
+            }
+            break
+        }
+      }
+    }
+
+    // 资源校验：不足则拦截
+    if (needStamina > 0 && survival.stamina < needStamina) {
+      state.logMessage = '体力不足，无法执行此操作'
+      return false
+    }
+    if (needSatiety > 0 && survival.satiety < needSatiety) {
+      state.logMessage = '饱食度不足，无法执行此操作'
+      return false
+    }
+    if (needHp > 0 && survival.hp < needHp) {
+      state.logMessage = '生命值不足，无法执行此操作'
+      return false
+    }
+    if (needSan > 0 && survival.san < needSan) {
+      state.logMessage = '精神不足以支撑这个选择'
+      return false
+    }
+    for (const ic of itemCosts) {
+      if (getItemCount(state.player, ic.itemId) < ic.quantity) {
+        state.logMessage = '缺少所需物品，无法执行此操作'
+        return false
+      }
+    }
+
+    // 扣减各类资源
+    if (needStamina > 0) survival.stamina = Math.max(0, survival.stamina - needStamina)
+    if (needSatiety > 0) survival.satiety = Math.max(0, survival.satiety - needSatiety)
+    if (needSan > 0) survival.san = Math.max(0, survival.san - needSan)
+    if (needHp > 0) survival.hp = Math.max(0, survival.hp - needHp)
+    for (const ic of itemCosts) {
+      removeItem(state.player, ic.itemId, ic.quantity)
+    }
+
+    // 时间消耗（未配置 costTime 时使用默认值）
+    const minutes = button.costTime ?? defaultMinutes
+    if (minutes > 0) {
+      advanceGameTime(minutes)
+    }
+
+    return true
+  }
+
+  /**
    * 处理事件选项选择
    * 根据选项结果执行对应操作
    */
@@ -555,8 +642,8 @@ export function useGame(initialPlayer: PlayerState) {
     const option = state.currentFrame.options.find((o) => o.id === optionId)
     if (!option) return
 
-    // 选择选项消耗5分钟游戏时间
-    // advanceGameTime(5)
+    // 先执行选项花费（资源不足则拦截，不执行选项）
+    if (!consumeButtonCosts(option)) return
 
     const result = resolveEventOptionResult(option, state.player)
     if (!result) return
@@ -566,9 +653,6 @@ export function useGame(initialPlayer: PlayerState) {
     if (option.usedFlag) {
       state.player.flags[option.usedFlag] = true
     }
-
-    // 先执行选项的消耗（后续实现）
-    // ...
 
     // 根据选项结果类型执行不同操作
     switch (result.type) {
@@ -595,6 +679,10 @@ export function useGame(initialPlayer: PlayerState) {
         const nextFrame = state.currentEvent?.frames.find((f) => f.id === result.targetFrameId)
         if (nextFrame) {
           state.currentFrame = nextFrame
+          // 帧显示后设置其 seenFlag（与 enterEvent 进入事件时一致）
+          if (nextFrame.seenFlag) {
+            state.player.flags[nextFrame.seenFlag] = true
+          }
           // 执行新帧的 onEnterEffects
           executeEffects(nextFrame.onEnterEffects)
         } else if (state.currentEvent) {
@@ -602,6 +690,10 @@ export function useGame(initialPlayer: PlayerState) {
           const visibleFrame = findFirstVisibleFrame(state.currentEvent.frames, state.player)
           if (visibleFrame) {
             state.currentFrame = visibleFrame
+            // 帧显示后设置其 seenFlag（与 enterEvent 进入事件时一致）
+            if (visibleFrame.seenFlag) {
+              state.player.flags[visibleFrame.seenFlag] = true
+            }
             // 执行新帧的 onEnterEffects
             executeEffects(visibleFrame.onEnterEffects)
           } else {
@@ -791,7 +883,7 @@ export function useGame(initialPlayer: PlayerState) {
 
     switch (interactionType) {
       case 'explore': {
-        // 探索：推进10分钟，刷新场景描述，完成后检测被动事件（复用 handleExplore）
+        // 探索：推进时间（costTime ?? 10）、刷新场景描述（复用 handleExplore）
         // 注意：handleExplore 内部已调用 handleFlag，故此处 return 避免与末尾 handleFlag 重复执行
         handleExplore(interaction)
         return
@@ -799,8 +891,8 @@ export function useGame(initialPlayer: PlayerState) {
 
       case 'event': {
         if (params?.interactionType === 'event') {
-          // 触发事件（消耗少量时间）
-          advanceGameTime(5)
+          // 统一消耗（未配置 costTime 时默认 5 分钟）
+          if (!consumeButtonCosts(interaction, 5)) return
           enterEvent(params.eventId)
           break
         }
@@ -809,29 +901,32 @@ export function useGame(initialPlayer: PlayerState) {
       case 'enterSubScene': {
         state.sceneTextAfter = ''
         if (params?.interactionType === 'enterSubScene') {
-          enterSubSceneById(params.subSceneId, 5)
+          // 内部含被动拦截与统一消耗（默认 5 分钟）
+          if (!enterSubSceneById(params.subSceneId, interaction)) return
           break
         }
       }
 
       case 'exitSubScene': {
         state.sceneTextAfter = ''
-        exitSubSceneToParent(5)
+        // 内部含被动拦截与统一消耗（默认 5 分钟）
+        if (!exitSubSceneToParent(interaction)) return
         break
       }
 
       case 'rest': {
-        // 休息：消耗60分钟（1小时），恢复体力/HP/SAN，移除休息状态
-        advanceGameTime(60)
-        applyRestRecovery(1, 1)
+        // 休息：消耗 costTime（默认 60 分钟）作为休息时长，按比例恢复体力/HP/SAN，移除休息状态
+        const restMinutes = interaction.costTime ?? 60
+        advanceGameTime(restMinutes)
+        applyRestRecovery(restMinutes / 60, 1)
         state.logMessage = '你休息了一会儿，恢复了一些体力'
         break
       }
 
       case 'talk': {
         if (params?.interactionType === 'talk') {
-          // 对话：消耗10分钟
-          advanceGameTime(10)
+          // 统一消耗（未配置 costTime 时默认 10 分钟）
+          if (!consumeButtonCosts(interaction, 10)) return
           enterEvent(params.eventId)
           break
         }
@@ -839,7 +934,7 @@ export function useGame(initialPlayer: PlayerState) {
 
       case 'trade': {
         if (params?.interactionType === 'trade') {
-          // 打开交易面板
+          // 打开交易面板（无消耗）
           state.currentTraderId = params.traderId
           state.mode = 'trade'
           break
@@ -852,8 +947,8 @@ export function useGame(initialPlayer: PlayerState) {
           return
         }
         if (params?.interactionType === 'move') {
-          // 方向移动：消耗10分钟
-          advanceGameTime(10)
+          // 统一消耗（未配置 costTime 时默认 10 分钟）
+          if (!consumeButtonCosts(interaction, 10)) return
           state.logMessage = `你向 ${params.direction} 方向移动`
           break
         }
@@ -862,12 +957,20 @@ export function useGame(initialPlayer: PlayerState) {
       case 'moveToScene': {
         state.sceneTextAfter = ''
         if (params?.interactionType === 'moveToScene') {
-          // 离开当前场景前被动事件拦截（触发后覆盖移动操作）
+          // 离开当前场景前被动事件拦截（触发后覆盖移动操作，不消耗）
           if (tryTriggerPassiveEvents('leave')) {
             return
           }
-          // 场景间移动：消耗指定的旅行时间
-          advanceGameTime(params.travelTimeMinutes || 15)
+          // 统一消耗：travelTimeMinutes 时间 + staminaCost 体力
+          if (
+            !consumeButtonCosts(
+              interaction,
+              params.travelTimeMinutes || 15,
+              params.staminaCost || 0,
+            )
+          ) {
+            return
+          }
           const targetScene = registry.getScene(params.targetSceneId)
           if (targetScene) {
             state.logMessage = params.pathDescription
@@ -945,7 +1048,8 @@ export function useGame(initialPlayer: PlayerState) {
   function handleExplore(explore: ButtonOption): void {
     if (tryTriggerPassiveEvents('explore')) return
     state.sceneTextAfter = ''
-    advanceGameTime(10)
+    // 统一消耗（未配置 costTime 时默认 10 分钟）
+    if (!consumeButtonCosts(explore, 10)) return
     refreshSceneDescription()
     state.logMessage = '你在周围仔细探索了一番'
     handleFlag(explore)
@@ -979,15 +1083,8 @@ export function useGame(initialPlayer: PlayerState) {
       setSceneTextAfter('该资源点已经没有可采集的资源了')
       return
     }
-    // 2. 体力是否充足
-    const costEnergy = collect.costEnergy ?? 0
-    if (costEnergy > 0 && state.player.survival.stamina < costEnergy) {
-      setSceneTextAfter('体力不足，无法进行采集')
-      return
-    }
-
-    // 扣除时间和体力
-    advanceGameTime(collect.costTime ?? 10)
+    // 2. 统一消耗（时间/体力/SAN/HP/物品；不足则拦截）
+    if (!consumeButtonCosts(collect, 10)) return
 
     // 显示资源文本（使用 sceneTextAfter 追加到主文字区域下方）
     if (collect.text) {
@@ -1101,45 +1198,55 @@ export function useGame(initialPlayer: PlayerState) {
    * 进入场景（handleSceneMove 与 handleInteraction 共用）
    * 离开场景前先拦截被动事件（触发则覆盖进入操作）
    */
-  function enterSceneById(SceneId: string, subSceneId?: string, costMinutes?: number): void {
-    // 离开当前场景（母场景）进入子场景前被动事件拦截（触发后覆盖离开操作）
+  function enterSceneById(sceneId: string, subSceneId?: string, button?: ButtonOption): boolean {
+    // 离开当前场景前被动事件拦截（触发后覆盖进入操作，不消耗）
     if (tryTriggerPassiveEvents('leave')) {
-      return
+      return false
     }
-
-    const scene = registry.getScene(SceneId)
-    advanceGameTime(costMinutes ?? 5)
+    // 统一消耗（未配置 costTime 时默认 5 分钟）
+    if (button && !consumeButtonCosts(button, 5)) {
+      return false
+    }
+    const scene = registry.getScene(sceneId)
     if (scene) {
       enterScene(scene, subSceneId)
     }
+    return true
   }
   /**
    * 进入子场景（handleSceneMove 与 handleInteraction 共用）
    * 离开母场景前先拦截被动事件（触发则覆盖进入操作）
    */
-  function enterSubSceneById(subSceneId: string, costMinutes?: number): void {
+  function enterSubSceneById(subSceneId: string, button?: ButtonOption): boolean {
     // 离开当前场景（母场景）进入子场景前被动事件拦截（触发后覆盖离开操作）
     if (tryTriggerPassiveEvents('leave')) {
-      return
+      return false
     }
-
-    advanceGameTime(costMinutes ?? 5)
+    // 统一消耗（未配置 costTime 时默认 5 分钟）
+    if (button && !consumeButtonCosts(button, 5)) {
+      return false
+    }
     if (registry.getSubScene(subSceneId)) {
       enterScene(state.currentScene, subSceneId)
     }
+    return true
   }
 
   /**
    * 离开子场景返回母场景（handleSceneMove 与 handleInteraction 共用）
    * 离开前先拦截被动事件（触发则覆盖离开操作）
    */
-  function exitSubSceneToParent(costMinutes?: number): void {
+  function exitSubSceneToParent(button?: ButtonOption): boolean {
     // 离开子场景前被动事件拦截（触发后覆盖离开操作）
     if (tryTriggerPassiveEvents('leave')) {
-      return
+      return false
     }
-    advanceGameTime(costMinutes ?? 5)
+    // 统一消耗（未配置 costTime 时默认 5 分钟）
+    if (button && !consumeButtonCosts(button, 5)) {
+      return false
+    }
     enterScene(state.currentScene, null)
+    return true
   }
 
   /**
@@ -1154,19 +1261,12 @@ export function useGame(initialPlayer: PlayerState) {
       return
     }
 
-    // 前置校验：体力是否充足
-    const costEnergy = moveAction.costEnergy ?? 0
-    if (costEnergy > 0 && state.player.survival.stamina < costEnergy) {
-      setSceneTextAfter('体力不足，无法行动')
-      return
-    }
-
     if (moveType === 'enterSubScene' && moveAction.subSceneId) {
-      enterSubSceneById(moveAction.subSceneId, moveAction.costTime)
+      if (!enterSubSceneById(moveAction.subSceneId, moveAction)) return
     } else if (moveType === 'exitSubScene') {
-      exitSubSceneToParent(moveAction.costTime)
+      if (!exitSubSceneToParent(moveAction)) return
     } else if (moveType === 'enterScene' && moveAction.sceneId) {
-      enterSceneById(moveAction.sceneId, moveAction.subSceneId, moveAction.costTime)
+      if (!enterSceneById(moveAction.sceneId, moveAction.subSceneId, moveAction)) return
     } else {
       // 普通 move 类型：打开大地图界面（不消耗时间，移动时再结算）
       state.sceneTextAfter = ''
