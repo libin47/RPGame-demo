@@ -328,4 +328,120 @@ function optionResultIcon(option: EventOption): string {
   box-shadow: none;
   transform: none;
 }
+
+/* ═════════════════════════════════════════════════════════
+   原型试验：陈年暗纸·手记风
+   用于与 ScenePanel 的「浅色书页」风格对比，仅覆盖本面板。
+   选中方案后可整体铺开，或整块删除还原。
+   ═════════════════════════════════════════════════════════ */
+.event-panel {
+  position: relative;
+  --text-primary: #d9cfbd;
+  --text-secondary: #a99a83;
+  --text-muted: #847663;
+  --accent: #7fb0a8;
+  --accent-dim: rgba(127, 176, 168, 0.15);
+  --link: #8ab8b0;
+  --link-hover: #a6ccc5;
+  --border-weak: rgba(233, 215, 178, 0.12);
+  --border-mid: rgba(233, 215, 178, 0.22);
+  color: var(--text-primary);
+  font-family: 'KaiTi', 'STKaiti', 'KaiTi SC', 'FangSong', 'SimSun', 'Songti SC', serif;
+  background:
+    radial-gradient(ellipse at 50% 18%, rgba(255, 214, 150, 0.07), transparent 55%),
+    linear-gradient(180deg, #221a11 0%, #160f09 100%);
+}
+
+/* 纸张颗粒感（暖白噪声，overlay 叠加在深色纸面上） */
+.event-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+.event-panel .event-text {
+  padding: 1.2rem 1.4rem 1.6rem;
+}
+
+.event-panel .frame-text,
+.event-panel .text-variation {
+  color: var(--text-primary);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.event-panel .result-prefix,
+.event-panel .result-suffix {
+  color: var(--text-primary);
+  background: rgba(255, 238, 205, 0.06);
+  border: 1px solid rgba(233, 215, 178, 0.1);
+}
+
+/* 暗纸氛围晕影（比原来更沉，保留灯下感） */
+.event-panel .vignette-overlay {
+  background:
+    radial-gradient(
+      ellipse at center top,
+      rgba(0, 0, 0, 0) 25%,
+      rgba(10, 6, 2, 0.25) 62%,
+      rgba(8, 5, 2, 0.42) 100%
+    ),
+    radial-gradient(ellipse at center bottom, rgba(0, 0, 0, 0) 25%, rgba(10, 6, 2, 0.18) 55%);
+}
+
+.event-panel .option-list {
+  border-top: 1px solid rgba(233, 215, 178, 0.12);
+  background: rgba(10, 6, 2, 0.3);
+}
+
+.event-panel .option-btn {
+  font-family: inherit;
+  border-color: rgba(233, 215, 178, 0.18);
+  background: rgba(255, 240, 210, 0.035);
+  color: var(--text-secondary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.event-panel .option-btn:hover {
+  background: rgba(255, 240, 210, 0.07);
+  border-color: rgba(233, 215, 178, 0.3);
+  color: var(--text-primary);
+}
+
+/* 危险选项：朱砂 */
+.event-panel .opt-danger {
+  border-color: rgba(201, 100, 79, 0.55);
+  color: #d98a72;
+}
+
+.event-panel .opt-danger:hover {
+  background: rgba(201, 100, 79, 0.12);
+  border-color: #c9644f;
+}
+
+/* 特殊选项：赭金 */
+.event-panel .opt-special {
+  border-color: rgba(201, 168, 106, 0.55);
+  color: #d9b878;
+}
+
+.event-panel .opt-special:hover {
+  background: rgba(201, 168, 106, 0.12);
+  border-color: #c9a86a;
+}
+
+/* 疯狂选项：墨紫 */
+.event-panel .opt-madness {
+  border-color: rgba(164, 128, 184, 0.55);
+  color: #b69bc8;
+}
+
+.event-panel .opt-madness:hover {
+  background: rgba(164, 128, 184, 0.12);
+  border-color: #a480b8;
+}
 </style>

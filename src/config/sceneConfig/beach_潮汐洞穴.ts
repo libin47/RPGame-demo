@@ -102,7 +102,7 @@ const beach_潮汐洞穴: SubScene = {
       text: '你用刀片贴着岩壁小心地刮下了一层藻类。它们在你手心里继续发着光，触感湿滑冰凉。',
     },
   ],
-  isDungeon: false,
+  isDungeon: true,
 }
 
 export default beach_潮汐洞穴

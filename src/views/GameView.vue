@@ -27,7 +27,8 @@
         :is-campsite="!!game.state.currentSubScene?.isCampsite"
         :scene-text-prefix="game.state.sceneTextPrefix"
         :scene-text-after="game.state.sceneTextAfter"
-        :background-color="backgroundColor"
+        :theme="sceneTheme"
+        :overlay="sceneOverlay"
         :player-state="game.state.player"
         :expanded-category="expandedCategory"
         :is-event-clicked="game.state.eventEntryClicked"
@@ -211,6 +212,7 @@ import { getVisibleOptions, getVisibleVariations, isOptionAvailable } from '@/en
 import { getGameInstance } from '@/runtime/gameInstance'
 import type { GameInstance } from '@/runtime/gameInstance'
 import { useUI } from '@/runtime/useUI'
+import { TimeOfDay } from '@/types/seasonWeather'
 import type { ButtonOption } from '@/types/option'
 import type { buildOption } from '@/types/build'
 
@@ -333,6 +335,35 @@ const backgroundColor = computed<string>(() => {
   const timeOfDay = getTimeOfDay(player.progress.timeMinutes)
   const config = registry.getTimeOfDayConfig(timeOfDay)
   return config?.backgroundColor || '#12122a'
+})
+
+// ============================================================
+// 场景纸张主题与环境叠加（由时段与场景属性驱动）
+// ============================================================
+
+/** 场景纸张主题：day（白天·浅色纸）/ dusk（黄昏黎明·暗纸）/ night（夜晚·深色纸） */
+const sceneTheme = computed<'day' | 'dusk' | 'night'>(() => {
+  const timeOfDay = getTimeOfDay(game.value.state.player.progress.timeMinutes)
+  switch (timeOfDay) {
+    case TimeOfDay.DAWN:
+    case TimeOfDay.DUSK:
+      return 'dusk'
+    case TimeOfDay.LATE_NIGHT:
+    case TimeOfDay.EARLY_MORNING:
+    case TimeOfDay.NIGHT:
+      return 'night'
+    default:
+      return 'day'
+  }
+})
+
+/** 场景环境叠加：营地暖光 / 地牢危险（子场景优先） */
+const sceneOverlay = computed<'none' | 'campsite' | 'dungeon'>(() => {
+  const state = game.value.state
+  if (state.currentSubScene?.isCampsite) return 'campsite'
+  const target = state.currentSubScene ?? state.currentScene
+  if (target.isDungeon) return 'dungeon'
+  return 'none'
 })
 
 // ============================================================
