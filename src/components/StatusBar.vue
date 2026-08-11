@@ -134,9 +134,9 @@ defineEmits<{
 
 const registry = getRegistry()
 
-/** 状态栏背景：使用传入背景色 + 渐变叠加 */
+/** 状态栏背景：纸墨面板底 + 微妙压暗渐变 */
 const barBackground = computed<string>(() => {
-  return `linear-gradient(180deg, ${props.backgroundColor} 0%, rgba(0,0,0,0.15) 100%), ${props.backgroundColor}`
+  return `linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.16) 100%), var(--panel-bg)`
 })
 
 // ── 第一行 ──
@@ -337,7 +337,7 @@ const sanLevelClass = computed<string>(() => {
 }
 
 .sep {
-  color: #ffffff;
+  color: var(--text-muted);
   margin: 0 0.15rem;
   flex-shrink: 0;
 }
@@ -398,10 +398,10 @@ const sanLevelClass = computed<string>(() => {
   flex: 1;
   height: 22px;
   border-radius: 7px;
-  background: #5f5f5f;
+  background: rgba(0, 0, 0, 0.28);
   overflow: hidden;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--line-soft);
 }
 
 .bar-fill {
@@ -545,7 +545,7 @@ const sanLevelClass = computed<string>(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--bar-bg);
   border-radius: var(--radius-md);
   padding: 0.35rem 0.5rem;
   margin-top: 0.1rem;
@@ -560,9 +560,9 @@ const sanLevelClass = computed<string>(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-sm);
   padding: 0.3rem 0.65rem;
@@ -572,10 +572,10 @@ const sanLevelClass = computed<string>(() => {
 }
 
 .tool-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--card-hover);
+  border-color: var(--border-mid);
   color: var(--text-primary);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 4px var(--shadow);
 }
 
 .tool-btn:active {
@@ -583,23 +583,23 @@ const sanLevelClass = computed<string>(() => {
 }
 
 .tool-btn.btn-accent {
-  border-color: rgba(78, 205, 196, 0.4);
-  background: rgba(78, 205, 196, 0.08);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
 }
 .tool-btn.btn-accent:hover {
-  border-color: var(--accent);
-  background: rgba(78, 205, 196, 0.18);
-  color: var(--accent);
+  background: var(--accent-bg-hover);
+  color: var(--accent-hover);
 }
 
 .tool-btn.btn-info {
-  border-color: rgba(100, 181, 246, 0.4);
-  background: rgba(100, 181, 246, 0.08);
+  border-color: var(--special);
+  background: var(--special-bg);
+  color: var(--special);
 }
 .tool-btn.btn-info:hover {
-  border-color: #64b5f6;
-  background: rgba(100, 181, 246, 0.18);
-  color: #64b5f6;
+  background: var(--special-bg-hover);
+  color: var(--special);
 }
 
 .tool-icon {

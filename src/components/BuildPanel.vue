@@ -509,7 +509,8 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 .panel-header {
@@ -518,7 +519,7 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   justify-content: space-between;
   padding: 0.7rem 1.2rem;
   border-bottom: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bar-bg);
 }
 
 .panel-title {
@@ -531,7 +532,7 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   padding: 0.3rem 0.8rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-sm);
   cursor: pointer;
@@ -539,7 +540,7 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
 }
 
 .btn-back:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--card-hover);
   color: var(--text-primary);
 }
 
@@ -578,11 +579,11 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   padding: 0.7rem;
   border: 1px solid var(--border-weak);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
 }
 
 .building-card.existing {
-  border-color: rgba(78, 205, 196, 0.3);
+  border-color: var(--accent);
 }
 
 .building-header {
@@ -601,8 +602,8 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
 .tag-deco {
   padding: 0.05rem 0.35rem;
   border-radius: 3px;
-  background: rgba(255, 213, 79, 0.12);
-  color: #ffd54f;
+  background: var(--special-bg);
+  color: var(--special);
   font-size: var(--font-xs);
 }
 
@@ -623,7 +624,7 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
 .action-tag {
   padding: 0.1rem 0.4rem;
   border-radius: 3px;
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--accent-bg);
   color: var(--accent);
   font-size: var(--font-xs);
 }
@@ -645,7 +646,7 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
 
 .upgrade-label {
   font-size: var(--font-xs);
-  color: #ffd54f;
+  color: var(--special);
   min-width: 5rem;
 }
 
@@ -684,10 +685,10 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
 
 .btn-upgrade {
   padding: 0.2rem 0.7rem;
-  border: 1px solid rgba(255, 213, 79, 0.4);
+  border: 1px solid var(--special);;
   border-radius: var(--radius-md);
   background: rgba(255, 213, 79, 0.08);
-  color: #ffd54f;
+  color: var(--special);;
   font-size: var(--font-xs);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -711,13 +712,13 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
 }
 
 .stamina-badge {
-  color: #ffd700;
-  background: rgba(255, 215, 0, 0.1);
+  color: var(--special);
+  background: var(--special-bg);
 }
 
 .time-badge {
-  color: #90caf9;
-  background: rgba(144, 202, 249, 0.1);
+  color: var(--recovery);
+  background: var(--accent-bg);
 }
 
 /* ---- 可建造 ---- */
@@ -733,13 +734,13 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   padding: 0.7rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   transition: all var(--transition-fast);
 }
 
 .build-card:not(.build-disabled):hover {
-  border-color: rgba(78, 205, 196, 0.4);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent);
+  background: var(--card-hover);
 }
 
 .build-disabled {
@@ -789,7 +790,7 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   padding: 0.4rem 1rem;
   border: 1px solid var(--accent);
   border-radius: var(--radius-md);
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--accent-bg);
   color: var(--accent);
   font-size: var(--font-sm);
   cursor: pointer;
@@ -798,7 +799,7 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
 }
 
 .btn-build:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.25);
+  background: var(--accent-bg-hover);
 }
 .btn-build:disabled {
   opacity: 0.35;
@@ -813,7 +814,7 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   margin-top: 0.8rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-md);
   cursor: pointer;
@@ -822,7 +823,7 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
 }
 
 .btn-return:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--card-hover);
   color: var(--text-primary);
 }
 </style>

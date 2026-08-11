@@ -138,17 +138,20 @@ onBeforeUnmount(() => {
   padding: 1.2rem 1.5rem;
   color: var(--text-primary);
   text-align: center;
+  background: var(--paper-root);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 /* 选项描述（顶部，斜体） */
 .roll-desc {
   width: 100%;
   font-style: italic;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--prefix-bg);
+  border: 1px solid var(--border-weak);
   border-radius: var(--radius-sm);
   padding: 0.5em 0.8em;
   margin-bottom: 0.8rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: var(--text-shadow);
   white-space: pre-wrap;
   line-height: 1.7;
   font-size: var(--font-md);
@@ -183,9 +186,9 @@ onBeforeUnmount(() => {
   width: 92px;
   height: 92px;
   border-radius: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  border: 2px solid var(--border-mid);
+  background: var(--card-bg);
+  box-shadow: 0 6px 20px var(--shadow-strong);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -256,7 +259,7 @@ onBeforeUnmount(() => {
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  text-shadow: var(--text-shadow);
   color: var(--text-primary);
 }
 
@@ -272,7 +275,7 @@ onBeforeUnmount(() => {
 .dice-note {
   margin-top: 0.6rem;
   font-size: var(--font-sm);
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 }
 
 /* 属性与修正 */
@@ -284,7 +287,7 @@ onBeforeUnmount(() => {
 
 .roll-reason {
   font-size: var(--font-sm);
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   line-height: 1.7;
 }
 
@@ -360,7 +363,7 @@ onBeforeUnmount(() => {
   padding: 0.6rem 1.15rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-md);
   letter-spacing: 0.03em;
@@ -368,19 +371,19 @@ onBeforeUnmount(() => {
   transition:
     all var(--transition-fast),
     transform 0.12s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px var(--shadow);
 }
 
 .continue-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--card-hover);
+  border-color: var(--border-mid);
   color: var(--text-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 12px var(--shadow-strong);
   transform: translateY(-1px);
 }
 
 .continue-btn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px var(--shadow);
 }
 </style>

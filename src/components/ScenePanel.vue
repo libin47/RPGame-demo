@@ -14,7 +14,11 @@
         <p v-if="props.sceneTextPrefix" class="scene-prefix">{{ props.sceneTextPrefix }}</p>
         <p class="scene-line">
           <template v-for="segment in parsedSegments" :key="segment.segmentKey">
-            <span v-if="segment.type === 'text'">{{ segment.content }}</span>
+            <CorruptText
+              v-if="segment.type === 'text'"
+              :text="segment.content"
+              :tier="sanTier"
+            />
             <button
               v-else-if="segment.type === 'entry'"
               type="button"
@@ -217,6 +221,7 @@ import type { PlayerState } from '@/types/player'
 import { paramRegistry } from '@/config/params'
 import type { Conditions } from '@/types/effect'
 import RichText from './RichText.vue'
+import CorruptText from './CorruptText.vue'
 
 /**
  * 营地建筑基本信息
@@ -257,6 +262,8 @@ const props = defineProps<{
   /** 环境叠加：none / campsite（营地暖光）/ dungeon（地牢危险） */
   overlay?: 'none' | 'campsite' | 'dungeon'
   playerState: PlayerState
+  /** SAN 异常档位（0 正常 ~ 4 极度），用于场景主文本的异常渲染 */
+  sanTier?: number
   /** 当前展开的分类（由 GameView 管理，场景切换时自动重置） */
   expandedCategory: string | null
   // 描述中事件是否点击
@@ -1052,81 +1059,13 @@ function interactionBtnClass(inter: SceneInteraction): string {
 }
 
 /* ═════════════════════════════════════════════════════════
-   原型试验：纸张墨水风 · 时段三主题 + 环境叠加
-   主题：data-theme = day（浅色纸）/ dusk（黄昏黎明·暗纸）/ night（夜晚·深色纸）
-   叠加：data-overlay = none / campsite（营地暖光）/ dungeon（地牢危险）
-   由 GameView 按时段与场景属性计算传入。选中方案后可整体铺开。
+   纸墨主题令牌已上移至 GameView 容器层（.main-content）
+   主题：data-theme = day / dusk / night；叠加：data-overlay = campsite / dungeon
+   本面板只需继承令牌，无需重复定义
    ═════════════════════════════════════════════════════════ */
 
-/* ---- 令牌：白天（默认） ---- */
 .scene-panel {
   position: relative;
-  /* 墨色 */
-  --ink: #332d22;
-  --ink-mid: #5f5545;
-  --ink-weak: #93876f;
-  /* 纸面 */
-  --paper-root: #efe6d1;
-  --narr-top: #f2ebd8;
-  --narr-bottom: #ecdfc6;
-  --narr-glow: rgba(255, 250, 235, 0.85);
-  --panel-bg: linear-gradient(180deg, #eadcc0 0%, #e2d1ae 100%);
-  --bar-bg: rgba(226, 213, 182, 0.55);
-  --sub-bg: rgba(226, 213, 182, 0.5);
-  --card-bg: rgba(255, 252, 242, 0.72);
-  --card-hover: #fffdf5;
-  --btn-bg: rgba(255, 252, 242, 0.92);
-  --prefix-bg: rgba(255, 252, 242, 0.72);
-  /* 线条/阴影 */
-  --line: rgba(90, 74, 50, 0.2);
-  --line-soft: rgba(90, 74, 50, 0.13);
-  --shadow: rgba(90, 70, 40, 0.16);
-  --shadow-strong: rgba(90, 70, 40, 0.28);
-  /* 墨彩强调色 */
-  --accent: #4a6a5a;
-  --accent-hover: #2f5344;
-  --accent-ink: #f5f0e2;
-  --accent-bg: rgba(74, 106, 90, 0.08);
-  --accent-bg-hover: rgba(74, 106, 90, 0.16);
-  --danger: #a64536;
-  --danger-bg: rgba(166, 69, 54, 0.06);
-  --danger-bg-hover: rgba(166, 69, 54, 0.14);
-  --special: #9a6a28;
-  --special-bg: rgba(168, 122, 46, 0.06);
-  --special-bg-hover: rgba(168, 122, 46, 0.14);
-  --link: #4a6a5a;
-  --link-hover: #2f5344;
-  --prefix-line: #a0804f;
-  --recovery: #4a7a6a;
-  --rc-suf: #3d7a4f;
-  --rc-low: #9a7a28;
-  --rc-crit: #a64536;
-  /* 质感 */
-  --text-shadow: none;
-  --grain-opacity: 0.09;
-  --grain-blend: multiply;
-  --grain-filter: invert(1);
-  --stain-opacity: 1;
-  --vignette:
-    radial-gradient(
-      ellipse at center top,
-      rgba(90, 70, 40, 0) 45%,
-      rgba(90, 70, 40, 0.05) 80%,
-      rgba(80, 60, 35, 0.1) 100%
-    ),
-    radial-gradient(ellipse at center bottom, rgba(90, 70, 40, 0) 45%, rgba(80, 60, 35, 0.06) 75%);
-  /* 环境叠加（营地暖光 / 地牢危险），默认透明 */
-  --warm-glow: transparent;
-  --danger-tint: transparent;
-
-  /* 映射到既有变量，子组件无需感知主题 */
-  --text-primary: var(--ink);
-  --text-secondary: var(--ink-mid);
-  --text-muted: var(--ink-weak);
-  --accent-dim: var(--accent-bg);
-  --border-weak: var(--line-soft);
-  --border-mid: var(--line);
-
   color: var(--text-primary);
   font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
   background: var(--paper-root);
@@ -1135,137 +1074,15 @@ function interactionBtnClass(inter: SceneInteraction): string {
     color 0.5s ease;
 }
 
-/* ---- 令牌：黄昏/黎明（暗纸，与事件面板同源） ---- */
-.scene-panel[data-theme='dusk'] {
-  --ink: #d9cfbd;
-  --ink-mid: #a99a83;
-  --ink-weak: #847663;
-  --paper-root: #241c12;
-  --narr-top: #2a2115;
-  --narr-bottom: #1d150c;
-  --narr-glow: transparent;
-  --panel-bg: linear-gradient(180deg, #241b10 0%, #1c140a 100%);
-  --bar-bg: rgba(0, 0, 0, 0.14);
-  --sub-bg: rgba(0, 0, 0, 0.18);
-  --card-bg: rgba(255, 240, 210, 0.05);
-  --card-hover: rgba(255, 240, 210, 0.09);
-  --btn-bg: rgba(255, 240, 210, 0.06);
-  --prefix-bg: rgba(255, 238, 205, 0.06);
-  --line: rgba(233, 215, 178, 0.14);
-  --line-soft: rgba(233, 215, 178, 0.08);
-  --shadow: rgba(0, 0, 0, 0.3);
-  --shadow-strong: rgba(0, 0, 0, 0.45);
-  --accent: #7fb0a8;
-  --accent-hover: #9cc8c0;
-  --accent-ink: #101410;
-  --accent-bg: rgba(127, 176, 168, 0.12);
-  --accent-bg-hover: rgba(127, 176, 168, 0.22);
-  --danger: #d98a72;
-  --danger-bg: rgba(217, 138, 114, 0.1);
-  --danger-bg-hover: rgba(217, 138, 114, 0.2);
-  --special: #d9b878;
-  --special-bg: rgba(217, 184, 120, 0.1);
-  --special-bg-hover: rgba(217, 184, 120, 0.2);
-  --link: #8ab8b0;
-  --link-hover: #a6ccc5;
-  --prefix-line: #c9a86a;
-  --recovery: #7fb0a8;
-  --rc-suf: #7fae8a;
-  --rc-low: #c9a86a;
-  --rc-crit: #d98a72;
-  --text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
-  --grain-opacity: 0.24;
-  --grain-blend: overlay;
-  --grain-filter: none;
-  --stain-opacity: 0.15;
-  --vignette:
-    radial-gradient(
-      ellipse at center top,
-      rgba(0, 0, 0, 0) 30%,
-      rgba(0, 0, 0, 0.22) 65%,
-      rgba(0, 0, 0, 0.4) 100%
-    ),
-    radial-gradient(ellipse at center bottom, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.16) 60%);
-}
-
-/* ---- 令牌：夜晚（深色纸，更压抑） ---- */
-.scene-panel[data-theme='night'] {
-  --ink: #b8ad97;
-  --ink-mid: #8d8473;
-  --ink-weak: #6b6355;
-  --paper-root: #100c08;
-  --narr-top: #151009;
-  --narr-bottom: #0d0a06;
-  --narr-glow: transparent;
-  --panel-bg: linear-gradient(180deg, #14100a 0%, #0c0906 100%);
-  --bar-bg: rgba(0, 0, 0, 0.25);
-  --sub-bg: rgba(0, 0, 0, 0.3);
-  --card-bg: rgba(240, 230, 210, 0.04);
-  --card-hover: rgba(240, 230, 210, 0.08);
-  --btn-bg: rgba(240, 230, 210, 0.05);
-  --prefix-bg: rgba(240, 230, 210, 0.05);
-  --line: rgba(220, 205, 180, 0.1);
-  --line-soft: rgba(220, 205, 180, 0.06);
-  --shadow: rgba(0, 0, 0, 0.4);
-  --shadow-strong: rgba(0, 0, 0, 0.55);
-  --accent: #5f8f88;
-  --accent-hover: #79aaa2;
-  --accent-ink: #0c0e0c;
-  --accent-bg: rgba(95, 143, 136, 0.12);
-  --accent-bg-hover: rgba(95, 143, 136, 0.22);
-  --danger: #b86a58;
-  --danger-bg: rgba(184, 106, 88, 0.1);
-  --danger-bg-hover: rgba(184, 106, 88, 0.2);
-  --special: #b89a60;
-  --special-bg: rgba(184, 154, 96, 0.1);
-  --special-bg-hover: rgba(184, 154, 96, 0.2);
-  --link: #6f9f98;
-  --link-hover: #8ab8b0;
-  --prefix-line: #a0804f;
-  --recovery: #6f9f98;
-  --rc-suf: #7fae8a;
-  --rc-low: #a0804f;
-  --rc-crit: #b86a58;
-  --text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
-  --grain-opacity: 0.26;
-  --grain-blend: overlay;
-  --grain-filter: none;
-  --stain-opacity: 0.12;
-  --vignette:
-    radial-gradient(
-      ellipse at center top,
-      rgba(0, 0, 0, 0) 22%,
-      rgba(0, 0, 0, 0.3) 62%,
-      rgba(0, 0, 0, 0.52) 100%
-    ),
-    radial-gradient(ellipse at center bottom, rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0.22) 58%);
-}
-
-/* ---- 环境叠加：营地暖光 / 地牢危险（与主题正交，覆盖整个面板） ---- */
-.scene-panel[data-overlay='campsite'] {
-  --warm-glow:
-    radial-gradient(ellipse 78% 56% at 50% 74%, rgba(255, 158, 66, 0.3), transparent 70%),
-    radial-gradient(ellipse 46% 30% at 50% 102%, rgba(255, 138, 48, 0.2), transparent 75%);
-}
-
-.scene-panel[data-overlay='dungeon'] {
-  /* 与营地同构：红光从顶部两侧边缘向下扩散（不染红整体晕影） */
-  --danger-tint:
-    radial-gradient(ellipse 78% 56% at 50% 74%, rgba(255, 158, 66, 0.3), transparent 70%),
-    radial-gradient(ellipse 46% 30% at 50% 102%, rgba(255, 138, 48, 0.2), transparent 75%);
-  /* radial-gradient(ellipse 46% 40% at 12% 0%, rgba(196, 32, 24, 0.3), transparent 70%),
-    radial-gradient(ellipse 46% 40% at 88% 0%, rgba(196, 32, 24, 0.3), transparent 70%),
-    radial-gradient(ellipse 32% 22% at 0% -4%, rgba(216, 44, 32, 0.38), transparent 75%),
-    radial-gradient(ellipse 32% 22% at 100% -4%, rgba(216, 44, 32, 0.38), transparent 75%); */
-}
-
 /* 环境氛围层：叠加在内容之上、纸纹之下，透出光晕/危险色 */
 .scene-panel .atmosphere-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 3;
-  background: var(--warm-glow), var(--danger-tint);
+  /* 两层渐变叠加（透明渐变兼容营地/地牢两种面板），背景色单独设置 */
+  background-image: var(--danger-tint), var(--warm-glow);
+  background-color: transparent;
 }
 
 /* 旧纸色斑（低频泛黄不均匀，模拟陈年纸张） */
@@ -1346,11 +1163,12 @@ function interactionBtnClass(inter: SceneInteraction): string {
   box-shadow: 0 1px 2px var(--shadow);
 }
 
-/* 事件入口链接：墨色虚线标注，hover 变实线 */
+/* 事件入口链接：高亮色 + 虚线标注，hover 变实线 */
 .scene-panel .event-link {
   color: var(--link);
   border-bottom: 1px dashed var(--link);
   padding-bottom: 1px;
+  text-shadow: 0 1px 2px var(--shadow);
 }
 
 .scene-panel .event-link:hover {

@@ -74,7 +74,8 @@ defineEmits<{
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 /* ---- 头部（与 RecipePanel 一致） ---- */
@@ -84,7 +85,7 @@ defineEmits<{
   justify-content: space-between;
   padding: 0.7rem 1.2rem;
   border-bottom: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bar-bg);
 }
 
 .rp-title {
@@ -97,9 +98,9 @@ defineEmits<{
 .rp-title-text {
   margin: 0;
   font-size: var(--font-xs);
-  color: grey;
+  color: var(--text-muted);
   padding: 0.1rem 1.2rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bar-bg);
 }
 
 /* ---- 内容区 ---- */
@@ -125,13 +126,13 @@ defineEmits<{
   padding: 0.8rem 0.9rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   transition: all var(--transition-fast);
 }
 
 .rest-card:hover {
   border-color: rgba(165, 214, 167, 0.4);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--card-hover);
 }
 
 /* 左侧信息 */
@@ -197,7 +198,7 @@ defineEmits<{
   margin-top: 0.8rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-md);
   cursor: pointer;
@@ -206,7 +207,7 @@ defineEmits<{
 }
 
 .btn-return:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--card-hover);
   color: var(--text-primary);
 }
 </style>

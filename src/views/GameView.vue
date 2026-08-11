@@ -2,7 +2,16 @@
      组合 StatusBar（三行）+ ScenePanel/EventPanel/BattlePanel
      背景色随时间段变化 -->
 <template>
-  <div class="game-view" :style="{ background: backgroundColor }">
+  <!-- data-theme：时段主题（day/dusk/night）；data-overlay：环境叠加（campsite/dungeon）
+       data-san：SAN 异常档位（0 正常 ~ 4 极度），驱动内容区滤镜/扭曲/覆盖层
+       纸墨主题令牌在此根容器定义，状态栏与所有子面板通过 var(--...) 继承同一套配色 -->
+  <div
+    class="game-view"
+    :data-theme="sceneTheme"
+    :data-overlay="sceneOverlay"
+    :data-san="sanTier"
+    :style="{ background: backgroundColor }"
+  >
     <!-- 顶部状态栏（世界信息/生存属性/工具栏） -->
     <StatusBar
       :player-state="game.state.player"
@@ -18,6 +27,13 @@
 
     <!-- 主内容区：根据当前模式切换面板 -->
     <div class="main-content">
+      <!-- SAN 异常覆盖层（噪点/边缘变形/划痕，随档位显现，不挡操作） -->
+      <div v-if="sanTier > 0" class="san-overlay" aria-hidden="true">
+        <div class="san-noise"></div>
+        <div class="san-vignette"></div>
+        <div v-if="sanTier >= 3" class="san-scratch"></div>
+      </div>
+
       <!-- 场景模式 -->
       <ScenePanel
         v-if="game.state.mode === 'normal'"
@@ -30,6 +46,7 @@
         :theme="sceneTheme"
         :overlay="sceneOverlay"
         :player-state="game.state.player"
+        :san-tier="sanTier"
         :expanded-category="expandedCategory"
         :is-event-clicked="game.state.eventEntryClicked"
         @update:expanded-category="expandedCategory = $event"
@@ -83,6 +100,7 @@
         :options="visibleEventOptions"
         :variations="visibleEventVariations"
         :option-availability="optionAvailability"
+        :san-tier="sanTier"
         @select-option="game.selectEventOption"
       />
 
@@ -186,6 +204,58 @@
     <div v-if="uiState.showAttributes" class="panel-overlay">
       <AttributesPanel :player-state="game.state.player" @close="uiState.showAttributes = false" />
     </div>
+
+    <!-- SAN 扭曲滤镜定义（隐藏，供 CSS filter: url() 引用） -->
+    <svg class="san-svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <!-- 中等扭曲（档位 3） -->
+      <filter id="san-distort-mid">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.012 0.018"
+          numOctaves="2"
+          seed="5"
+          result="noise"
+        >
+          <animate
+            attributeName="baseFrequency"
+            dur="6s"
+            values="0.012 0.018;0.018 0.026;0.012 0.018"
+            repeatCount="indefinite"
+          />
+        </feTurbulence>
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="noise"
+          scale="14"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+      </filter>
+      <!-- 重度扭曲（档位 4） -->
+      <filter id="san-distort-severe">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.016 0.024"
+          numOctaves="3"
+          seed="11"
+          result="noise"
+        >
+          <animate
+            attributeName="baseFrequency"
+            dur="3.5s"
+            values="0.016 0.024;0.028 0.04;0.016 0.024"
+            repeatCount="indefinite"
+          />
+        </feTurbulence>
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="noise"
+          scale="26"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+      </filter>
+    </svg>
   </div>
 </template>
 
@@ -208,7 +278,7 @@ import StorePanel from '@/components/StorePanel.vue'
 import RepairPanel from '@/components/RepairPanel.vue'
 import MapPanel from '@/components/MapPanel.vue'
 import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
-import { getVisibleOptions, getVisibleVariations, isOptionAvailable } from '@/engine'
+import { getVisibleOptions, getVisibleVariations, isOptionAvailable, getSanLevel } from '@/engine'
 import { getGameInstance } from '@/runtime/gameInstance'
 import type { GameInstance } from '@/runtime/gameInstance'
 import { useUI } from '@/runtime/useUI'
@@ -361,9 +431,24 @@ const sceneTheme = computed<'day' | 'dusk' | 'night'>(() => {
 const sceneOverlay = computed<'none' | 'campsite' | 'dungeon'>(() => {
   const state = game.value.state
   if (state.currentSubScene?.isCampsite) return 'campsite'
-  const target = state.currentSubScene ?? state.currentScene
-  if (target.isDungeon) return 'dungeon'
+  if (state.currentSubScene?.isDungeon) return 'dungeon'
+  console.log(state.currentScene)
   return 'none'
+})
+
+// ============================================================
+// SAN 异常档位（驱动内容区滤镜/扭曲/覆盖层与文本异常）
+// ============================================================
+
+/**
+ * SAN 异常档位：0 正常 ~ 4 极度
+ * 由 getSanLevel 映射：5 理性(81+)→0；4 不安(61-80)→1；3 动摇(41-60)→2；
+ *                    2 崩溃(21-40)→3；1 疯狂(1-20)→4；0 濒死(<=0)→4（最重）
+ */
+const sanTier = computed<number>(() => {
+  const lvl = getSanLevel(game.value.state.player.survival.san)
+  if (lvl >= 5) return 0
+  return Math.min(4, 5 - lvl)
 })
 
 // ============================================================
@@ -624,7 +709,7 @@ watch(
   display: flex;
   flex-direction: column;
   height: 100vh;
-  color: #e0e0e0;
+  color: var(--text-primary);
   transition: background 0.6s ease;
 }
 
@@ -633,6 +718,204 @@ watch(
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
+  transition: filter 1.6s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   纸墨主题令牌（全局根容器层，状态栏与所有子面板共用）
+   主题：data-theme = day（浅色纸）/ dusk（黄昏黎明·暗纸）/ night（夜晚·深色纸）
+   叠加：data-overlay = none / campsite（营地暖光）/ dungeon（地牢危险）
+   ═══════════════════════════════════════════════════════════ */
+
+/* ---- 令牌：白天（默认） ---- */
+.game-view {
+  /* 墨色 */
+  --ink: #332d22;
+  --ink-mid: #5f5545;
+  --ink-weak: #93876f;
+  /* 纸面 */
+  --paper-root: #efe6d1;
+  --narr-top: #f2ebd8;
+  --narr-bottom: #ecdfc6;
+  --narr-glow: rgba(255, 250, 235, 0.85);
+  --panel-bg: linear-gradient(180deg, #eadcc0 0%, #e2d1ae 100%);
+  --bar-bg: rgba(226, 213, 182, 0.55);
+  --sub-bg: rgba(226, 213, 182, 0.5);
+  --card-bg: rgba(255, 252, 242, 0.72);
+  --card-hover: #fffdf5;
+  --btn-bg: rgba(255, 252, 242, 0.92);
+  --prefix-bg: rgba(255, 252, 242, 0.72);
+  /* 线条/阴影 */
+  --line: rgba(90, 74, 50, 0.2);
+  --line-soft: rgba(90, 74, 50, 0.13);
+  --shadow: rgba(90, 70, 40, 0.16);
+  --shadow-strong: rgba(90, 70, 40, 0.28);
+  /* 墨彩强调色 */
+  --accent: #4a6a5a;
+  --accent-hover: #2f5344;
+  --accent-ink: #f5f0e2;
+  --accent-bg: rgba(74, 106, 90, 0.08);
+  --accent-bg-hover: rgba(74, 106, 90, 0.16);
+  --danger: #a64536;
+  --danger-bg: rgba(166, 69, 54, 0.06);
+  --danger-bg-hover: rgba(166, 69, 54, 0.14);
+  --special: #9a6a28;
+  --special-bg: rgba(168, 122, 46, 0.06);
+  --special-bg-hover: rgba(168, 122, 46, 0.14);
+  --link: #2f8a5f;
+  --link-hover: #237a51;
+  --prefix-line: #a0804f;
+  --recovery: #4a7a6a;
+  --rc-suf: #3d7a4f;
+  --rc-low: #9a7a28;
+  --rc-crit: #a64536;
+  /* 质感 */
+  --text-shadow: none;
+  --grain-opacity: 0.09;
+  --grain-blend: multiply;
+  --grain-filter: invert(1);
+  --stain-opacity: 1;
+  --vignette:
+    radial-gradient(
+      ellipse at center top,
+      rgba(90, 70, 40, 0) 45%,
+      rgba(90, 70, 40, 0.05) 80%,
+      rgba(80, 60, 35, 0.1) 100%
+    ),
+    radial-gradient(ellipse at center bottom, rgba(90, 70, 40, 0) 45%, rgba(80, 60, 35, 0.06) 75%);
+  /* 环境叠加（营地暖光 / 地牢危险），默认透明渐变（不能用 transparent，颜色只能出现在 background 最后一层） */
+  --warm-glow: radial-gradient(circle, transparent 0, transparent 100%);
+  --danger-tint: radial-gradient(circle, transparent 0, transparent 100%);
+
+  /* 映射到既有变量，子组件无需感知主题 */
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-mid);
+  --text-muted: var(--ink-weak);
+  --accent-dim: var(--accent-bg);
+  --border-weak: var(--line-soft);
+  --border-mid: var(--line);
+}
+
+/* ---- 令牌：黄昏/黎明（暗纸） ---- */
+.game-view[data-theme='dusk'] {
+  --ink: #efe6d2;
+  --ink-mid: #c4b59b;
+  --ink-weak: #a2917a;
+  --paper-root: #382b1a;
+  --narr-top: #3f3120;
+  --narr-bottom: #2f2414;
+  --narr-glow: rgba(255, 190, 110, 0.1);
+  --panel-bg: linear-gradient(180deg, #392c1b 0%, #2e2314 100%);
+  --bar-bg: rgba(0, 0, 0, 0.14);
+  --sub-bg: rgba(0, 0, 0, 0.18);
+  --card-bg: rgba(255, 240, 210, 0.05);
+  --card-hover: rgba(255, 240, 210, 0.09);
+  --btn-bg: rgba(255, 240, 210, 0.06);
+  --prefix-bg: rgba(255, 238, 205, 0.06);
+  --line: rgba(233, 215, 178, 0.14);
+  --line-soft: rgba(233, 215, 178, 0.08);
+  --shadow: rgba(0, 0, 0, 0.3);
+  --shadow-strong: rgba(0, 0, 0, 0.45);
+  --accent: #7fb0a8;
+  --accent-hover: #9cc8c0;
+  --accent-ink: #101410;
+  --accent-bg: rgba(127, 176, 168, 0.12);
+  --accent-bg-hover: rgba(127, 176, 168, 0.22);
+  --danger: #d98a72;
+  --danger-bg: rgba(217, 138, 114, 0.1);
+  --danger-bg-hover: rgba(217, 138, 114, 0.2);
+  --special: #d9b878;
+  --special-bg: rgba(217, 184, 120, 0.1);
+  --special-bg-hover: rgba(217, 184, 120, 0.2);
+  --link: #9ad8ca;
+  --link-hover: #b8e8dc;
+  --prefix-line: #c9a86a;
+  --recovery: #7fb0a8;
+  --rc-suf: #7fae8a;
+  --rc-low: #c9a86a;
+  --rc-crit: #d98a72;
+  --text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --grain-opacity: 0.24;
+  --grain-blend: overlay;
+  --grain-filter: none;
+  --stain-opacity: 0.15;
+  --vignette:
+    radial-gradient(
+      ellipse at center top,
+      rgba(0, 0, 0, 0) 30%,
+      rgba(0, 0, 0, 0.16) 65%,
+      rgba(0, 0, 0, 0.28) 100%
+    ),
+    radial-gradient(ellipse at center bottom, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.12) 60%);
+}
+
+/* ---- 令牌：夜晚（深色纸，更压抑） ---- */
+.game-view[data-theme='night'] {
+  --ink: #d8cfbb;
+  --ink-mid: #b0a68f;
+  --ink-weak: #8b8070;
+  --paper-root: #100c08;
+  --narr-top: #151009;
+  --narr-bottom: #0d0a06;
+  --narr-glow: transparent;
+  --panel-bg: linear-gradient(180deg, #14100a 0%, #0c0906 100%);
+  --bar-bg: rgba(0, 0, 0, 0.25);
+  --sub-bg: rgba(0, 0, 0, 0.3);
+  --card-bg: rgba(240, 230, 210, 0.04);
+  --card-hover: rgba(240, 230, 210, 0.08);
+  --btn-bg: rgba(240, 230, 210, 0.05);
+  --prefix-bg: rgba(240, 230, 210, 0.05);
+  --line: rgba(220, 205, 180, 0.1);
+  --line-soft: rgba(220, 205, 180, 0.06);
+  --shadow: rgba(0, 0, 0, 0.4);
+  --shadow-strong: rgba(0, 0, 0, 0.55);
+  --accent: #6fa39a;
+  --accent-hover: #8ab8b0;
+  --accent-ink: #0c0e0c;
+  --accent-bg: rgba(95, 143, 136, 0.12);
+  --accent-bg-hover: rgba(95, 143, 136, 0.22);
+  --danger: #c47763;
+  --danger-bg: rgba(184, 106, 88, 0.1);
+  --danger-bg-hover: rgba(184, 106, 88, 0.2);
+  --special: #c2a468;
+  --special-bg: rgba(184, 154, 96, 0.1);
+  --special-bg-hover: rgba(184, 154, 96, 0.2);
+  --link: #88cdbd;
+  --link-hover: #a6e0d0;
+  --prefix-line: #a0804f;
+  --recovery: #6fa39a;
+  --rc-suf: #7fae8a;
+  --rc-low: #a0804f;
+  --rc-crit: #c47763;
+  --text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  --grain-opacity: 0.26;
+  --grain-blend: overlay;
+  --grain-filter: none;
+  --stain-opacity: 0.12;
+  --vignette:
+    radial-gradient(
+      ellipse at center top,
+      rgba(0, 0, 0, 0) 22%,
+      rgba(0, 0, 0, 0.3) 62%,
+      rgba(0, 0, 0, 0.52) 100%
+    ),
+    radial-gradient(ellipse at center bottom, rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0.22) 58%);
+}
+
+/* ---- 环境叠加：营地暖光 / 地牢危险（与主题正交） ---- */
+.game-view[data-overlay='campsite'] {
+  --warm-glow:
+    radial-gradient(ellipse 78% 56% at 50% 74%, rgba(255, 158, 66, 0.3), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 50% 102%, rgba(255, 138, 48, 0.2), transparent 75%);
+}
+
+.game-view[data-overlay='dungeon'] {
+  --danger-tint:
+    radial-gradient(ellipse 46% 40% at 12% 0%, rgba(196, 32, 24, 0.3), transparent 70%),
+    radial-gradient(ellipse 46% 40% at 88% 0%, rgba(196, 32, 24, 0.3), transparent 70%),
+    radial-gradient(ellipse 32% 22% at 0% -4%, rgba(216, 44, 32, 0.38), transparent 75%),
+    radial-gradient(ellipse 32% 22% at 100% -4%, rgba(216, 44, 32, 0.38), transparent 75%);
 }
 
 .placeholder-panel {
@@ -671,5 +954,180 @@ watch(
   bottom: 0;
   z-index: 100;
   background: #12122a;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SAN 异常效果（data-san：0 正常 ~ 4 极度）
+   文本异常由 ScenePanel/EventPanel 内的 CorruptText 承担；
+   此处负责内容区整体滤镜、晃动与覆盖层（噪点/边缘变形/划痕）
+   ═══════════════════════════════════════════════════════════ */
+
+/* 档位 1：轻微——整体色温微偏移 */
+.game-view[data-san='1'] .main-content {
+  filter: contrast(0.985) saturate(1.03) hue-rotate(-2deg);
+}
+
+/* 档位 2：明显——色偏加重 + 轻微晃动 */
+.game-view[data-san='2'] .main-content {
+  filter: contrast(1.05) saturate(1.12) hue-rotate(-6deg);
+  animation: san-shake-soft 6s infinite;
+}
+
+/* 档位 3：混乱——重色偏 + 中等扭曲 + 晃动 */
+.game-view[data-san='3'] .main-content {
+  filter: url(#san-distort-mid) contrast(1.1) saturate(1.26) hue-rotate(-12deg);
+  animation: san-shake-soft 4s infinite;
+}
+
+/* 档位 4：极度——强扭曲 + 模糊 + 剧烈晃动 */
+.game-view[data-san='4'] .main-content {
+  filter: url(#san-distort-severe) contrast(1.15) saturate(1.42) hue-rotate(-18deg) blur(0.3px);
+  animation: san-shake-hard 1.4s infinite;
+}
+
+/* 晃动动画（轻/重两档，仅作用于内容区） */
+@keyframes san-shake-soft {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  20% {
+    transform: translate(0.6px, -0.6px) rotate(-0.08deg);
+  }
+  40% {
+    transform: translate(-0.6px, 0.4px) rotate(0.06deg);
+  }
+  60% {
+    transform: translate(0.4px, 0.6px) rotate(-0.05deg);
+  }
+  80% {
+    transform: translate(-0.5px, -0.4px) rotate(0.07deg);
+  }
+}
+
+@keyframes san-shake-hard {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    transform: translate(-1.6px, 1.2px) rotate(-0.25deg);
+  }
+  30% {
+    transform: translate(1.4px, -1.6px) rotate(0.2deg);
+  }
+  45% {
+    transform: translate(-1.2px, -1px) rotate(-0.15deg);
+  }
+  60% {
+    transform: translate(1.6px, 1.4px) rotate(0.22deg);
+  }
+  80% {
+    transform: translate(-1px, 0.8px) rotate(-0.12deg);
+  }
+}
+
+/* ---- SAN 覆盖层（pointer-events: none，不挡操作） ---- */
+.san-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.game-view[data-san='1'] .san-overlay {
+  opacity: 0.18;
+}
+.game-view[data-san='2'] .san-overlay {
+  opacity: 0.32;
+}
+.game-view[data-san='3'] .san-overlay {
+  opacity: 0.5;
+}
+.game-view[data-san='4'] .san-overlay {
+  opacity: 0.62;
+}
+
+/* 噪点层：低频闪烁颗粒 */
+.san-noise {
+  position: absolute;
+  inset: -10%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+  mix-blend-mode: overlay;
+  animation: san-noise-jitter 0.45s steps(2) infinite;
+}
+
+@keyframes san-noise-jitter {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-8px, 6px);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(6px, -8px);
+    opacity: 0.6;
+  }
+}
+
+/* 边缘变形层：暗角呼吸 + 边缘波动 */
+.san-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.4) 100%),
+    radial-gradient(ellipse at 50% 0%, transparent 70%, rgba(0, 0, 0, 0.3) 100%);
+  animation: san-vignette-breathe 4.5s ease-in-out infinite;
+}
+
+@keyframes san-vignette-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+}
+
+/* 划痕层：横向撕裂线（档位 3+） */
+.san-scratch {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    96deg,
+    transparent 0 42%,
+    rgba(255, 255, 255, 0.05) 42% 42.4%,
+    transparent 42.4% 71%,
+    rgba(0, 0, 0, 0.12) 71% 71.3%,
+    transparent 71.3%
+  );
+  mix-blend-mode: overlay;
+  animation: san-scratch-slide 7s linear infinite;
+}
+
+@keyframes san-scratch-slide {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+/* 隐藏 SVG 滤镜定义容器 */
+.san-svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 </style>

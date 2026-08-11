@@ -358,7 +358,9 @@ function onAction(actionType: string): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  color: #e0e0e0;
+  color: var(--text-primary);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
   position: relative;
 }
 
@@ -368,15 +370,15 @@ function onAction(actionType: string): void {
   align-items: center;
   gap: 10px;
   padding: 8px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-weak);
+  background: var(--bar-bg);
   flex-shrink: 0;
 }
 
 .dist-label {
   font-size: 13px;
   font-weight: 600;
-  color: #a0a0a0;
+  color: var(--text-secondary);
 }
 
 .dist-track {
@@ -390,7 +392,7 @@ function onAction(actionType: string): void {
   flex: 1;
   height: 10px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sub-bg);
   transition: background 0.3s;
 }
 
@@ -408,18 +410,18 @@ function onAction(actionType: string): void {
 /* ---- 敌人状态 ---- */
 .battle-enemies {
   padding: 16px 20px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid var(--border-weak);
+  background: var(--sub-bg);
 }
 
 .enemy-card {
   margin-bottom: 10px;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--card-bg);
+  border: 1px solid var(--border-weak);
   border-radius: 8px;
   transition: all 0.25s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .enemy-card:last-child {
@@ -431,8 +433,8 @@ function onAction(actionType: string): void {
 }
 
 .enemy-card.enemy-selectable:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--card-hover);
+  border-color: var(--border-mid);
 }
 
 /* 当前选中攻击目标：金色高亮 */
@@ -527,7 +529,7 @@ function onAction(actionType: string): void {
 
 .hp-label {
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
   width: 22px;
   text-align: right;
   font-weight: 600;
@@ -536,7 +538,7 @@ function onAction(actionType: string): void {
 .hp-bar-bg {
   flex: 1;
   height: 16px;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--sub-bg);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -584,7 +586,7 @@ function onAction(actionType: string): void {
 
 .log-line {
   margin: 2px 0;
-  color: #d0d0d0;
+  color: var(--text-primary);
 }
 
 .log-line:first-child {
@@ -597,8 +599,8 @@ function onAction(actionType: string): void {
   flex-wrap: wrap;
   gap: 8px;
   padding: 10px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--border-weak);
+  background: var(--bar-bg);
   flex-shrink: 0;
 }
 
@@ -607,10 +609,10 @@ function onAction(actionType: string): void {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border: 1px solid rgba(100, 181, 246, 0.4);
+  border: 1px solid var(--special);
   border-radius: 8px;
-  background: rgba(100, 181, 246, 0.08);
-  color: #c0d9f0;
+  background: var(--special-bg);
+  color: var(--special);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -618,9 +620,9 @@ function onAction(actionType: string): void {
 }
 
 .skill-btn:hover:not(:disabled) {
-  background: rgba(100, 181, 246, 0.2);
-  border-color: #64b5f6;
-  color: #fff;
+  background: var(--special-bg-hover);
+  border-color: var(--special);
+  color: var(--text-primary);
 }
 
 .skill-btn:disabled {
@@ -633,19 +635,19 @@ function onAction(actionType: string): void {
 
 .skill-range {
   font-size: 11px;
-  color: #7ea8cc;
+  color: var(--text-muted);
   font-weight: 400;
 }
 
 .skill-btn.skill-off-range {
   opacity: 0.45;
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-  color: #777;
+  border-color: var(--border-weak);
+  background: var(--card-bg);
+  color: var(--text-muted);
 }
 
 .skill-btn.skill-off-range .skill-range {
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* ---- 操作按钮 ---- */
@@ -653,35 +655,35 @@ function onAction(actionType: string): void {
   display: flex;
   gap: 8px;
   padding: 12px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid var(--border-weak);
+  background: var(--sub-bg);
 }
 
 .action-btn {
   flex: 1;
   padding: 10px 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-mid);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #c0c0c0;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   text-align: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 2px var(--shadow);
 }
 
 .action-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  background: var(--card-hover);
+  border-color: var(--border-mid);
+  color: var(--text-primary);
+  box-shadow: 0 2px 6px var(--shadow);
 }
 
 .action-btn:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 1px var(--shadow);
 }
 
 .action-btn:disabled {
@@ -700,13 +702,13 @@ function onAction(actionType: string): void {
 }
 
 .defend-btn {
-  border-color: rgba(78, 205, 196, 0.5);
-  color: #4ecdc4;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .defend-btn:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.1);
-  border-color: #4ecdc4;
+  background: var(--accent-bg-hover);
+  border-color: var(--accent);
 }
 
 .item-btn {
@@ -720,14 +722,14 @@ function onAction(actionType: string): void {
 }
 
 .escape-btn {
-  border-color: rgba(136, 136, 136, 0.5);
-  color: #999;
+  border-color: var(--border-mid);
+  color: var(--text-muted);
 }
 
 .escape-btn:hover:not(:disabled) {
-  background: rgba(136, 136, 136, 0.1);
-  border-color: #aaa;
-  color: #ccc;
+  background: var(--btn-bg);
+  border-color: var(--border-mid);
+  color: var(--text-secondary);
 }
 
 /* ---- 战斗胜利区 ---- */
@@ -737,8 +739,8 @@ function onAction(actionType: string): void {
   align-items: center;
   gap: 12px;
   padding: 14px 20px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid var(--border-weak);
+  background: var(--sub-bg);
   flex-shrink: 0;
 }
 
@@ -780,10 +782,10 @@ function onAction(actionType: string): void {
   max-height: 82%;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(160deg, rgba(38, 42, 54, 0.98), rgba(24, 27, 36, 0.98));
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--panel-bg);
+  border: 1px solid var(--border-mid);
   border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 12px 40px var(--shadow-strong);
   overflow: hidden;
 }
 
@@ -792,33 +794,33 @@ function onAction(actionType: string): void {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-weak);
+  background: var(--bar-bg);
   flex-shrink: 0;
 }
 
 .item-modal-title {
   font-size: 15px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   letter-spacing: 2px;
 }
 
 .item-modal-close {
   width: 26px;
   height: 26px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--border-mid);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #bbb;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
   transition: all 0.15s;
 }
 .item-modal-close:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--card-hover);
+  color: var(--text-primary);
 }
 
 .item-modal-body {
@@ -848,7 +850,7 @@ function onAction(actionType: string): void {
   color: #66bb6a;
 }
 .g-tool {
-  color: #64b5f6;
+  color: var(--special);
 }
 
 .item-row {
@@ -857,20 +859,20 @@ function onAction(actionType: string): void {
   gap: 8px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--card-bg);
+  border: 1px solid var(--border-weak);
   margin-bottom: 6px;
   transition: background 0.15s;
 }
 .item-row:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--card-hover);
 }
 
 .item-row-name {
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  color: #e8e8e8;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -878,7 +880,7 @@ function onAction(actionType: string): void {
 
 .item-row-qty {
   font-size: 12px;
-  color: #999;
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
@@ -911,19 +913,19 @@ function onAction(actionType: string): void {
   border-color: #66bb6a;
 }
 .b-tool {
-  border-color: rgba(100, 181, 246, 0.5);
-  color: #64b5f6;
-  background: rgba(100, 181, 246, 0.08);
+  border-color: var(--special);
+  color: var(--special);
+  background: var(--special-bg);
 }
 .b-tool:hover {
-  background: rgba(100, 181, 246, 0.18);
-  border-color: #64b5f6;
+  background: var(--special-bg-hover);
+  border-color: var(--special);
 }
 
 .item-empty {
   margin: 24px 0;
   text-align: center;
-  color: #888;
+  color: var(--text-muted);
   font-size: 13px;
 }
 

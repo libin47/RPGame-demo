@@ -254,7 +254,7 @@ function resolveConditionTarget(
  * 获取 SAN 值等级
  * 1: 疯狂(1-20), 2: 崩溃(21-40), 3: 动摇(41-60), 4: 不安(61-80), 5: 理性(81+)
  */
-function getSanLevel(san: number): number {
+export function getSanLevel(san: number): number {
   if (san <= 0) return 0
   if (san <= 20) return 1
   if (san <= 40) return 2

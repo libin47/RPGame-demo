@@ -300,7 +300,7 @@ const beach_椰树林: SubScene = {
       },
     },
   ],
-  isDungeon: false,
+  isDungeon: true,
 }
 
 export default beach_椰树林

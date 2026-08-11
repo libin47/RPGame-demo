@@ -186,11 +186,13 @@ function onLoadSlot(slot: number): void {
 .system-card {
   width: 380px;
   max-height: 85vh;
-  background: linear-gradient(180deg, #1a1a2e 0%, #12122a 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-bg);
+  border: 1px solid var(--border-mid);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 40px var(--shadow-strong);
+  color: var(--text-primary);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 .card-header {
@@ -198,29 +200,29 @@ function onLoadSlot(slot: number): void {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-weak);
 }
 
 .card-title {
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .close-btn {
   padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-mid);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #aaa;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.15s;
 }
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--card-hover);
+  color: var(--text-primary);
 }
 
 /* ═══════════════════════════════════════════
@@ -230,7 +232,7 @@ function onLoadSlot(slot: number): void {
   display: flex;
   gap: 0;
   padding: 0 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-weak);
 }
 
 .tab-btn {
@@ -239,19 +241,19 @@ function onLoadSlot(slot: number): void {
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: #888;
+  color: var(--text-muted);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .tab-btn:hover {
-  color: #ccc;
+  color: var(--text-secondary);
 }
 
 .tab-btn.active {
-  color: #64b5f6;
-  border-bottom-color: #64b5f6;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 /* ═══════════════════════════════════════════
@@ -269,17 +271,17 @@ function onLoadSlot(slot: number): void {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-weak);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--card-bg);
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
 }
 
 .slot-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: var(--card-hover);
+  border-color: var(--border-mid);
 }
 
 .slot-card:active {
@@ -287,15 +289,15 @@ function onLoadSlot(slot: number): void {
 }
 
 .slot-card.slot-active {
-  border-color: rgba(78, 205, 196, 0.4);
-  background: rgba(78, 205, 196, 0.06);
+  border-color: var(--accent);
+  background: var(--accent-bg);
 }
 
 .slot-number {
   width: 52px;
   font-size: 13px;
   font-weight: 600;
-  color: #aaa;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -309,23 +311,23 @@ function onLoadSlot(slot: number): void {
 .slot-day {
   font-size: 14px;
   font-weight: 600;
-  color: #d0d0d0;
+  color: var(--text-primary);
 }
 
 .slot-time {
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .slot-date {
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .slot-empty-label {
   flex: 1;
   font-size: 13px;
-  color: #555;
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -335,17 +337,17 @@ function onLoadSlot(slot: number): void {
 
 .action-hint {
   font-size: 12px;
-  color: #64b5f6;
+  color: var(--accent);
   padding: 3px 10px;
-  border: 1px solid rgba(100, 181, 246, 0.3);
+  border: 1px solid var(--accent-bg-hover);
   border-radius: 4px;
-  background: rgba(100, 181, 246, 0.06);
+  background: var(--accent-bg);
   transition: all 0.15s;
 }
 
 .slot-card:hover .action-hint {
-  background: rgba(100, 181, 246, 0.14);
-  border-color: #64b5f6;
+  background: var(--accent-bg-hover);
+  border-color: var(--accent);
 }
 
 /* ═══════════════════════════════════════════

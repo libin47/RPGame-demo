@@ -33,6 +33,7 @@ export {
   isOptionAvailable,
   getOptionResultIcon,
   canTriggerEvent,
+  getSanLevel,
 } from './event'
 
 // 探索逻辑

@@ -177,7 +177,8 @@ function onRepair(instanceId: string): void {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 /* ---- 头部（与制作/烹饪面板一致） ---- */
@@ -187,7 +188,7 @@ function onRepair(instanceId: string): void {
   justify-content: space-between;
   padding: 0.7rem 1.2rem;
   border-bottom: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bar-bg);
 }
 
 .rp-title {
@@ -216,13 +217,13 @@ function onRepair(instanceId: string): void {
   padding: 0.7rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   transition: all var(--transition-fast);
 }
 
 .rp-card:not(.rp-disabled):hover {
-  border-color: rgba(78, 205, 196, 0.4);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent);
+  background: var(--card-hover);
 }
 
 .rp-disabled {
@@ -272,10 +273,10 @@ function onRepair(instanceId: string): void {
 
 .dur-track {
   height: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--sub-bg);
   border-radius: 4px;
   overflow: hidden;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 3px var(--shadow);
 }
 
 .dur-fill {
@@ -338,7 +339,7 @@ function onRepair(instanceId: string): void {
   padding: 0.4rem 1rem;
   border: 1px solid var(--accent);
   border-radius: var(--radius-md);
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--accent-bg);
   color: var(--accent);
   font-size: var(--font-sm);
   cursor: pointer;
@@ -347,7 +348,7 @@ function onRepair(instanceId: string): void {
 }
 
 .rp-execute-btn:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.25);
+  background: var(--accent-bg-hover);
 }
 
 .rp-execute-btn:disabled {
@@ -372,7 +373,7 @@ function onRepair(instanceId: string): void {
   margin-top: 0.8rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-md);
   cursor: pointer;
@@ -381,7 +382,7 @@ function onRepair(instanceId: string): void {
 }
 
 .btn-return:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--card-hover);
   color: var(--text-primary);
 }
 </style>

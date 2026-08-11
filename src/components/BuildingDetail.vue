@@ -491,6 +491,8 @@ function getStaminaCoeff(): number {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
   position: relative;
 }
 
@@ -509,14 +511,7 @@ function getStaminaCoeff(): number {
 .vignette-overlay {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(
-      ellipse at center top,
-      rgba(0, 0, 0, 0) 20%,
-      rgba(0, 0, 0, 0.15) 60%,
-      rgba(0, 0, 0, 0.3) 100%
-    ),
-    radial-gradient(ellipse at center bottom, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0.1) 50%);
+  background: var(--vignette);
   pointer-events: none;
   z-index: 1;
 }
@@ -542,10 +537,10 @@ function getStaminaCoeff(): number {
 .durability-track {
   flex: 1;
   height: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--sub-bg);
   border-radius: 4px;
   overflow: hidden;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 3px var(--shadow);
 }
 .durability-fill {
   height: 100%;
@@ -585,7 +580,7 @@ function getStaminaCoeff(): number {
   color: var(--accent);
   font-size: var(--font-lg);
   letter-spacing: 0.03em;
-  text-shadow: 0 0 20px rgba(78, 205, 196, 0.15);
+  text-shadow: 0 0 20px var(--accent-bg-hover);
 }
 .building-desc {
   margin: 0;
@@ -604,7 +599,7 @@ function getStaminaCoeff(): number {
   gap: 0.5rem;
   padding: 0.7rem 1.2rem;
   border-top: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--sub-bg);
 }
 
 .interaction-btn {
@@ -618,12 +613,12 @@ function getStaminaCoeff(): number {
   padding: 0 0.6rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-sm);
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px var(--shadow);
   user-select: none;
   overflow: hidden;
   position: relative;
@@ -639,15 +634,15 @@ function getStaminaCoeff(): number {
 .interaction-btn:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 3px 10px rgba(0, 0, 0, 0.3),
-    0 0 15px rgba(255, 255, 255, 0.03);
+    0 3px 10px var(--shadow-strong),
+    0 0 15px var(--accent-bg-hover);
 }
 .interaction-btn:hover::before {
   opacity: 1;
 }
 .interaction-btn:active {
   transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .btn-icon {
@@ -663,25 +658,25 @@ function getStaminaCoeff(): number {
 
 /* 各类型交互按钮配色 */
 .btn-craft {
-  border-color: rgba(78, 205, 196, 0.35);
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.06), rgba(78, 205, 196, 0.02));
+  border-color: var(--accent);
+  background: var(--accent-bg);
   color: var(--accent);
 }
 .btn-craft:hover {
-  border-color: rgba(78, 205, 196, 0.6);
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(78, 205, 196, 0.05));
-  box-shadow: 0 3px 12px rgba(78, 205, 196, 0.15);
+  border-color: var(--accent);
+  background: var(--accent-bg-hover);
+  box-shadow: 0 3px 12px var(--shadow-strong);
 }
 
 .btn-store {
-  border-color: rgba(100, 181, 246, 0.35);
-  background: linear-gradient(135deg, rgba(100, 181, 246, 0.06), rgba(100, 181, 246, 0.02));
-  color: #64b5f6;
+  border-color: var(--special);
+  background: var(--special-bg);
+  color: var(--special);
 }
 .btn-store:hover {
-  border-color: rgba(100, 181, 246, 0.6);
-  background: linear-gradient(135deg, rgba(100, 181, 246, 0.15), rgba(100, 181, 246, 0.05));
-  box-shadow: 0 3px 12px rgba(100, 181, 246, 0.15);
+  border-color: var(--special);
+  background: var(--special-bg-hover);
+  box-shadow: 0 3px 12px var(--shadow-strong);
 }
 
 .btn-collect {
@@ -718,23 +713,23 @@ function getStaminaCoeff(): number {
 }
 
 .btn-repair {
-  border-color: rgba(78, 205, 196, 0.35);
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.06), rgba(78, 205, 196, 0.02));
+  border-color: var(--accent);
+  background: var(--accent-bg);
   color: var(--accent);
 }
 .btn-repair:hover {
-  border-color: rgba(78, 205, 196, 0.6);
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(78, 205, 196, 0.05));
-  box-shadow: 0 3px 12px rgba(78, 205, 196, 0.15);
+  border-color: var(--accent);
+  background: var(--accent-bg-hover);
+  box-shadow: 0 3px 12px var(--shadow-strong);
 }
 
 .btn-default {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--border-mid);
   color: var(--text-secondary);
 }
 .btn-default:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-mid);
+  background: var(--card-hover);
 }
 
 /* ============================================================
@@ -746,8 +741,8 @@ function getStaminaCoeff(): number {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.7rem 1.2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.35) 100%);
+  border-top: 1px solid var(--border-weak);
+  background: var(--bar-bg);
   backdrop-filter: blur(8px);
   position: relative;
   flex-shrink: 0;
@@ -759,7 +754,7 @@ function getStaminaCoeff(): number {
   left: 1.2rem;
   right: 1.2rem;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  background: linear-gradient(90deg, transparent, var(--border-weak), transparent);
 }
 
 .action-bar-right {
@@ -776,7 +771,7 @@ function getStaminaCoeff(): number {
   padding: 0 1rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-sm);
   cursor: pointer;
@@ -785,9 +780,9 @@ function getStaminaCoeff(): number {
   user-select: none;
 }
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--card-hover);
   color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-mid);
 }
 .action-btn:active {
   transform: scale(0.97);
@@ -801,7 +796,7 @@ function getStaminaCoeff(): number {
 }
 .btn-back:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--card-hover);
   border-color: var(--border-mid);
 }
 
@@ -828,14 +823,14 @@ function getStaminaCoeff(): number {
 }
 
 .btn-repair {
-  border-color: rgba(78, 205, 196, 0.35);
+  border-color: var(--accent);
   color: var(--accent);
-  background: rgba(78, 205, 196, 0.04);
+  background: var(--accent-bg);
 }
 .btn-repair:hover {
-  background: rgba(78, 205, 196, 0.12);
-  border-color: rgba(78, 205, 196, 0.55);
-  box-shadow: 0 0 10px rgba(78, 205, 196, 0.1);
+  background: var(--accent-bg-hover);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px var(--shadow);
 }
 
 /* ============================================================
@@ -847,7 +842,7 @@ function getStaminaCoeff(): number {
   justify-content: space-between;
   padding: 0.7rem 1.2rem;
   border-bottom: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bar-bg);
 }
 .subview-header h3 {
   margin: 0;
@@ -871,11 +866,11 @@ function getStaminaCoeff(): number {
   padding: 0.7rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   transition: border-color 0.2s;
 }
 .upgrade-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--border-mid);
 }
 .upgrade-card.upg-disabled {
   opacity: 0.55;
@@ -959,8 +954,8 @@ function getStaminaCoeff(): number {
   padding: 1.4rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, rgba(25, 25, 30, 0.98), rgba(20, 20, 25, 0.98));
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: var(--panel-bg);
+  box-shadow: 0 8px 32px var(--shadow-strong);
   animation: fadeIn 0.2s ease;
 }
 
@@ -1009,7 +1004,7 @@ function getStaminaCoeff(): number {
 .item-chip {
   padding: 0.1rem 0.45rem;
   border-radius: 3px;
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--accent-bg);
   color: var(--accent);
   font-size: var(--font-xs);
 }

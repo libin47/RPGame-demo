@@ -274,8 +274,9 @@ const warmthClass = computed<string>(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  color: #e0e0e0;
-  background: #12122a;
+  color: var(--text-primary);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 /* ═══════════════════════════════════════════
@@ -286,20 +287,20 @@ const warmthClass = computed<string>(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-weak);
 }
 
 .panel-title {
   font-size: 16px;
   font-weight: 700;
   margin: 0;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .player-class {
   font-size: 12px;
-  color: #64b5f6;
-  background: rgba(100, 181, 246, 0.08);
+  color: var(--special);
+  background: var(--special-bg);
   padding: 2px 10px;
   border-radius: 4px;
   margin-right: auto;
@@ -307,17 +308,17 @@ const warmthClass = computed<string>(() => {
 
 .close-btn {
   padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-mid);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #aaa;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.15s;
 }
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--card-hover);
+  color: var(--text-primary);
 }
 
 /* ═══════════════════════════════════════════
@@ -339,10 +340,10 @@ const warmthClass = computed<string>(() => {
 .section-title {
   font-size: 13px;
   font-weight: 600;
-  color: #888;
+  color: var(--text-muted);
   margin: 0 0 10px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-weak);
   letter-spacing: 1px;
 }
 
@@ -364,25 +365,25 @@ const warmthClass = computed<string>(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--card-bg);
+  border: 1px solid var(--border-weak);
   border-radius: 8px;
 }
 
 .attr-label {
   font-size: 13px;
-  color: #999;
+  color: var(--text-secondary);
 }
 
 .attr-value {
   font-size: 15px;
   font-weight: 700;
-  color: #d0d0d0;
+  color: var(--text-primary);
   margin-left: auto;
 }
 
 .attr-value.def-value {
-  color: #7ec8e3;
+  color: var(--special);
 }
 
 .attr-mod {
@@ -416,19 +417,19 @@ const warmthClass = computed<string>(() => {
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--card-bg);
   border-radius: 6px;
 }
 
 .stat-label {
   font-size: 13px;
-  color: #999;
+  color: var(--text-secondary);
 }
 
 .stat-value {
   font-size: 13px;
   font-weight: 600;
-  color: #ccc;
+  color: var(--text-secondary);
 }
 
 .gold-value {
@@ -463,18 +464,18 @@ const warmthClass = computed<string>(() => {
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--card-bg);
   border-radius: 6px;
 }
 
 .coeff-label {
   font-size: 12px;
-  color: #999;
+  color: var(--text-secondary);
 }
 
 .coeff-value {
   font-size: 13px;
   font-weight: 600;
-  color: #b0b0b0;
+  color: var(--text-secondary);
 }
 </style>

@@ -242,7 +242,8 @@ function nodeDisplayName(node: MapNode): string {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 /* 头部 */
@@ -252,7 +253,7 @@ function nodeDisplayName(node: MapNode): string {
   gap: 0.8rem;
   padding: 0.7rem 1.2rem;
   border-bottom: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bar-bg);
   flex-shrink: 0;
 }
 
@@ -290,7 +291,7 @@ function nodeDisplayName(node: MapNode): string {
   display: block;
   max-width: 100%;
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 30px var(--shadow-strong);
 }
 
 /* 路径线层（图片之上、节点之下） */
@@ -317,19 +318,19 @@ function nodeDisplayName(node: MapNode): string {
   display: flex;
   align-items: center;
   padding: 0.25rem 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(20, 30, 40, 0.8);
+  background: var(--card-bg);
   color: var(--text-primary);
   font-size: var(--font-xs);
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 8px var(--shadow-strong);
 }
 
 .mp-node:hover {
-  background: rgba(78, 205, 196, 0.35);
+  background: var(--accent-bg-hover);
   border-color: var(--accent);
   transform: translate(-50%, -50%) scale(1.08);
 }
@@ -359,12 +360,12 @@ function nodeDisplayName(node: MapNode): string {
 /* 不可达节点（有路径配置但当前无可行路线）：弱化显示 */
 .mp-node-unreachable {
   opacity: 0.4;
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--border-weak);
 }
 
 .mp-node-unreachable:hover {
-  background: rgba(20, 30, 40, 0.8);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--card-bg);
+  border-color: var(--border-weak);
   transform: translate(-50%, -50%);
 }
 
@@ -404,7 +405,7 @@ function nodeDisplayName(node: MapNode): string {
   padding: 0.5rem 1rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-md);
   cursor: pointer;
@@ -413,7 +414,7 @@ function nodeDisplayName(node: MapNode): string {
 }
 
 .btn-back:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--card-hover);
   color: var(--text-primary);
 }
 </style>

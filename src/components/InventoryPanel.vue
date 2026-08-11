@@ -523,8 +523,9 @@ function onUnequipFromDetail(): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  color: #e0e0e0;
-  background: #12122a;
+  color: var(--text-primary);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 /* ═══════════════════════════════════════════
@@ -532,8 +533,8 @@ function onUnequipFromDetail(): void {
    ═══════════════════════════════════════════ */
 .weight-bar {
   padding: 8px 20px;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bar-bg);
+  border-bottom: 1px solid var(--border-weak);
   flex-shrink: 0;
 }
 
@@ -546,11 +547,11 @@ function onUnequipFromDetail(): void {
 }
 
 .weight-label {
-  color: #888;
+  color: var(--text-muted);
 }
 
 .weight-value {
-  color: #d0d0d0;
+  color: var(--text-primary);
   font-weight: 500;
 }
 .weight-value.overloaded {
@@ -565,14 +566,14 @@ function onUnequipFromDetail(): void {
 
 .weight-track {
   height: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sub-bg);
   border-radius: 2px;
   overflow: hidden;
 }
 
 .weight-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4ecdc4, #44b09e);
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -596,31 +597,31 @@ function onUnequipFromDetail(): void {
   display: flex;
   gap: 4px;
   padding: 8px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid var(--border-weak);
+  background: var(--sub-bg);
   overflow-x: auto;
   flex-shrink: 0;
 }
 
 .filter-tab {
   padding: 4px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-weak);
   border-radius: 14px;
   background: transparent;
-  color: #888;
+  color: var(--text-muted);
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s;
 }
 .filter-tab:hover {
-  color: #ccc;
-  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text-secondary);
+  border-color: var(--border-mid);
 }
 .filter-tab.active {
-  color: #64b5f6;
-  border-color: #64b5f6;
-  background: rgba(100, 181, 246, 0.1);
+  color: var(--special);
+  border-color: var(--special);
+  background: var(--special-bg);
 }
 
 /* 物品网格（4列） */
@@ -638,22 +639,22 @@ function onUnequipFromDetail(): void {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--card-bg);
+  border: 1px solid var(--border-weak);
   border-radius: 8px;
   padding: 10px 6px 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 .item-card:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  background: var(--card-hover);
+  border-color: var(--border-mid);
+  box-shadow: 0 2px 8px var(--shadow);
   transform: translateY(-1px);
 }
 .item-card.item-equipped {
-  border-color: rgba(78, 205, 196, 0.5);
-  background: rgba(78, 205, 196, 0.04);
+  border-color: var(--accent);
+  background: var(--accent-bg);
 }
 
 /* 图标区 */
@@ -664,7 +665,7 @@ function onUnequipFromDetail(): void {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bar-bg);
   border-radius: 8px;
   margin-bottom: 6px;
   flex-shrink: 0;
@@ -679,15 +680,15 @@ function onUnequipFromDetail(): void {
   left: 2px;
   font-size: 10px;
   line-height: 1;
-  color: #4ecdc4;
-  text-shadow: 0 0 4px rgba(78, 205, 196, 0.8);
+  color: var(--accent);
+  text-shadow: 0 0 4px var(--accent);
 }
 .icon-qty {
   position: absolute;
   right: 2px;
   bottom: 2px;
   font-size: 10px;
-  color: #aaa;
+  color: var(--text-secondary);
   font-weight: 500;
   line-height: 1;
 }
@@ -696,13 +697,13 @@ function onUnequipFromDetail(): void {
   left: 3px;
   bottom: 2px;
   font-size: 9px;
-  color: #777;
+  color: var(--text-muted);
   line-height: 1;
 }
 
 .item-name {
   font-size: 12px;
-  color: #d0d0d0;
+  color: var(--text-primary);
   text-align: center;
   line-height: 1.3;
   word-break: break-all;
@@ -714,7 +715,7 @@ function onUnequipFromDetail(): void {
   height: 4px;
   margin-top: 6px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sub-bg);
   overflow: hidden;
 }
 
@@ -737,7 +738,7 @@ function onUnequipFromDetail(): void {
   grid-column: 1 / -1;
   text-align: center;
   padding: 40px 0;
-  color: #555;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -746,14 +747,14 @@ function onUnequipFromDetail(): void {
    ═══════════════════════════════════════════ */
 .bottom-section {
   flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.15);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--sub-bg);
+  border-top: 1px solid var(--border-weak);
 }
 
 .b-section-title {
   font-size: 11px;
   font-weight: 600;
-  color: #888;
+  color: var(--text-muted);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
@@ -761,7 +762,7 @@ function onUnequipFromDetail(): void {
 /* 装备三列网格 */
 .equip-section {
   padding: 8px 16px 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-weak);
 }
 
 .equip-grid {
@@ -786,19 +787,19 @@ function onUnequipFromDetail(): void {
   flex-shrink: 0;
 }
 .cell-label {
-  color: #888;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 .cell-item {
   flex: 1;
-  color: #ccc;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
 .cell-item.empty {
-  color: #555;
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -835,14 +836,14 @@ function onUnequipFromDetail(): void {
 }
 
 .stat-label {
-  color: #999;
+  color: var(--text-secondary);
 }
 .stat-value {
-  color: #d0d0d0;
+  color: var(--text-primary);
   font-weight: 500;
 }
 .stat-sep {
-  color: #444;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -850,16 +851,16 @@ function onUnequipFromDetail(): void {
 .bottom-close {
   display: flex;
   padding: 10px 16px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--border-weak);
 }
 
 .close-btn {
   flex: 1;
   padding: 12px 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--border-mid);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #ccc;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 3px;
@@ -868,9 +869,9 @@ function onUnequipFromDetail(): void {
   transition: all 0.15s;
 }
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-mid);
 }
 
 /* ═══════════════════════════════════════════
@@ -889,10 +890,10 @@ function onUnequipFromDetail(): void {
 .modal-content {
   width: 360px;
   max-width: 90vw;
-  background: #1a1a3a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--panel-bg);
+  border: 1px solid var(--border-mid);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px var(--shadow-strong);
   overflow: hidden;
 }
 
@@ -901,7 +902,7 @@ function onUnequipFromDetail(): void {
   align-items: center;
   gap: 10px;
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-weak);
 }
 
 .modal-icon {
@@ -911,22 +912,22 @@ function onUnequipFromDetail(): void {
   flex: 1;
   font-size: 16px;
   font-weight: 600;
-  color: #f0f0f0;
+  color: var(--text-primary);
 }
 
 .modal-close {
   padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-weak);
   border-radius: 4px;
   background: transparent;
-  color: #888;
+  color: var(--text-muted);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.15s;
 }
 .modal-close:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  background: var(--card-hover);
 }
 
 .modal-body {
@@ -935,7 +936,7 @@ function onUnequipFromDetail(): void {
 
 .modal-desc {
   font-size: 14px;
-  color: #d0d0d0;
+  color: var(--text-primary);
   line-height: 1.7;
   margin: 0 0 16px;
   white-space: pre-wrap;
@@ -946,7 +947,7 @@ function onUnequipFromDetail(): void {
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--sub-bg);
   border-radius: 6px;
   margin-bottom: 14px;
 }
@@ -957,10 +958,10 @@ function onUnequipFromDetail(): void {
   font-size: 12px;
 }
 .meta-label {
-  color: #888;
+  color: var(--text-muted);
 }
 .meta-value {
-  color: #d0d0d0;
+  color: var(--text-primary);
 }
 
 .modal-actions {
@@ -973,14 +974,14 @@ function onUnequipFromDetail(): void {
   padding: 8px 20px;
   font-size: 13px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: #ccc;
+  border: 1px solid var(--border-mid);
+  background: var(--btn-bg);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.15s;
 }
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--card-hover);
 }
 
 .btn-use {
@@ -993,12 +994,12 @@ function onUnequipFromDetail(): void {
 }
 
 .btn-equip {
-  color: #64b5f6;
-  border-color: rgba(100, 181, 246, 0.3);
+  color: var(--special);
+  border-color: var(--special);
 }
 .btn-equip:hover {
-  background: rgba(100, 181, 246, 0.1);
-  border-color: #64b5f6;
+  background: var(--special-bg-hover);
+  border-color: var(--special);
 }
 
 .btn-unequip {

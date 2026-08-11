@@ -438,7 +438,8 @@ function onExecute(item: RecipeDisplayItem): void {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 /* ---- 头部（与 BuildPanel 一致） ---- */
@@ -448,7 +449,7 @@ function onExecute(item: RecipeDisplayItem): void {
   justify-content: space-between;
   padding: 0.7rem 1.2rem;
   border-bottom: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bar-bg);
 }
 
 .rp-title {
@@ -463,7 +464,7 @@ function onExecute(item: RecipeDisplayItem): void {
   gap: 0.35rem;
   padding: 0.5rem 1.2rem;
   border-bottom: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--sub-bg);
   overflow-x: auto;
   flex-shrink: 0;
 }
@@ -472,7 +473,7 @@ function onExecute(item: RecipeDisplayItem): void {
   padding: 0.3rem 0.7rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--btn-bg);
   color: var(--text-muted);
   font-size: var(--font-xs);
   cursor: pointer;
@@ -481,14 +482,14 @@ function onExecute(item: RecipeDisplayItem): void {
 }
 
 .rp-filter-tab:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--card-hover);
   color: var(--text-secondary);
-  border-color: var(--border-strong);
+  border-color: var(--border-mid);
 }
 
 .rp-filter-tab.active {
   border-color: var(--accent);
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--accent-bg);
   color: var(--accent);
 }
 
@@ -513,13 +514,13 @@ function onExecute(item: RecipeDisplayItem): void {
   padding: 0.7rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   transition: all var(--transition-fast);
 }
 
 .rp-card:not(.rp-disabled):hover {
-  border-color: rgba(78, 205, 196, 0.4);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent);
+  background: var(--card-hover);
 }
 
 .rp-disabled {
@@ -563,13 +564,13 @@ function onExecute(item: RecipeDisplayItem): void {
 }
 
 .stamina-badge {
-  color: #ffd700;
-  background: rgba(255, 215, 0, 0.1);
+  color: var(--special);
+  background: var(--special-bg);
 }
 
 .time-badge {
-  color: #90caf9;
-  background: rgba(144, 202, 249, 0.1);
+  color: var(--recovery);
+  background: var(--accent-bg);
 }
 
 /* 材料/消耗 chips（复用 BuildPanel 的命名） */
@@ -631,7 +632,7 @@ function onExecute(item: RecipeDisplayItem): void {
   justify-content: center;
   border: 1px solid var(--border-mid);
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--btn-bg);
   color: var(--text-primary);
   font-size: 14px;
   cursor: pointer;
@@ -660,7 +661,7 @@ function onExecute(item: RecipeDisplayItem): void {
   padding: 0.4rem 1rem;
   border: 1px solid var(--accent);
   border-radius: var(--radius-md);
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--accent-bg);
   color: var(--accent);
   font-size: var(--font-sm);
   cursor: pointer;
@@ -669,7 +670,7 @@ function onExecute(item: RecipeDisplayItem): void {
 }
 
 .rp-execute-btn:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.25);
+  background: var(--accent-bg-hover);
 }
 
 .rp-execute-btn:disabled {
@@ -694,7 +695,7 @@ function onExecute(item: RecipeDisplayItem): void {
   margin-top: 0.8rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-md);
   cursor: pointer;
@@ -703,7 +704,7 @@ function onExecute(item: RecipeDisplayItem): void {
 }
 
 .btn-return:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--card-hover);
   color: var(--text-primary);
 }
 </style>

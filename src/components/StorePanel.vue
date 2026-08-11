@@ -168,7 +168,8 @@ function getItemWeight(itemId: string): number {
   flex-direction: column;
   height: 100%;
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--panel-bg);
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
 }
 
 /* 头部 */
@@ -178,7 +179,7 @@ function getItemWeight(itemId: string): number {
   gap: 0.8rem;
   padding: 0.7rem 1.2rem;
   border-bottom: 1px solid var(--border-weak);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bar-bg);
   flex-shrink: 0;
 }
 
@@ -261,15 +262,15 @@ function getItemWeight(itemId: string): number {
   padding: 0.35rem 0.3rem;
   border: 1px solid var(--border-weak);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--card-bg);
   cursor: pointer;
   transition: all var(--transition-fast);
   min-width: 0;
 }
 
 .sp-item-card:hover {
-  background: rgba(78, 205, 196, 0.06);
-  border-color: rgba(78, 205, 196, 0.3);
+  background: var(--accent-bg);
+  border-color: var(--accent);
 }
 
 .sp-item-card:active {
@@ -320,7 +321,7 @@ function getItemWeight(itemId: string): number {
   padding: 0.4rem 1rem;
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: var(--font-sm);
   cursor: pointer;
@@ -328,7 +329,7 @@ function getItemWeight(itemId: string): number {
 }
 
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--card-hover);
   color: var(--text-primary);
 }
 
