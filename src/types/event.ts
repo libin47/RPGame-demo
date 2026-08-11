@@ -132,9 +132,9 @@ export interface EventOption extends ButtonOption {
   rollResult?: {
     // 属性
     attribute: '力量' | '智力' | '敏捷' | '体质' | 'SAN'
-    // 难度（DC），默认10
+    // 难度（dc）：0=普通成功（投掷≤属性最终值）、1=困难成功（投掷≤属性/2）、2=极难成功（投掷≤属性/5），默认0
     dc?: number
-    // 修正
+    // 奖励/惩罚骰：满足条件的项 value 累加后按净额结算，正=奖励骰数量、负=惩罚骰数量（重掷十位骰取小/大）
     modifier?: { value: number; condition: Conditions; text?: string }[]
 
     // 结果

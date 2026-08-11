@@ -15,6 +15,7 @@ import type {
 } from '@/types/scene'
 import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
 import type { EffectResult } from '@/types/effect'
+import { EffectType, GainExpTarget } from '@/types/effect'
 import type { EndingConfig } from '@/types/ending'
 import {
   getRegistry,
@@ -23,11 +24,14 @@ import {
   evaluateConditions,
   addItem,
   onItemAdded,
+  onAttributeChanged,
+  applySanDelta,
   selectSceneDescription,
   markDescriptionSeen,
   getScenePassiveEvent,
   markDescriptionEventSeen,
 } from '@/engine'
+import type { AttributeChangeRecord } from '@/engine'
 import { getVisibleOptions, findFirstVisibleFrame, resolveTextVariation } from '@/engine'
 import { findMapRoute, isMapNodeUnlocked } from '@/engine'
 import {
@@ -83,20 +87,28 @@ const ROLL_OUTCOME_LABELS: Record<RollOutcome, string> = {
 export interface RollResultInfo {
   /** 检定的属性（中文） */
   attribute: string
-  /** 属性总值（基础 + 修正） */
+  /** 属性最终值（基础 + 修正，判定阈值基准） */
   attributeValue: number
-  /** 属性修正值 */
-  modifier: number
-  /** d20 投掷结果 */
-  d20: number
-  /** 合计（d20 + 修正） */
-  total: number
-  /** 难度值 */
+  /** 属性基础值（不含修正，用于经验档位） */
+  attributeBase: number
+  /** 奖励骰净数量（正=奖励，负=惩罚） */
+  bonusDice: number
+  /** 本次投掷的所有 d100（共 1+|bonusDice| 个，按投掷顺序） */
+  rolls: number[]
+  /** 最终判定值（奖励骰取最小、惩罚骰取最大、无奖罚取基准） */
+  finalRoll: number
+  /** 难度：0 普通成功 / 1 困难成功 / 2 极难成功 */
   dc: number
+  /** 达成判定所需阈值（投掷 ≤ 阈值即达成对应等级） */
+  threshold: number
+  /** 实际掷出的成功等级（失败为 null；大成功/大失败时按其对应等级） */
+  successGrade: 'normal' | 'hard' | 'extreme' | null
   /** 判定结果 */
   outcome: RollOutcome
-  /** 满足条件的修正原因 */
+  /** 奖励/惩罚骰原因 */
   modifierReasons: string[]
+  /** 本次获得经验（SAN 检定恒为 0；暂不展示） */
+  gainedExp: number
   /** 选项描述（顶部展示） */
   description: string
 }
@@ -180,6 +192,9 @@ interface GameRuntimeState {
   /** 事件帧文本前缀（上一帧选中的选项结果文本，拼接到当前帧文本前） */
   frameTextPrefix: string
 
+  /** 事件帧文本后缀（选项资源不足等拦截提示，显示在帧文本下方；成功选择/切换帧时清空） */
+  frameTextSuffix: string
+
   /** 场景文本前缀（从事件跳转到场景时，显示 exitText/enterText 在场景描述前） */
   sceneTextPrefix: string
   /** 场景文本后缀（从事件返回场景时，显示 exitText/enterText 在场景描述后） */
@@ -260,6 +275,7 @@ function createGameState(initialPlayer: PlayerState) {
     rollResultInfo: null,
     currentBattle: null,
     frameTextPrefix: '',
+    frameTextSuffix: '',
     sceneTextPrefix: '',
     sceneTextAfter: '',
     eventEntryClicked: false,
@@ -285,8 +301,73 @@ function createGameState(initialPlayer: PlayerState) {
 // 组合式函数
 // ============================================================
 
-/** 上一个 useGame 实例注册的物品获得监听器注销函数（新实例创建时先注销旧的，避免重复触发） */
+/** 上一个 useGame 实例注册的物品获得/属性变动监听器注销函数（新实例创建时先注销旧的，避免重复触发） */
 let disposeItemAddedListener: (() => void) | null = null
+let disposeAttributeChangeListener: (() => void) | null = null
+
+/**
+ * 事件中获得物品/属性变动的提示缓冲
+ * 事件中发生的变动同时写入场景后缀（sceneTextAfter）与缓冲，
+ * 缓冲在下一帧跳转时合并进帧前缀（frameTextPrefix）显示；
+ * 离开事件（endEvent）或进入新事件（enterEvent）时清空。
+ */
+let pendingNotices: string[] = []
+
+/** 属性中文标签 */
+const ATTRIBUTE_LABELS: Record<AttributeChangeRecord['attribute'], string> = {
+  strength: '力量',
+  agility: '敏捷',
+  intelligence: '智力',
+  constitution: '体质',
+  san: 'SAN',
+}
+
+/**
+ * 将属性变动记录格式化为带颜色标记的提示行（{{green}}/{{red}} 由渲染层 RichText 解析）
+ * - 经验变动：力量+++（1-8 一个、9-16 两个…，按 Math.ceil(|delta|/8)），涨绿跌红
+ * - 升级（经验达标）：你的等级提升了：力量 50→51（绿色）
+ * - 直接基础值变动：力量 50→55（绿）/ 力量 50→45（红）
+ * - SAN 变动：SAN++（1-5 一个、6-10 两个…，按 Math.ceil(|delta|/5)），涨绿跌红
+ */
+function formatAttributeChangeNotices(change: AttributeChangeRecord): string[] {
+  const label = ATTRIBUTE_LABELS[change.attribute]
+  const lines: string[] = []
+
+  // SAN 变动（生存属性，仅增减量）
+  if (change.attribute === 'san') {
+    if (change.delta !== undefined && change.delta !== 0) {
+      const sign = change.delta > 0 ? '+' : '-'
+      const count = Math.ceil(Math.abs(change.delta) / 5)
+      const color = change.delta > 0 ? 'green' : 'red'
+      lines.push(`{{${color}}}${label}${sign.repeat(count)}{{/${color}}}`)
+    }
+    return lines
+  }
+
+  // 经验变动（原始增减量）
+  if (change.expDelta !== undefined && change.expDelta !== 0) {
+    const sign = change.expDelta > 0 ? '+' : '-'
+    const count = Math.ceil(Math.abs(change.expDelta) / 8)
+    const color = change.expDelta > 0 ? 'green' : 'red'
+    lines.push(`{{${color}}}${label}${sign.repeat(count)}{{/${color}}}`)
+  }
+
+  // 基础值（等级）变动：升级 / 直接改值，涨绿跌红
+  if (
+    change.oldValue !== undefined &&
+    change.newValue !== undefined &&
+    change.oldValue !== change.newValue
+  ) {
+    if (change.newValue > change.oldValue) {
+      const head = change.levelUp ? '你的等级提升了：' : ''
+      lines.push(`{{green}}${head}${label} ${change.oldValue}→${change.newValue}{{/green}}`)
+    } else {
+      lines.push(`{{red}}${label} ${change.oldValue}→${change.newValue}{{/red}}`)
+    }
+  }
+
+  return lines
+}
 
 /**
  * 使用游戏状态
@@ -345,8 +426,11 @@ export function useGame(initialPlayer: PlayerState) {
     state.mode = 'event'
     state.currentEvent = event
     state.currentFrame = firstFrame
+    // 清空跨事件残留的物品/属性变动提示缓冲（提示已写入场景后缀）
+    pendingNotices = []
     state.rollResultInfo = null
     state.frameTextPrefix = ''
+    state.frameTextSuffix = ''
     state.sceneTextPrefix = ''
     state.sceneTextAfter = ''
     // 设置事件触发标志位
@@ -389,6 +473,73 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 获取用于经验档位的基础属性值（不含临时修正）
+   */
+  function getRollBaseAttribute(player: PlayerState, attribute: RollAttribute): number {
+    switch (attribute) {
+      case '力量':
+        return player.attributes.strength
+      case '敏捷':
+        return player.attributes.agility
+      case '智力':
+        return player.attributes.intelligence
+      case '体质':
+        return player.attributes.constitution
+      case 'SAN':
+        return player.survival.san
+      default:
+        return 10
+    }
+  }
+
+  /**
+   * 检定经验结算（COC 规则，判定完成时立即结算；SAN 检定无经验）
+   * 基础经验按属性基础值分档：<40 → +4，40-60 → +3，60-80 → +2，80-100 → +1
+   * 难度倍率：困难(dc=1)成功 ×2，极难(dc=2)成功 ×3；大成功再 ×2；失败 +1；大失败 +0
+   */
+  function gainRollExp(
+    player: PlayerState,
+    attribute: RollAttribute,
+    baseValue: number,
+    dc: number,
+    outcome: RollOutcome,
+  ): number {
+    if (attribute === 'SAN' || outcome === 'bigFail') return 0
+    if (outcome === 'fail') {
+      gainAttributeExp(player, attribute, 1)
+      return 1
+    }
+    const baseExp = baseValue < 40 ? 4 : baseValue < 60 ? 3 : baseValue < 80 ? 2 : 1
+    const dcMult = dc === 1 ? 2 : dc === 2 ? 3 : 1
+    const gained = baseExp * dcMult * (outcome === 'bigSuccess' ? 2 : 1)
+    if (gained > 0) gainAttributeExp(player, attribute, gained)
+    return gained
+  }
+
+  /**
+   * 累加基础属性经验并触发升级检查（复用引擎效果结算器的升级逻辑）
+   */
+  function gainAttributeExp(player: PlayerState, attribute: RollAttribute, amount: number): void {
+    if (attribute === 'SAN' || amount <= 0) return
+    const expTarget: Record<RollAttribute, string> = {
+      力量: 'strength',
+      敏捷: 'agility',
+      智力: 'intelligence',
+      体质: 'constitution',
+      SAN: '',
+    }
+    const targetId = expTarget[attribute]
+    if (!targetId) return
+    const resolver = getEffectResolver()
+    resolver.executeGainExpEffect(player, {
+      type: EffectType.GAIN_EXP,
+      target: GainExpTarget.ATTRIBUTE,
+      targetId,
+      amount,
+    })
+  }
+
+  /**
    * 解析事件选项的最终结果
    * 四种模式：
    *  1. rollResult - 掷骰判定：生成判定帧展示过程，返回 null（分支结果由"继续"按钮触发）
@@ -404,32 +555,73 @@ export function useGame(initialPlayer: PlayerState) {
     option: NonNullable<(typeof state)['currentFrame']>['options'][number],
     player: PlayerState,
   ): EventOptionResult | null {
-    // 1. 掷骰判定
+    // 1. 掷骰判定（COC d100 规则）
     if (option.rollResult) {
       const roll = option.rollResult
 
-      // 计算属性修正（DND规则：(属性-10)/2，向下取整）
-      let modifier = Math.floor((getRollAttribute(player, roll.attribute) - 10) / 2)
+      // 属性最终值（判定阈值基准）与基础值（经验档位）
+      const attributeValue = getRollAttribute(player, roll.attribute)
+      const attributeBase = getRollBaseAttribute(player, roll.attribute)
 
-      // 附加修正：modifier 中满足条件的项累加 value，并记录原因文本（用于判定界面展示）
+      // 奖励/惩罚骰净额（满足条件的项累加，正=奖励数量，负=惩罚数量）
+      let bonusDice = 0
       const modifierReasons: string[] = []
       if (roll.modifier) {
         for (const m of roll.modifier) {
           if (evaluateConditions(m.condition, player)) {
-            modifier += m.value
+            bonusDice += m.value
             if (m.text) modifierReasons.push(m.text)
           }
         }
       }
 
-      // 掷d20
-      const d20 = Math.floor(Math.random() * 20) + 1
-      const total = d20 + modifier
-      const dc = roll.dc ?? 10
+      // 投掷 1 + |奖励/惩罚骰净数量| 个 d100（1-100）：奖励骰取最小、惩罚骰取最大
+      const rollCount = 1 + Math.abs(bonusDice)
+      const rolls: number[] = []
+      for (let i = 0; i < rollCount; i++) {
+        rolls.push(Math.floor(Math.random() * 100) + 1)
+      }
+      const finalRoll =
+        bonusDice > 0 ? Math.min(...rolls) : bonusDice < 0 ? Math.max(...rolls) : (rolls[0] ?? 1)
 
-      // 判定：自然20大成功、自然1大失败、合计>=DC成功、否则失败
-      const outcome: RollOutcome =
-        d20 === 20 ? 'bigSuccess' : d20 === 1 ? 'bigFail' : total >= dc ? 'success' : 'fail'
+      // 难度（dc）：0 普通成功 / 1 困难成功 / 2 极难成功
+      const dc = Math.min(Math.max(roll.dc ?? 0, 0), 2)
+
+      // 成功等级（投掷 ≤ 属性 → 普通；≤ 属性/2 → 困难；≤ 属性/5 → 极难）
+      let successGrade: 'normal' | 'hard' | 'extreme' | null = null
+      if (finalRoll <= attributeValue / 5) {
+        successGrade = 'extreme'
+      } else if (finalRoll <= attributeValue / 2) {
+        successGrade = 'hard'
+      } else if (finalRoll <= attributeValue) {
+        successGrade = 'normal'
+      }
+
+      // 大成功/大失败优先于难度比对
+      // 属性 <50：投出 1 大成功、95-100 大失败；属性 ≥50：投出 1-5 大成功、100 大失败
+      let outcome: RollOutcome
+      const bigSuccessRoll = attributeValue >= 50 ? finalRoll <= 5 : finalRoll === 1
+      const bigFailRoll = attributeValue >= 50 ? finalRoll === 100 : finalRoll >= 95
+      if (bigSuccessRoll) {
+        outcome = 'bigSuccess'
+      } else if (bigFailRoll) {
+        outcome = 'bigFail'
+      } else {
+        // 依据 dc 判定：所需成功等级必须达成
+        const success =
+          dc === 0
+            ? successGrade !== null
+            : dc === 1
+              ? successGrade === 'hard' || successGrade === 'extreme'
+              : successGrade === 'extreme'
+        outcome = success ? 'success' : 'fail'
+      }
+      // 展示阈值：按 dc 要求的等级对应
+      const threshold =
+        dc === 0 ? attributeValue : dc === 1 ? attributeValue / 2 : attributeValue / 5
+
+      // 经验结算（SAN 无经验；判定完成即结算，暂不展示）
+      const gainedExp = gainRollExp(player, roll.attribute, attributeBase, dc, outcome)
 
       // 取对应分支结果（大成功/大失败未配置时回退到成功/失败）
       const branchResult: EventOptionResult | undefined =
@@ -444,7 +636,19 @@ export function useGame(initialPlayer: PlayerState) {
       // 生成判定帧展示判定过程，分支结果由"继续"按钮执行
       createRollResultFrame(
         option,
-        { d20, modifier, total, dc, outcome, modifierReasons },
+        {
+          attributeValue,
+          attributeBase,
+          bonusDice,
+          rolls,
+          finalRoll,
+          dc,
+          threshold,
+          successGrade,
+          outcome,
+          gainedExp,
+          modifierReasons,
+        },
         branchResult,
       )
       return null
@@ -483,11 +687,16 @@ export function useGame(initialPlayer: PlayerState) {
   function createRollResultFrame(
     option: NonNullable<(typeof state)['currentFrame']>['options'][number],
     info: {
-      d20: number
-      modifier: number
-      total: number
+      attributeValue: number
+      attributeBase: number
+      bonusDice: number
+      rolls: number[]
+      finalRoll: number
       dc: number
+      threshold: number
+      successGrade: 'normal' | 'hard' | 'extreme' | null
       outcome: RollOutcome
+      gainedExp: number
       modifierReasons: string[]
     },
     branchResult: EventOptionResult | undefined,
@@ -500,16 +709,18 @@ export function useGame(initialPlayer: PlayerState) {
     const roll = option.rollResult
     if (!roll) return
     const attributeLabel = roll.attribute
-    const attributeValue = getRollAttribute(state.player, roll.attribute)
-    const modifierText = info.modifier >= 0 ? `+${info.modifier}` : `${info.modifier}`
+    const dcLabel = info.dc === 1 ? '困难' : info.dc === 2 ? '极难' : '普通'
 
     // 判定过程文本
     const lines = [
       `【${attributeLabel}检定】`,
-      `属性：${attributeLabel} ${attributeValue}（修正 ${modifierText}）`,
+      `属性：${attributeLabel} ${info.attributeValue}`,
       ...info.modifierReasons.map((t) => `· ${t}`),
-      `掷骰：d20 → ${info.d20}`,
-      `合计：${info.total}（难度 DC ${info.dc}）`,
+      ...(info.bonusDice !== 0
+        ? [`奖励/惩罚骰：${info.bonusDice > 0 ? '+' : ''}${info.bonusDice}`]
+        : []),
+      `投掷：d100 → ${info.finalRoll}${info.rolls.length > 1 ? `（${info.rolls.join(' / ')}，${info.bonusDice > 0 ? '取最小' : '取最大'}）` : ''}`,
+      `要求：${dcLabel}成功（≤ ${info.threshold}）`,
       `判定结果：${ROLL_OUTCOME_LABELS[info.outcome]}`,
     ]
 
@@ -523,13 +734,17 @@ export function useGame(initialPlayer: PlayerState) {
     // 保存判定展示信息（供 RollResultPanel 渲染）
     state.rollResultInfo = {
       attribute: attributeLabel,
-      attributeValue,
-      modifier: info.modifier,
-      d20: info.d20,
-      total: info.total,
+      attributeValue: info.attributeValue,
+      attributeBase: info.attributeBase,
+      bonusDice: info.bonusDice,
+      rolls: info.rolls,
+      finalRoll: info.finalRoll,
       dc: info.dc,
+      threshold: info.threshold,
+      successGrade: info.successGrade,
       outcome: info.outcome,
       modifierReasons: info.modifierReasons,
+      gainedExp: info.gainedExp,
       description,
     }
     state.frameTextPrefix = description
@@ -547,19 +762,18 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
-   * 执行按钮交互的花费（快捷字段 costTime/costEnergy/costSan/costHp 与 costs[] 叠加扣减）
-   * 先校验体力/饱食度/生命/物品是否充足，不足则拦截（交互不执行）
-   * 用于事件选项与场景交互按钮统一结算。
-   *
-   * @param button - 交互按钮（事件选项或场景交互）
-   * @param defaultMinutes - 未配置 costTime 时的默认消耗分钟数
-   * @param extraStamina - 额外的体力消耗（如 moveToScene 的 staminaCost）
-   * @returns 是否消耗成功（false = 资源不足，调用方应中止交互）
+   * 汇总按钮交互的资源消耗（时间不参与校验，仅扣减阶段使用）
    */
-  function consumeButtonCosts(button: ButtonOption, defaultMinutes = 0, extraStamina = 0): boolean {
-    const survival = state.player.survival
-
-    // 汇总各类资源总消耗
+  function summarizeButtonCosts(
+    button: ButtonOption,
+    extraStamina = 0,
+  ): {
+    needStamina: number
+    needSatiety: number
+    needSan: number
+    needHp: number
+    itemCosts: { itemId: string; quantity: number }[]
+  } {
     let needStamina = (button.costEnergy ?? 0) + extraStamina
     let needSatiety = 0
     let needSan = button.costSan ?? 0
@@ -589,35 +803,71 @@ export function useGame(initialPlayer: PlayerState) {
         }
       }
     }
+    return { needStamina, needSatiety, needSan, needHp, itemCosts }
+  }
 
-    // 资源校验：不足则拦截
-    if (needStamina > 0 && survival.stamina < needStamina) {
-      state.logMessage = '体力不足，无法执行此操作'
-      return false
-    }
-    if (needSatiety > 0 && survival.satiety < needSatiety) {
-      state.logMessage = '饱食度不足，无法执行此操作'
-      return false
-    }
-    if (needHp > 0 && survival.hp < needHp) {
-      state.logMessage = '生命值不足，无法执行此操作'
-      return false
-    }
-    if (needSan > 0 && survival.san < needSan) {
-      state.logMessage = '精神不足以支撑这个选择'
-      return false
-    }
+  /**
+   * 校验按钮交互花费是否满足（不扣减资源/时间）
+   * 用于在被动事件触发之前做前置校验，资源不足时立即给出提示并中止交互
+   *
+   * @param button - 交互按钮（事件选项或场景交互）
+   * @param extraStamina - 额外的体力消耗（如 moveToScene 的 staminaCost）
+   * @returns 不足时的提示文本；满足返回 null
+   */
+  function checkButtonCosts(button: ButtonOption, extraStamina = 0): string | null {
+    const survival = state.player.survival
+    const { needStamina, needSatiety, needSan, needHp, itemCosts } = summarizeButtonCosts(
+      button,
+      extraStamina,
+    )
+    if (needStamina > 0 && survival.stamina < needStamina) return '体力不足，无法执行此操作'
+    if (needSatiety > 0 && survival.satiety < needSatiety) return '饱食度不足，无法执行此操作'
+    if (needHp > 0 && survival.hp < needHp) return '生命值不足，无法执行此操作'
+    if (needSan > 0 && survival.san < needSan) return '精神不足以支撑这个选择'
     for (const ic of itemCosts) {
-      if (getItemCount(state.player, ic.itemId) < ic.quantity) {
-        state.logMessage = '缺少所需物品，无法执行此操作'
-        return false
-      }
+      if (getItemCount(state.player, ic.itemId) < ic.quantity) return '缺少所需物品，无法执行此操作'
     }
+    return null
+  }
+
+  /**
+   * 资源不足等拦截提示：事件中显示在事件帧文本下方，场景中追加到场景文本之后
+   */
+  function showBlockedMessage(message: string): void {
+    if (state.mode === 'event') {
+      state.frameTextSuffix = message
+    } else {
+      setSceneTextAfter(message)
+    }
+  }
+
+  /**
+   * 执行按钮交互的花费（快捷字段 costTime/costEnergy/costSan/costHp 与 costs[] 叠加扣减）
+   * 先校验体力/饱食度/生命/物品是否充足，不足则拦截（交互不执行）
+   * 用于事件选项与场景交互按钮统一结算。
+   *
+   * @param button - 交互按钮（事件选项或场景交互）
+   * @param defaultMinutes - 未配置 costTime 时的默认消耗分钟数
+   * @param extraStamina - 额外的体力消耗（如 moveToScene 的 staminaCost）
+   * @returns 是否消耗成功（false = 资源不足，调用方应中止交互）
+   */
+  function consumeButtonCosts(button: ButtonOption, defaultMinutes = 0, extraStamina = 0): boolean {
+    // 资源校验：不足则拦截并给出提示
+    const error = checkButtonCosts(button, extraStamina)
+    if (error) {
+      showBlockedMessage(error)
+      return false
+    }
+    const survival = state.player.survival
+    const { needStamina, needSatiety, needSan, needHp, itemCosts } = summarizeButtonCosts(
+      button,
+      extraStamina,
+    )
 
     // 扣减各类资源
     if (needStamina > 0) survival.stamina = Math.max(0, survival.stamina - needStamina)
     if (needSatiety > 0) survival.satiety = Math.max(0, survival.satiety - needSatiety)
-    if (needSan > 0) survival.san = Math.max(0, survival.san - needSan)
+    if (needSan > 0) applySanDelta(state.player, -needSan)
     if (needHp > 0) survival.hp = Math.max(0, survival.hp - needHp)
     for (const ic of itemCosts) {
       removeItem(state.player, ic.itemId, ic.quantity)
@@ -644,6 +894,8 @@ export function useGame(initialPlayer: PlayerState) {
 
     // 先执行选项花费（资源不足则拦截，不执行选项）
     if (!consumeButtonCosts(option)) return
+    // 花费校验通过，清掉本帧上一次的资源不足拦截提示
+    state.frameTextSuffix = ''
 
     const result = resolveEventOptionResult(option, state.player)
     if (!result) return
@@ -700,6 +952,13 @@ export function useGame(initialPlayer: PlayerState) {
             state.logMessage = `目标帧 ${result.targetFrameId} 未找到`
           }
         }
+        // 合并本次事件中获得的物品/属性变动提示到帧前缀（显示在下一帧顶部）
+        if (pendingNotices.length > 0) {
+          state.frameTextPrefix = [state.frameTextPrefix, ...pendingNotices]
+            .filter(Boolean)
+            .join('\n')
+          pendingNotices = []
+        }
         break
       }
 
@@ -734,7 +993,9 @@ export function useGame(initialPlayer: PlayerState) {
         if (result.exitText) {
           setSceneTextAfter(result.exitText)
         }
-        console.log(state.sceneTextAfter)
+        // 丢弃物品/属性变动提示缓冲（提示已写入场景后缀，返回场景时展示）
+        pendingNotices = []
+        state.frameTextSuffix = ''
         break
       }
 
@@ -943,10 +1204,17 @@ export function useGame(initialPlayer: PlayerState) {
 
       case 'move': {
         state.sceneTextAfter = ''
-        if (tryTriggerPassiveEvents('leave')) {
-          return
-        }
         if (params?.interactionType === 'move') {
+          // 前置校验：资源不足立即提示并中止（不触发被动事件）
+          const error = checkButtonCosts(interaction)
+          if (error) {
+            showBlockedMessage(error)
+            return
+          }
+          // 被动事件拦截（触发后覆盖移动操作，不消耗）
+          if (tryTriggerPassiveEvents('leave')) {
+            return
+          }
           // 统一消耗（未配置 costTime 时默认 10 分钟）
           if (!consumeButtonCosts(interaction, 10)) return
           state.logMessage = `你向 ${params.direction} 方向移动`
@@ -957,6 +1225,12 @@ export function useGame(initialPlayer: PlayerState) {
       case 'moveToScene': {
         state.sceneTextAfter = ''
         if (params?.interactionType === 'moveToScene') {
+          // 前置校验：资源不足立即提示并中止（不触发被动事件）
+          const error = checkButtonCosts(interaction, params.staminaCost || 0)
+          if (error) {
+            showBlockedMessage(error)
+            return
+          }
           // 离开当前场景前被动事件拦截（触发后覆盖移动操作，不消耗）
           if (tryTriggerPassiveEvents('leave')) {
             return
@@ -1018,10 +1292,7 @@ export function useGame(initialPlayer: PlayerState) {
       state.player.survival.hp + Math.round((timeHours * 60) / 10) * buildLevel,
     )
     // 回复SAN（buildLevel - 1）
-    state.player.survival.san = Math.min(
-      state.player.survival.maxSan,
-      state.player.survival.san + Math.round((timeHours * 60) / 10) * (buildLevel - 1),
-    )
+    applySanDelta(state.player, Math.round((timeHours * 60) / 10) * (buildLevel - 1))
     // 移除休息时应移除的状态
     removeRestStatuses(state.player)
   }
@@ -1046,6 +1317,12 @@ export function useGame(initialPlayer: PlayerState) {
    * 探索：推进时间、刷新描述
    */
   function handleExplore(explore: ButtonOption): void {
+    // 前置校验：资源不足立即提示并中止（不触发被动事件）
+    const error = checkButtonCosts(explore)
+    if (error) {
+      showBlockedMessage(error)
+      return
+    }
     if (tryTriggerPassiveEvents('explore')) return
     state.sceneTextAfter = ''
     // 统一消耗（未配置 costTime 时默认 10 分钟）
@@ -1067,6 +1344,12 @@ export function useGame(initialPlayer: PlayerState) {
    * 资源采集/战斗
    */
   function handleCollect(collect: ResourceInteraction): void {
+    // 前置校验：资源不足立即提示并中止（不触发被动事件）
+    const error = checkButtonCosts(collect)
+    if (error) {
+      showBlockedMessage(error)
+      return
+    }
     if (tryTriggerPassiveEvents('collect')) return
     // 检查可用条件
     if (!evaluateConditions(collect.availableCondition, state.player)) {
@@ -1199,6 +1482,14 @@ export function useGame(initialPlayer: PlayerState) {
    * 离开场景前先拦截被动事件（触发则覆盖进入操作）
    */
   function enterSceneById(sceneId: string, subSceneId?: string, button?: ButtonOption): boolean {
+    // 前置校验：资源不足立即提示并中止（不触发被动事件）
+    if (button) {
+      const error = checkButtonCosts(button)
+      if (error) {
+        showBlockedMessage(error)
+        return false
+      }
+    }
     // 离开当前场景前被动事件拦截（触发后覆盖进入操作，不消耗）
     if (tryTriggerPassiveEvents('leave')) {
       return false
@@ -1218,6 +1509,14 @@ export function useGame(initialPlayer: PlayerState) {
    * 离开母场景前先拦截被动事件（触发则覆盖进入操作）
    */
   function enterSubSceneById(subSceneId: string, button?: ButtonOption): boolean {
+    // 前置校验：资源不足立即提示并中止（不触发被动事件）
+    if (button) {
+      const error = checkButtonCosts(button)
+      if (error) {
+        showBlockedMessage(error)
+        return false
+      }
+    }
     // 离开当前场景（母场景）进入子场景前被动事件拦截（触发后覆盖离开操作）
     if (tryTriggerPassiveEvents('leave')) {
       return false
@@ -1237,6 +1536,14 @@ export function useGame(initialPlayer: PlayerState) {
    * 离开前先拦截被动事件（触发则覆盖离开操作）
    */
   function exitSubSceneToParent(button?: ButtonOption): boolean {
+    // 前置校验：资源不足立即提示并中止（不触发被动事件）
+    if (button) {
+      const error = checkButtonCosts(button)
+      if (error) {
+        showBlockedMessage(error)
+        return false
+      }
+    }
     // 离开子场景前被动事件拦截（触发后覆盖离开操作）
     if (tryTriggerPassiveEvents('leave')) {
       return false
@@ -1606,12 +1913,32 @@ export function useGame(initialPlayer: PlayerState) {
     state.sceneTextAfter += description
   }
 
-  // 注册物品获得监听：每次获得物品时在场景文本后追加提示
+  // 注册物品获得监听：获得物品时追加场景后缀提示；事件中同时缓冲给下一帧前缀
   disposeItemAddedListener?.()
   disposeItemAddedListener = onItemAdded((itemId, quantity) => {
     const itemName = registry.getItemName(itemId)
-    console.log(`你获得了【${itemName}】×${quantity}`)
-    setSceneTextAfter(`你获得了【${itemName}】×${quantity}`)
+    const msg = `你获得了【${itemName}】×${quantity}`
+    // 场景后缀始终追加（事件回场景 / 场景中变动都能看到）
+    setSceneTextAfter(msg)
+    // 事件中发生的变动，保留给下一帧前缀合并显示
+    if (state.mode === 'event') {
+      pendingNotices.push(msg)
+    }
+  })
+
+  // 注册属性变动监听：基础属性/经验变动时追加场景后缀提示；事件中同时缓冲给下一帧前缀
+  disposeAttributeChangeListener?.()
+  disposeAttributeChangeListener = onAttributeChanged((change) => {
+    const lines = formatAttributeChangeNotices(change)
+    if (lines.length === 0) return
+    // 场景后缀始终追加（事件回场景 / 场景中变动都能看到）
+    for (const line of lines) {
+      setSceneTextAfter(line)
+    }
+    // 事件中发生的变动，保留给下一帧前缀合并显示
+    if (state.mode === 'event') {
+      pendingNotices.push(...lines)
+    }
   })
 
   /**

@@ -8,6 +8,78 @@ import { getRegistry } from './registry'
 import { applyStatus, removeStatus } from './status'
 import { addItem, removeItem, equipItemById, unequipByItemId } from './inventory'
 
+// ============================================================
+// 属性变动监听（供 runtime 层订阅：基础属性/经验变动时展示提醒）
+// ============================================================
+
+/** 基础属性键（与 PlayerAttributes 中可成长的属性一致） */
+export type GrowthAttributeKey = 'strength' | 'agility' | 'intelligence' | 'constitution'
+
+/** 可触发变动通知的属性键（基础属性 + 生存属性 SAN） */
+export type AttributeChangeKey = GrowthAttributeKey | 'san'
+
+/**
+ * 基础属性变动记录
+ * 经验变动与基础值（等级）变动可同时发生（如获得经验触发升级）；
+ * 生存属性（SAN）仅记录增减量 delta
+ */
+export interface AttributeChangeRecord {
+  /** 属性键 */
+  attribute: AttributeChangeKey
+  /** 本次经验原始增减量（经验变动时为数字；仅基础值变动时缺省） */
+  expDelta?: number
+  /** 基础值（等级）变动前 */
+  oldValue?: number
+  /** 基础值（等级）变动后 */
+  newValue?: number
+  /** 基础值变化是否由升级（经验达标）产生 */
+  levelUp?: boolean
+  /** 生存属性（SAN）的实际增减量 */
+  delta?: number
+}
+
+/** 属性变动监听器回调 */
+export type AttributeChangeListener = (change: AttributeChangeRecord) => void
+
+const attributeChangeListeners = new Set<AttributeChangeListener>()
+
+/**
+ * 注册属性变动监听器
+ * 基础属性值或经验值发生变动后触发（获得经验、升级、直接修改基础值等）
+ *
+ * @param listener - 回调，参数为属性变动记录
+ * @returns 注销函数
+ */
+export function onAttributeChanged(listener: AttributeChangeListener): () => void {
+  attributeChangeListeners.add(listener)
+  return () => {
+    attributeChangeListeners.delete(listener)
+  }
+}
+
+/** 触发属性变动监听器 */
+function notifyAttributeChanged(change: AttributeChangeRecord): void {
+  for (const listener of attributeChangeListeners) {
+    listener(change)
+  }
+}
+
+/**
+ * 应用 SAN 值变动（钳制到 0~maxSan）并触发属性变动通知
+ * 供效果结算（setAttributeValue）与运行时按钮消耗/休息恢复统一调用，
+ * 保证钳制逻辑与通知逻辑只有一份。
+ *
+ * @param player - 玩家状态（会被直接修改）
+ * @param delta - 期望增减量（实际应用值可能因钳制而不同）
+ */
+export function applySanDelta(player: PlayerState, delta: number): void {
+  const oldValue = player.survival.san
+  const newValue = Math.max(0, Math.min(player.survival.san + delta, player.survival.maxSan))
+  if (newValue === oldValue) return
+  player.survival.san = newValue
+  notifyAttributeChanged({ attribute: 'san', delta: newValue - oldValue })
+}
+
 /**
  * 效果解析执行器
  *
@@ -311,45 +383,125 @@ export class EffectResolver {
         player.survival.stamina = Math.max(0, Math.min(newValue, player.survival.maxStamina))
         break
       case AttributeType.SAN:
-        player.survival.san = Math.max(0, Math.min(newValue, player.survival.maxSan))
+        applySanDelta(player, newValue - player.survival.san)
         break
 
       // 基础属性
-      case AttributeType.STRENGTH:
+      case AttributeType.STRENGTH: {
+        const oldValue = player.attributes.strength
         player.attributes.strength = Math.max(0, Math.min(newValue, 100))
+        if (oldValue !== player.attributes.strength) {
+          notifyAttributeChanged({
+            attribute: 'strength',
+            oldValue,
+            newValue: player.attributes.strength,
+          })
+        }
         break
-      case AttributeType.AGILITY:
+      }
+      case AttributeType.AGILITY: {
+        const oldValue = player.attributes.agility
         player.attributes.agility = Math.max(0, Math.min(newValue, 100))
+        if (oldValue !== player.attributes.agility) {
+          notifyAttributeChanged({
+            attribute: 'agility',
+            oldValue,
+            newValue: player.attributes.agility,
+          })
+        }
         break
-      case AttributeType.INTELLIGENCE:
+      }
+      case AttributeType.INTELLIGENCE: {
+        const oldValue = player.attributes.intelligence
         player.attributes.intelligence = Math.max(0, Math.min(newValue, 100))
+        if (oldValue !== player.attributes.intelligence) {
+          notifyAttributeChanged({
+            attribute: 'intelligence',
+            oldValue,
+            newValue: player.attributes.intelligence,
+          })
+        }
         break
-      case AttributeType.CONSTITUTION:
+      }
+      case AttributeType.CONSTITUTION: {
+        const oldValue = player.attributes.constitution
         player.attributes.constitution = Math.max(0, Math.min(newValue, 100))
+        if (oldValue !== player.attributes.constitution) {
+          notifyAttributeChanged({
+            attribute: 'constitution',
+            oldValue,
+            newValue: player.attributes.constitution,
+          })
+        }
         // 体质变动会影响生命值上限
         this.recalculateMaxHp(player)
         break
+      }
       case AttributeType.LUCK:
         player.attributes.luck = Math.max(-100, Math.min(newValue, 100))
         break
 
       // 经验值
-      case AttributeType.STRENGTH_EXP:
+      case AttributeType.STRENGTH_EXP: {
+        const oldValue = player.attributes.strength
+        const oldExp = player.attributes.strengthExp
         player.attributes.strengthExp = Math.max(0, newValue)
         this.checkAttributeLevelUp(player, 'strength')
+        const newLevel = player.attributes.strength
+        notifyAttributeChanged({
+          attribute: 'strength',
+          expDelta: newValue - oldExp,
+          oldValue,
+          newValue: newLevel,
+          levelUp: newLevel > oldValue,
+        })
         break
-      case AttributeType.AGILITY_EXP:
+      }
+      case AttributeType.AGILITY_EXP: {
+        const oldValue = player.attributes.agility
+        const oldExp = player.attributes.agilityExp
         player.attributes.agilityExp = Math.max(0, newValue)
         this.checkAttributeLevelUp(player, 'agility')
+        const newLevel = player.attributes.agility
+        notifyAttributeChanged({
+          attribute: 'agility',
+          expDelta: newValue - oldExp,
+          oldValue,
+          newValue: newLevel,
+          levelUp: newLevel > oldValue,
+        })
         break
-      case AttributeType.INTELLIGENCE_EXP:
+      }
+      case AttributeType.INTELLIGENCE_EXP: {
+        const oldValue = player.attributes.intelligence
+        const oldExp = player.attributes.intelligenceExp
         player.attributes.intelligenceExp = Math.max(0, newValue)
         this.checkAttributeLevelUp(player, 'intelligence')
+        const newLevel = player.attributes.intelligence
+        notifyAttributeChanged({
+          attribute: 'intelligence',
+          expDelta: newValue - oldExp,
+          oldValue,
+          newValue: newLevel,
+          levelUp: newLevel > oldValue,
+        })
         break
-      case AttributeType.CONSTITUTION_EXP:
+      }
+      case AttributeType.CONSTITUTION_EXP: {
+        const oldValue = player.attributes.constitution
+        const oldExp = player.attributes.constitutionExp
         player.attributes.constitutionExp = Math.max(0, newValue)
         this.checkAttributeLevelUp(player, 'constitution')
+        const newLevel = player.attributes.constitution
+        notifyAttributeChanged({
+          attribute: 'constitution',
+          expDelta: newValue - oldExp,
+          oldValue,
+          newValue: newLevel,
+          levelUp: newLevel > oldValue,
+        })
         break
+      }
 
       // 武器熟练度
       case AttributeType.WEAPON_PROFICIENCY:
@@ -474,9 +626,9 @@ export class EffectResolver {
     const currentLevel = player.attributes[attribute]
     const currentExp = player.attributes[expKey]
 
-    if (currentLevel >= 100) return
+    if (currentLevel >= 20) return
 
-    const requiredExp = currentLevel * 100
+    const requiredExp = 100
     if (currentExp >= requiredExp) {
       // 升级
       player.attributes[attribute] += 1
@@ -506,31 +658,7 @@ export class EffectResolver {
       proficiency.level += 1
       proficiency.exp -= requiredExp
 
-      // 检查是否解锁新的战斗技能
-      this.checkWeaponSkillUnlock(player, weaponTypeId, proficiency.level)
-
       this.checkWeaponProficiencyLevelUp(player, weaponTypeId)
-    }
-  }
-
-  /**
-   * 检查武器熟练度提升后是否解锁新技能
-   */
-  private checkWeaponSkillUnlock(
-    player: PlayerState,
-    weaponTypeId: string,
-    newLevel: number,
-  ): void {
-    const weaponType = this.registry.getWeaponType(weaponTypeId)
-    if (!weaponType) return
-
-    const skillsToUnlock = weaponType.skillUnlocks[newLevel]
-    if (skillsToUnlock) {
-      for (const skillId of skillsToUnlock) {
-        if (!player.skills.unlockedBattleSkillIds.includes(skillId)) {
-          player.skills.unlockedBattleSkillIds.push(skillId)
-        }
-      }
     }
   }
 
@@ -770,24 +898,27 @@ export class EffectResolver {
       }
 
       case 'attribute': {
-        // 基础属性经验
-        switch (targetId) {
-          case 'strength':
-            player.attributes.strengthExp += amount
-            this.checkAttributeLevelUp(player, 'strength')
-            break
-          case 'agility':
-            player.attributes.agilityExp += amount
-            this.checkAttributeLevelUp(player, 'agility')
-            break
-          case 'intelligence':
-            player.attributes.intelligenceExp += amount
-            this.checkAttributeLevelUp(player, 'intelligence')
-            break
-          case 'constitution':
-            player.attributes.constitutionExp += amount
-            this.checkAttributeLevelUp(player, 'constitution')
-            break
+        // 基础属性经验（仅在 4 个可成长属性上结算并触发变动通知）
+        const attrKey: GrowthAttributeKey | null =
+          targetId === 'strength' ||
+          targetId === 'agility' ||
+          targetId === 'intelligence' ||
+          targetId === 'constitution'
+            ? targetId
+            : null
+        if (attrKey) {
+          const oldValue = player.attributes[attrKey]
+          const expKey = `${attrKey}Exp` as const
+          player.attributes[expKey] += amount
+          this.checkAttributeLevelUp(player, attrKey)
+          const newValue = player.attributes[attrKey]
+          notifyAttributeChanged({
+            attribute: attrKey,
+            expDelta: amount,
+            oldValue,
+            newValue,
+            levelUp: newValue > oldValue,
+          })
         }
         return `获得 ${targetId} 经验 +${amount}`
       }

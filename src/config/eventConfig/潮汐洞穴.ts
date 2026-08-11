@@ -128,7 +128,7 @@ export const event_beach_潮汐洞穴_防水箱: GameEvent = {
           name: '强行掰开',
           rollResult: {
             attribute: '力量',
-            dc: 14,
+            dc: 0,
             successResult: nextFrame(
               'event_beach_潮汐洞穴_防水箱_撬开',
               '你咬紧牙关，用尽全力一掰。钙壳发出一声脆响，裂开了。',

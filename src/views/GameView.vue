@@ -78,6 +78,7 @@
         :frame="game.state.currentFrame"
         :resolved-text="resolvedFrameText"
         :frame-text-prefix="game.state.frameTextPrefix"
+        :frame-text-suffix="game.state.frameTextSuffix"
         :options="visibleEventOptions"
         :variations="visibleEventVariations"
         :option-availability="optionAvailability"

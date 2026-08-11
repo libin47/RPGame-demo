@@ -37,7 +37,8 @@ export const event_beach_椰树林_灰褐色的猴子: GameEvent = {
           name: '观察猴群',
           rollResult: {
             attribute: '智力',
-            dc: 10,
+            modifier: [{ value: 1, condition: { flag: ['flag_潮汐洞穴_箱子已开启'] } }],
+            dc: 0,
             successResult: nextFrame(
               'event_beach_椰树林_灰褐色的猴子_观察成功',
               '你仔细观察着一群猴子的一举一动。',
@@ -97,7 +98,7 @@ export const event_beach_椰树林_灰褐色的猴子: GameEvent = {
           name: '闪避',
           rollResult: {
             attribute: '敏捷',
-            dc: 10,
+            dc: 0,
             successResult: nextFrame(
               'event_beach_椰树林_灰褐色的猴子_闪避成功',
               '你侧身一闪。\n\n椰子擦过你的耳边砸在身后的沙地上，发出一声闷响。',

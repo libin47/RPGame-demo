@@ -32,7 +32,9 @@
           </template>
         </p>
         <!-- 场景文本后缀 -->
-        <p v-if="props.sceneTextAfter" class="scene-suffix">{{ props.sceneTextAfter }}</p>
+        <p v-if="props.sceneTextAfter" class="scene-suffix">
+          <RichText :text="props.sceneTextAfter" />
+        </p>
       </div>
     </div>
 
@@ -219,6 +221,7 @@ import { evaluateConditions, getResolvedDescriptionText } from '@/engine'
 import type { PlayerState } from '@/types/player'
 import { paramRegistry } from '@/config/params'
 import type { Conditions } from '@/types/effect'
+import RichText from './RichText.vue'
 
 /**
  * 营地建筑基本信息

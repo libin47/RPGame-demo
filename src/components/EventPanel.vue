@@ -8,8 +8,14 @@
       <div class="vignette-overlay"></div>
       <div class="content">
         <!-- 上一帧选项结果文本 -->
-        <div v-if="frameTextPrefix" class="result-prefix">{{ frameTextPrefix }}</div>
+        <div v-if="frameTextPrefix" class="result-prefix">
+          <RichText :text="frameTextPrefix" />
+        </div>
         <p class="frame-text">{{ resolvedText }}</p>
+        <!-- 资源不足等拦截提示（显示在帧文本下方） -->
+        <div v-if="frameTextSuffix" class="result-suffix">
+          <RichText :text="frameTextSuffix" />
+        </div>
         <!-- 文本变体（斜体、条件满足时显示） -->
         <p v-for="v in props.variations" :key="v.content" class="text-variation">{{ v.content }}</p>
       </div>
@@ -38,6 +44,7 @@
 import { computed } from 'vue'
 import type { EventFrame, EventOption, EventTextVariation } from '@/types/event'
 import { getOptionResultIcon } from '@/engine'
+import RichText from './RichText.vue'
 
 // ============================================================
 // 组件属性
@@ -50,6 +57,8 @@ const props = defineProps<{
   resolvedText: string
   /** 上一帧选项结果文本（带样式区分） */
   frameTextPrefix: string
+  /** 资源不足等拦截提示（显示在帧文本下方） */
+  frameTextSuffix: string
   /** 过滤后的可见选项列表（由 GameView 计算传入） */
   options: EventOption[]
   /** 可见的文本变体列表（由 GameView 计算传入） */
@@ -170,6 +179,20 @@ function optionResultIcon(option: EventOption): string {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   white-space: pre-wrap;
   color: var(--text-primary);
+}
+
+/* 资源不足等拦截提示（显示在帧文本下方，与 ScenePanel 的 scene-suffix 统一） */
+.result-suffix {
+  margin: 1em 0 0.8em 0;
+  font-style: italic;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 0.4em 0.6em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  white-space: pre-wrap;
+  color: var(--text-primary);
+  line-height: 1.75;
+  font-size: var(--font-lg);
 }
 
 /* 文本变体：斜体，其余与主文本相同 */

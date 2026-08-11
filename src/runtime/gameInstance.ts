@@ -35,6 +35,7 @@ export interface GameInstance {
     readonly rollResultInfo: RollResultInfo | null
     readonly currentBattle: import('@/engine').BattleState | null
     readonly frameTextPrefix: string
+    readonly frameTextSuffix: string
     readonly sceneTextPrefix: string
     readonly sceneTextAfter: string
     readonly eventEntryClicked: boolean

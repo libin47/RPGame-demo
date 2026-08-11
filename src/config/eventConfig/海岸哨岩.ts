@@ -22,7 +22,7 @@ export const event_beach_海岸哨岩_攀爬: GameEvent = {
           name: '开始攀爬',
           rollResult: {
             attribute: '力量',
-            dc: 1,
+            dc: 0,
             successResult: nextFrame(
               'event_beach_海岸哨岩_攀爬_上半段',
               '你抓住裂缝边缘，一步步向上挪动。',
@@ -49,7 +49,7 @@ export const event_beach_海岸哨岩_攀爬: GameEvent = {
           name: '继续攀爬',
           rollResult: {
             attribute: '敏捷',
-            dc: 1,
+            dc: 0,
             successResult: nextFrame(
               'event_beach_海岸哨岩_攀爬_登顶',
               '你找到了岩壁上微小的凸起，手脚交替，稳定地向上推进。',

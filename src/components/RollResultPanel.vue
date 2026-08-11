@@ -9,25 +9,39 @@
     <!-- 检定标题 -->
     <div class="roll-title">【{{ info.attribute }}检定】</div>
 
-    <!-- 骰子区 -->
+    <!-- 骰子区（奖励/惩罚骰时显示多个 d100） -->
     <div class="dice-stage">
-      <div class="dice" :class="[!settled ? 'rolling' : 'dice-' + info.outcome]">
-        <span class="d20-num">{{ displayNum }}</span>
-        <span class="d20-label">d20</span>
+      <div class="dice-row">
+        <div
+          v-for="(_, i) in diceCount"
+          :key="i"
+          class="dice"
+          :class="[
+            !settled ? 'rolling' : selectedIndices.has(i) ? 'dice-' + info.outcome : 'dice-dim',
+          ]"
+        >
+          <span class="d20-num">{{ settled ? info.rolls[i] : rollDisplay[i] }}</span>
+          <span v-if="info.bonusDice !== 0 && settled" class="d20-label">
+            {{ selectedIndices.has(i) ? (info.bonusDice > 0 ? '取小' : '取大') : '' }}
+          </span>
+        </div>
+      </div>
+      <div v-if="info.bonusDice !== 0" class="dice-note">
+        奖励/惩罚骰 ×{{ Math.abs(info.bonusDice) }}（{{
+          info.bonusDice > 0 ? '取最小' : '取最大'
+        }}）
       </div>
     </div>
 
-    <!-- 属性与修正信息 -->
-    <div class="roll-meta">
-      属性 {{ info.attribute }} {{ info.attributeValue }}（修正 {{ modifierText }}）
-    </div>
+    <!-- 属性与要求信息 -->
+    <div class="roll-meta">属性 {{ info.attribute }} {{ info.attributeValue }}</div>
     <div v-for="(r, i) in info.modifierReasons" :key="i" class="roll-reason">· {{ r }}</div>
 
-    <!-- 合计与结果（骰子定格后出现） -->
+    <!-- 投掷与结果（骰子定格后出现） -->
     <transition name="pop">
       <div v-if="settled" class="roll-footer">
         <div class="total-line">
-          合计 <b>{{ info.total }}</b> ／ 难度 DC {{ info.dc }}
+          投掷 <b>{{ info.finalRoll }}</b> ／ 要求 {{ requirementText }}
         </div>
         <div class="roll-result" :class="'result-' + info.outcome">{{ outcomeText }}</div>
       </div>
@@ -58,30 +72,50 @@ const OUTCOME_LABELS: Record<RollResultInfo['outcome'], string> = {
   bigFail: '大失败！',
 }
 
-/** 修正值文本（带符号） */
-const modifierText = computed(() =>
-  props.info.modifier >= 0 ? `+${props.info.modifier}` : `${props.info.modifier}`,
-)
+/** 判定要求文本（按难度等级） */
+const requirementText = computed(() => {
+  const v = props.info.attributeValue
+  if (props.info.dc === 1) return `困难成功（≤ ${Math.floor(v / 2)}）`
+  if (props.info.dc === 2) return `极难成功（≤ ${Math.floor(v / 5)}）`
+  return `成功（≤ ${v}）`
+})
 
 /** 判定结果文案 */
 const outcomeText = computed(() => OUTCOME_LABELS[props.info.outcome])
 
-/** 骰子显示数字（滚动中） */
-const displayNum = ref('…')
+/** 骰子数量（奖励/惩罚骰时 >1） */
+const diceCount = computed(() => Math.max(props.info.rolls.length, 1))
+
+/** 滚动中的骰子显示值 */
+const rollDisplay = ref<number[]>([])
+
+/** 最终选中的骰子下标集合（奖励取最小/惩罚取最大） */
+const selectedIndices = computed(() => {
+  const set = new Set<number>()
+  if (!settled.value) return set
+  props.info.rolls.forEach((v, i) => {
+    if (v === props.info.finalRoll) set.add(i)
+  })
+  return set
+})
+
 /** 是否已定格（骰子滚动结束，显示结果） */
 const settled = ref(false)
 
 let rollTimer: number | undefined
 
-/** 骰子滚动动画：随机跳动约 1 秒后定格真实结果 */
+/** 骰子滚动动画：每个骰子随机跳动约 1 秒后定格真实结果 */
 function startRoll(): void {
+  rollDisplay.value = Array.from(
+    { length: diceCount.value },
+    () => Math.floor(Math.random() * 100) + 1,
+  )
   const start = performance.now()
   const tick = () => {
-    displayNum.value = String(Math.floor(Math.random() * 20) + 1)
+    rollDisplay.value = rollDisplay.value.map(() => Math.floor(Math.random() * 100) + 1)
     if (performance.now() - start < 300) {
       rollTimer = window.setTimeout(tick, 10)
     } else {
-      displayNum.value = String(props.info.d20)
       settled.value = true
     }
   }
@@ -134,13 +168,21 @@ onBeforeUnmount(() => {
   margin: 0.4rem 0 1rem;
 }
 
+/* 多骰子横向排列 */
+.dice-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
 /* 骰子卡片 */
 .dice {
   position: relative;
-  width: 110px;
-  height: 110px;
-  margin: 0 auto;
-  border-radius: 18px;
+  width: 92px;
+  height: 92px;
+  border-radius: 16px;
   border: 2px solid rgba(255, 255, 255, 0.35);
   background: rgba(255, 255, 255, 0.07);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
@@ -149,6 +191,12 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
+}
+
+/* 未被选中的骰子（奖励/惩罚骰时） */
+.dice-dim {
+  opacity: 0.35;
+  filter: saturate(0.4);
 }
 
 /* 滚动中：抖动 + 呼吸脉冲 */
@@ -204,7 +252,7 @@ onBeforeUnmount(() => {
 }
 
 .d20-num {
-  font-size: 3.4rem;
+  font-size: 2.6rem;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -214,10 +262,17 @@ onBeforeUnmount(() => {
 
 .d20-label {
   margin-top: 0.2rem;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   letter-spacing: 0.2em;
   color: var(--text-secondary);
   text-transform: uppercase;
+}
+
+/* 奖励/惩罚骰说明 */
+.dice-note {
+  margin-top: 0.6rem;
+  font-size: var(--font-sm);
+  color: var(--text-tertiary);
 }
 
 /* 属性与修正 */

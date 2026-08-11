@@ -811,11 +811,6 @@ function executePlayerBasicAttack(player: PlayerState, battle: BattleState): voi
     `你对 ${target.config.name} 造成了 ${finalDamage} 点伤害${critText}` +
       (target.hp <= 0 ? `，${target.config.name} 被击败了!` : ''),
   )
-
-  // 获得力量经验（近战攻击）
-  if (weaponTypeId !== 'unarmed' || player.equipment.weapon) {
-    player.attributes.strengthExp += 2
-  }
 }
 
 /**

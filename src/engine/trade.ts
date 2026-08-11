@@ -54,7 +54,7 @@ export function calculateBuyPrice(
     }
   }
 
-  return Math.round(item.basePrice * multiplier)
+  return Math.round((item.basePrice ?? 1) * multiplier)
 }
 
 /**
@@ -81,7 +81,7 @@ export function calculateSellPrice(
     }
   }
 
-  return Math.round(item.basePrice * multiplier)
+  return Math.round((item.basePrice ?? 1) * multiplier)
 }
 
 /**
