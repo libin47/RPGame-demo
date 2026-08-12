@@ -58,7 +58,7 @@ const chars = computed<Char[]>(() => {
       } else {
         // 乱码：替换为符号
         out.push({
-          char: GLYPHS[Math.floor(Math.random() * GLYPHS.length)],
+          char: GLYPHS[Math.floor(Math.random() * GLYPHS.length)]!,
           cls: 'ct-glyph',
           style: '',
         })

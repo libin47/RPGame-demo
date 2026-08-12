@@ -55,12 +55,7 @@ export interface BattleSkill {
   /** 技能类型 */
   skillType: 'battle'
 
-  /** 技能等级（部分技能可升级，0表示不可升级） */
-  level: number
-  /** 最大等级 */
-  maxLevel: number
-
-  // 武器熟练度等级
+  /** 解锁所需武器熟练度等级（普攻等基础技能为0） */
   unlockLevel?: number
 
   /** 是否锁定，通过其他方式解锁 */
@@ -74,53 +69,51 @@ export interface BattleSkill {
   /** 伤害类型（普攻时使用武器自身的伤害类型） */
   damageTypeId?: string
 
-  /** 技能数值 */
+  /** 技能数值（含效果与描述文本） */
   stats: BattleSkillStats
 
   /** 技能消耗 */
   costs: BattleSkillCost[]
 
-  /** 技能冷却（回合数） */
-  cooldown: number
+  /** 技能冷却（回合数，可选，默认0） */
+  cooldown?: number
 
-  /** 目标选择 */
-  targetType: BattleSkillTargetType
-
-  /** 命中后施加的效果 */
-  onHitEffects?: EffectResult[]
-  /** 暴击时额外施加的效果 */
-  onCritEffects?: EffectResult[]
-
-  /** 技能使用时的描述文本（用于战斗日志，支持占位符如 {damage}） */
-  useTextTemplate?: string
-  /** 技能未命中时的描述文本 */
-  missTextTemplate?: string
-
-  /** 此技能是否为默认普攻（武器熟练度0时自动解锁） */
-  isDefaultAttack?: boolean
+  /** 目标选择（可选，默认单个敌人） */
+  targetType?: BattleSkillTargetType
 }
 
 /**
  * 战斗技能数值
+ * 所有字段均为可选，未填写时使用默认值。
  */
 export interface BattleSkillStats {
-  /** 伤害倍率（基于武器基础伤害的倍率，1.0 = 普攻伤害） */
-  damageMultiplier: number
-  /** 额外固定伤害（不受武器影响） */
+  /** 伤害倍率（基于武器骰子伤害的倍率，默认1） */
+  damageMultiplier?: number
+  /** 额外固定伤害（不受武器影响，默认0） */
   bonusDamage?: number
-  /** 力量对伤害的加成系数（0表示不受力量加成） */
-  strengthScaling: number
-  /** 敏捷对伤害的加成系数（0表示不受敏捷加成） */
-  agilityScaling: number
-  /** 智力对伤害的加成系数（0表示不受智力加成） */
-  intelligenceScaling: number
-
-  /** 命中修正（加到基础命中上） */
-  accuracyModifier: number
-  /** 暴击率修正（0.1 = +10%） */
-  criticalChanceModifier: number
-  /** 暴击倍率修正（加到武器暴击倍率上） */
-  criticalMultiplierBonus: number
+  /** 加成属性（力量/敏捷/智力/体质，默认力量） */
+  scalingAttribute?: AttributeType
+  /** 命中修正（d100判定修正，加到命中阈值上，可为负数，默认0） */
+  accuracyModifier?: number
+  /** 暴击修正（d100暴击阈值修正，加到暴击阈值上，可为负数，默认0） */
+  criticalModifier?: number
+  /** 释放次数（默认1，大于1时依次进行d100判定并结算） */
+  hitCount?: number
+  /** 命中后施加的效果 */
+  onHitEffects?: EffectResult[]
+  /** 暴击时额外施加的效果 */
+  onCritEffects?: EffectResult[]
+  /** 描述文本（使用时随机抽取，支持占位符如 {damage}、{weapon}、{target}） */
+  narrativeTexts?: {
+    /** 普通命中文本 */
+    hit?: string[]
+    /** 未命中文本 */
+    miss?: string[]
+    /** 暴击命中文本 */
+    critHit?: string[]
+    /** 暴击未命中文本 */
+    critMiss?: string[]
+  }
 }
 
 /**
@@ -191,9 +184,6 @@ export interface PassiveSkill {
 
 /** 所有技能类型 */
 export type Skill = BattleSkill | PassiveSkill
-
-/** 可成长的技能（战斗技能有等级/经验） */
-export type GrowableSkill = BattleSkill
 
 // ============================================================
 // 技能注册表

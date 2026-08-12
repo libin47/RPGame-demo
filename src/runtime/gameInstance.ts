@@ -39,7 +39,6 @@ export interface GameInstance {
     readonly sceneTextPrefix: string
     readonly sceneTextAfter: string
     readonly eventEntryClicked: boolean
-    readonly logMessage: string
     readonly currentEnding: EndingConfig | null
     readonly endingReason: string
     readonly currentCG: import('@/engine').CGPlayState | null
@@ -75,7 +74,6 @@ export interface GameInstance {
   /** 退出建筑交互模式返回场景 */
   exitBuilding: () => void
   /** 设置底部日志消息 */
-  setLogMessage: (message: string) => void
   /** 执行建造配方 */
   executeBuildRecipe: (recipeId: string) => CraftResult
   /** 执行建筑升级 */
@@ -185,7 +183,6 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     getCampsiteBuildings: game.getCampsiteBuildings,
     enterBuilding: game.enterBuilding,
     exitBuilding: game.exitBuilding,
-    setLogMessage: game.setLogMessage,
     executeBuildRecipe: game.executeBuildRecipe,
     executeUpgradeBuild: game.executeUpgradeBuildMode,
     executeDeconstruct: game.executeDeconstructBuilding,
@@ -249,7 +246,6 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     getCampsiteBuildings: game.getCampsiteBuildings,
     enterBuilding: game.enterBuilding,
     exitBuilding: game.exitBuilding,
-    setLogMessage: game.setLogMessage,
     executeBuildRecipe: game.executeBuildRecipe,
     executeUpgradeBuild: game.executeUpgradeBuildMode,
     executeDeconstruct: game.executeDeconstructBuilding,

@@ -669,33 +669,33 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   color: var(--text-muted);
 }
 .mat-miss {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 .cost-miss {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .fail-reason {
   margin: 0;
   font-size: var(--font-xs);
-  color: #ff6b6b;
+  color: var(--danger);
 }
 
 .btn-upgrade {
   padding: 0.2rem 0.7rem;
-  border: 1px solid var(--special);;
+  border: 1px solid var(--special);
   border-radius: var(--radius-md);
-  background: rgba(255, 213, 79, 0.08);
-  color: var(--special);;
+  background: var(--special-bg);
+  color: var(--special);
   font-size: var(--font-xs);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .btn-upgrade:hover:not(:disabled) {
-  background: rgba(255, 213, 79, 0.15);
+  background: var(--special-bg-hover);
 }
 .btn-upgrade:disabled {
   opacity: 0.35;

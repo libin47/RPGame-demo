@@ -593,13 +593,13 @@ function onExecute(item: RecipeDisplayItem): void {
 }
 
 .mat-miss {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .cost-miss {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 /* 耗时 */
@@ -653,7 +653,7 @@ function onExecute(item: RecipeDisplayItem): void {
 /* 品质预览 */
 .rp-quality .quality-label {
   font-size: var(--font-xs);
-  color: #ffd700;
+  color: var(--special);
 }
 
 /* 执行按钮（与 BuildPanel 的 .btn-build 一致） */

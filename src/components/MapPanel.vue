@@ -310,7 +310,10 @@ function nodeDisplayName(node: MapNode): string {
   stroke-linecap: round;
 }
 
-/* 场景节点标记 */
+/* 场景节点标记
+   注意：地图图片本身是浅色图，若按钮背景/文字跟随 data-theme，
+   在 dusk/night（深色面板+浅色文字）下会变成"深底浅字"，叠在浅色地图上失去辨识度。
+   因此节点配色固定为白天主题的常量，不随时段变化。 */
 .mp-node {
   position: absolute;
   z-index: 2;
@@ -318,20 +321,20 @@ function nodeDisplayName(node: MapNode): string {
   display: flex;
   align-items: center;
   padding: 0.25rem 0.7rem;
-  border: 1px solid var(--border-mid);
+  border: 1px solid rgba(90, 74, 50, 0.2); /* day --border-mid */
   border-radius: var(--radius-md);
-  background: var(--card-bg);
-  color: var(--text-primary);
+  background: rgba(255, 252, 242, 0.92); /* day --btn-bg */
+  color: #332d22; /* day --ink */
   font-size: var(--font-xs);
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
-  box-shadow: 0 2px 8px var(--shadow-strong);
+  box-shadow: 0 2px 8px rgba(90, 70, 40, 0.28); /* day --shadow-strong */
 }
 
 .mp-node:hover {
-  background: var(--accent-bg-hover);
-  border-color: var(--accent);
+  background: rgba(74, 106, 90, 0.16); /* day --accent-bg-hover */
+  border-color: #4a6a5a; /* day --accent */
   transform: translate(-50%, -50%) scale(1.08);
 }
 
@@ -348,24 +351,23 @@ function nodeDisplayName(node: MapNode): string {
 
 /* 当前所在节点高亮 */
 .mp-node-current {
-  border-color: #ffd700;
-  background: rgba(35, 29, 0, 0.696);
+  border-color: #9a6a28; /* day --special */
   box-shadow: 0 0 12px rgba(61, 52, 0, 0.683);
 }
 
 .mp-node-current:hover {
-  background: rgba(255, 215, 0, 0.4);
+  background: rgba(168, 122, 46, 0.06); /* day --special-bg */
 }
 
 /* 不可达节点（有路径配置但当前无可行路线）：弱化显示 */
 .mp-node-unreachable {
   opacity: 0.4;
-  border-color: var(--border-weak);
+  border-color: rgba(90, 74, 50, 0.13); /* day --border-weak */
 }
 
 .mp-node-unreachable:hover {
-  background: var(--card-bg);
-  border-color: var(--border-weak);
+  background: rgba(255, 252, 242, 0.72); /* day --card-bg */
+  border-color: rgba(90, 74, 50, 0.13); /* day --border-weak */
   transform: translate(-50%, -50%);
 }
 

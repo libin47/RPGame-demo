@@ -218,29 +218,29 @@ onBeforeUnmount(() => {
 
 /* 定格后按结果染色 */
 .dice-bigSuccess {
-  border-color: #ffd54f;
-  background: rgba(255, 213, 79, 0.16);
+  border-color: var(--special);
+  background: var(--special-bg);
   box-shadow: 0 0 28px rgba(255, 213, 79, 0.35);
   animation: dice-land 0.35s ease;
 }
 
 .dice-success {
-  border-color: #66bb6a;
-  background: rgba(102, 187, 106, 0.14);
+  border-color: var(--rc-suf);
+  background: var(--accent-bg);
   box-shadow: 0 0 24px rgba(102, 187, 106, 0.3);
   animation: dice-land 0.35s ease;
 }
 
 .dice-fail {
-  border-color: #ef5350;
-  background: rgba(239, 83, 80, 0.14);
+  border-color: var(--rc-crit);
+  background: var(--danger-bg);
   box-shadow: 0 0 20px rgba(239, 83, 80, 0.25);
   animation: dice-land 0.35s ease;
 }
 
 .dice-bigFail {
-  border-color: #ab47bc;
-  background: rgba(171, 71, 188, 0.16);
+  border-color: var(--madness);
+  background: var(--madness-bg);
   box-shadow: 0 0 26px rgba(171, 71, 188, 0.35);
   animation: dice-land 0.35s ease;
 }
@@ -327,28 +327,28 @@ onBeforeUnmount(() => {
 }
 
 .result-bigSuccess {
-  color: #ffd54f;
+  color: var(--special);
   text-shadow:
     0 0 18px rgba(255, 213, 79, 0.6),
     0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .result-success {
-  color: #81c784;
+  color: var(--rc-suf);
   text-shadow:
     0 0 14px rgba(102, 187, 106, 0.55),
     0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .result-fail {
-  color: #ef5350;
+  color: var(--rc-crit);
   text-shadow:
     0 0 12px rgba(239, 83, 80, 0.5),
     0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .result-bigFail {
-  color: #ce93d8;
+  color: var(--madness);
   text-shadow:
     0 0 16px rgba(171, 71, 188, 0.6),
     0 2px 4px rgba(0, 0, 0, 0.5);

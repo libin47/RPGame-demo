@@ -39,10 +39,10 @@ const segments = computed<Segment[]>(() => {
 
 <style scoped>
 .rich-green {
-  color: #81c784;
+  color: var(--rc-suf);
 }
 
 .rich-red {
-  color: #ef5350;
+  color: var(--rc-crit);
 }
 </style>

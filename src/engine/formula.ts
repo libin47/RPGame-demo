@@ -160,126 +160,45 @@ export function calcTurnOrder(agility: number): number {
 }
 
 /**
- * 计算玩家基础攻击伤害
- * 适用于普攻
- *
- * @param playerStrength - 玩家力量
- * @param weaponDamage - 武器基础伤害（无武器时为 0）
- * @param proficiencyBonus - 武器熟练度加成（每级 +2 伤害）
- * @returns 基础伤害
+ * 计算加成属性对伤害的修正
+ * 公式：(属性值 - 50) / 5，向下取整，允许负数
  */
-export function calcPlayerBaseDamage(
-  playerStrength: number,
-  weaponDamage: number,
-  proficiencyBonus: number,
-): number {
-  return Math.max(1, playerStrength * 0.5 + weaponDamage + proficiencyBonus)
-}
-
-/**
- * 计算命中判定
- *
- * @param attackerAgility - 攻击者敏捷
- * @param proficiencyBonus - 武器熟练度命中加成
- * @param accuracyModifier - 技能命中修正
- * @param defenderAgility - 防御者敏捷
- * @returns 是否命中
- */
-export function calcHitChance(
-  attackerAgility: number,
-  proficiencyBonus: number,
-  accuracyModifier: number,
-  defenderAgility: number,
-): number {
-  const baseHit = 0.8 // 基础命中率 80%
-  const agilityFactor = (attackerAgility - defenderAgility) * 0.005 // 敏捷差每差 1 点 ±0.5%
-  const proficiencyFactor = proficiencyBonus * 0.03 // 熟练度每级 +3%
-  return Math.min(
-    0.95,
-    Math.max(0.2, baseHit + agilityFactor + proficiencyFactor + accuracyModifier),
-  )
-}
-
-/**
- * 计算暴击判定
- *
- * @param proficiencyBonus - 武器熟练度暴击加成
- * @param critChanceModifier - 技能暴击率修正
- * @returns 是否暴击
- */
-export function calcCriticalChance(proficiencyBonus: number, critChanceModifier: number): number {
-  const baseCrit = 0.05 // 基础暴击率 5%
-  const proficiencyFactor = proficiencyBonus * 0.02 // 熟练度每级 +2%
-  return Math.min(0.5, baseCrit + proficiencyFactor + critChanceModifier)
-}
-
-/**
- * 计算暴击倍率
- *
- * @param proficiencyBonus - 武器熟练度暴击倍率加成
- * @param critMultiplierModifier - 技能暴击倍率修正
- * @returns 暴击倍率
- */
-export function calcCriticalMultiplier(
-  proficiencyBonus: number,
-  critMultiplierModifier: number,
-): number {
-  const baseMultiplier = 1.5 // 基础暴击倍率 1.5x
-  const proficiencyFactor = proficiencyBonus * 0.1 // 熟练度每级 +0.1
-  return baseMultiplier + proficiencyFactor + critMultiplierModifier
+export function calcAttributeScalingBonus(attributeValue: number): number {
+  return Math.floor((attributeValue - 50) / 5)
 }
 
 /**
  * 计算伤害经过防御减免后的最终值
- * 公式：最终伤害 = X·dp + X·(1−dp)·max(0, 1−d)
- *   X  = 技能修正后的原始伤害（含浮动与暴击倍率）
+ * 公式：最终伤害 = X·(1−d) + X·d·dp
+ *   X  = 技能修正后的原始伤害（含暴击取最大值等）
+ *   d  = 目标对应类型防御比例（1=完全免疫；>1 时 (1−d) 为负，允许负伤害即回复血量，不封顶）
  *   dp = 伤害类型穿透比例（DamageType.defensePenetration，0~1；1=完全无视防御，如真实伤害）
- *   d  = 目标对应类型防御比例（≥1 完全减免，0 不减免，<0 放大该部分伤害）
- * 允许完全减免产生 0 伤害
+ * 暴击时调用方传入减半后的防御比例（d/2）即可。
  *
- * @returns 最终伤害（向上取整，最小 0）
+ * @returns 最终伤害（向下取整，可为负数）
  */
 export function calcDamageAfterDefense(
   rawDamage: number,
   defensePenetration: number,
   defenseRatio: number,
 ): number {
-  const penetratedDamage = rawDamage * defensePenetration
-  const reducedDamage = rawDamage * (1 - defensePenetration) * Math.max(0, 1 - defenseRatio)
-  return Math.max(0, Math.ceil(penetratedDamage + reducedDamage))
+  const reducedDamage = rawDamage * (1 - defenseRatio)
+  const penetratedDamage = rawDamage * defenseRatio * defensePenetration
+  return Math.floor(reducedDamage + penetratedDamage)
 }
 
 /**
  * 计算防御实际减免掉的伤害量（用于防具耐久扣除）
- * = X·(1−dp)·clamp(d, 0, 1)
- * 完全减免（d≥1）时等于全部可减免部分；d≤0 时无减免
+ * = X·d·(1−dp)，防御比例截取到 [0, 1]
+ * d≤0 时无减免；d≥1 时减免全部可减免部分
  */
 export function calcAbsorbedDamage(
   rawDamage: number,
   defensePenetration: number,
   defenseRatio: number,
 ): number {
-  const reducedPortion = rawDamage * (1 - defensePenetration)
   const clampedRatio = Math.max(0, Math.min(1, defenseRatio))
-  return reducedPortion * clampedRatio
-}
-
-/**
- * 计算敌人技能命中
- *
- * @param enemyAgility - 敌人敏捷
- * @param accuracyModifier - 技能命中修正
- * @param playerAgility - 玩家敏捷
- * @returns 是否命中
- */
-export function calcEnemyHitChance(
-  enemyAgility: number,
-  accuracyModifier: number,
-  playerAgility: number,
-): number {
-  const baseHit = 0.75
-  const agilityFactor = (enemyAgility - playerAgility) * 0.005
-  return Math.min(0.95, Math.max(0.2, baseHit + agilityFactor + accuracyModifier))
+  return rawDamage * clampedRatio * (1 - defensePenetration)
 }
 
 /**

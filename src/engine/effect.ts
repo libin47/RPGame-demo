@@ -889,14 +889,6 @@ export class EffectResolver {
         return `获得 ${targetId} 熟练度 +${amount}`
       }
 
-      case 'battleSkill': {
-        if (!player.skills.battleSkills[targetId]) {
-          player.skills.battleSkills[targetId] = { level: 0, exp: 0 }
-        }
-        player.skills.battleSkills[targetId].exp += amount
-        return `获得技能 ${targetId} 经验 +${amount}`
-      }
-
       case 'attribute': {
         // 基础属性经验（仅在 4 个可成长属性上结算并触发变动通知）
         const attrKey: GrowthAttributeKey | null =

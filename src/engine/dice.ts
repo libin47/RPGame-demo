@@ -105,3 +105,146 @@ export function randomQuantity(min: number, max: number, luckModifier: number = 
   }
   return randomInt(min, effectiveMax)
 }
+
+// ============================================================
+// 骰子表达式
+// 支持 NdM 骰子与加减常数，如 "1d6"、"2d4+3"、"3d8-2"、"1d4+2d6+1"
+// 运算仅限加减和 d 骰子运算。
+// ============================================================
+
+/**
+ * 骰子表达式中的一项
+ * 每项要么是一个骰子组（如 2d6，带符号），要么是一个纯常数（如 +3/-2）。
+ */
+export interface DiceTerm {
+  /** 骰子数量（0 表示纯常数项） */
+  diceCount: number
+  /** 骰子面数 */
+  diceSides: number
+  /** 该项符号（+1 / -1） */
+  sign: number
+  /** 常数项数值（绝对值，仅纯常数项时有效） */
+  constant: number
+}
+
+/**
+ * 解析骰子表达式为有序项列表
+ * 表达式仅允许数字、d/D、+、- 与空格。
+ *
+ * @param expr - 骰子表达式，如 "2d4+3"
+ * @returns 解析出的项列表
+ * @throws 表达式格式非法时抛出错误
+ */
+export function parseDiceExpression(expr: string): DiceTerm[] {
+  const cleaned = expr.replace(/\s+/g, '')
+  if (cleaned.length === 0 || !/^[0-9dD+\-]+$/.test(cleaned)) {
+    throw new Error(`无效的骰子表达式: "${expr}"`)
+  }
+
+  const terms: DiceTerm[] = []
+  let index = 0
+  let sign = 1
+
+  while (index < cleaned.length) {
+    const ch = cleaned[index]!
+    if (ch === '+' || ch === '-') {
+      sign = ch === '-' ? -1 : 1
+      index++
+      continue
+    }
+    // 解析数字部分
+    const numStart = index
+    while (index < cleaned.length && /[0-9]/.test(cleaned[index]!)) index++
+    if (numStart === index) {
+      throw new Error(`无效的骰子表达式: "${expr}"`)
+    }
+    const numText = cleaned.slice(numStart, index)
+    const value = parseInt(numText, 10)
+
+    // 后面跟 d/D 则为骰子组
+    const nextCh = cleaned[index]
+    if (nextCh === 'd' || nextCh === 'D') {
+      index++
+      const sidesStart = index
+      while (index < cleaned.length && /[0-9]/.test(cleaned[index]!)) index++
+      if (sidesStart === index) {
+        throw new Error(`无效的骰子表达式: "${expr}"`)
+      }
+      const sides = parseInt(cleaned.slice(sidesStart, index), 10)
+      if (value < 0 || sides <= 0) {
+        throw new Error(`无效的骰子表达式: "${expr}"`)
+      }
+      terms.push({ diceCount: value, diceSides: sides, sign, constant: 0 })
+    } else {
+      // 纯常数项
+      terms.push({ diceCount: 0, diceSides: 0, sign, constant: value })
+    }
+  }
+
+  if (terms.length === 0) {
+    throw new Error(`无效的骰子表达式: "${expr}"`)
+  }
+  return terms
+}
+
+/**
+ * 求骰子表达式的值（随机投掷）
+ * 每个骰子组在 [1, sides] 内独立投掷后求和，再乘以符号。
+ *
+ * @param expr - 骰子表达式
+ * @returns 投掷结果
+ */
+export function rollDiceExpression(expr: string): number {
+  const terms = parseDiceExpression(expr)
+  let total = 0
+  for (const term of terms) {
+    if (term.diceCount > 0) {
+      let sum = 0
+      for (let i = 0; i < term.diceCount; i++) {
+        sum += randomInt(1, term.diceSides)
+      }
+      total += term.sign * sum
+    } else {
+      total += term.sign * term.constant
+    }
+  }
+  return total
+}
+
+/**
+ * 求骰子表达式的最大值（每个骰子取最大面值）
+ *
+ * @param expr - 骰子表达式
+ * @returns 最大值
+ */
+export function maxDiceExpression(expr: string): number {
+  const terms = parseDiceExpression(expr)
+  let total = 0
+  for (const term of terms) {
+    if (term.diceCount > 0) {
+      total += term.sign * term.diceCount * term.diceSides
+    } else {
+      total += term.sign * term.constant
+    }
+  }
+  return total
+}
+
+/**
+ * 求骰子表达式的最小值（每个骰子取1）
+ *
+ * @param expr - 骰子表达式
+ * @returns 最小值
+ */
+export function minDiceExpression(expr: string): number {
+  const terms = parseDiceExpression(expr)
+  let total = 0
+  for (const term of terms) {
+    if (term.diceCount > 0) {
+      total += term.sign * term.diceCount * 1
+    } else {
+      total += term.sign * term.constant
+    }
+  }
+  return total
+}

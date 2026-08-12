@@ -361,10 +361,10 @@ function onLoadSlot(slot: number): void {
 }
 
 .feedback.success {
-  color: #81c784;
+  color: var(--rc-suf);
 }
 
 .feedback.error {
-  color: #e57373;
+  color: var(--danger);
 }
 </style>

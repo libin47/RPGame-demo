@@ -28,7 +28,7 @@
     <!-- 主内容区：根据当前模式切换面板 -->
     <div class="main-content">
       <!-- SAN 异常覆盖层（噪点/边缘变形/划痕，随档位显现，不挡操作） -->
-      <div v-if="sanTier > 0" class="san-overlay" aria-hidden="true">
+      <div v-if="sanTier > 1" class="san-overlay" aria-hidden="true">
         <div class="san-noise"></div>
         <div class="san-vignette"></div>
         <div v-if="sanTier >= 3" class="san-scratch"></div>
@@ -112,6 +112,7 @@
         :distance="game.state.currentBattle.distance"
         :player="game.state.player"
         :target-enemy-id="game.state.currentBattle.targetEnemyId"
+        :skill-cooldowns="game.state.currentBattle.playerSkillCooldowns"
         :result="game.state.currentBattle.result"
         @action="onBattleAction"
         @select-target="onSelectEnemyTarget"
@@ -190,11 +191,6 @@
       <div v-else class="placeholder-panel">
         <p>此功能尚未实现</p>
       </div>
-    </div>
-
-    <!-- 底部消息栏 -->
-    <div class="bottom-message" v-if="game.state.logMessage">
-      <span class="log-text">{{ game.state.logMessage }}</span>
     </div>
 
     <!-- 系统菜单（保存/读档） -->
@@ -627,9 +623,7 @@ function onMoveToMapScene(sceneId: string): void {
 }
 
 /** 人物交互（暂未实现） */
-function onCharacter(char: import('@/types/scene').CharacterInteraction): void {
-  game.value.setLogMessage(`与 ${char.name} 交互 - 功能开发中`)
-}
+function onCharacter(char: import('@/types/scene').CharacterInteraction): void {}
 
 /** 当前交互的建筑数据（用于 BuildingDetail） */
 const currentBuildingData = computed<{
@@ -687,9 +681,7 @@ function onRepairBuilding(buildId: string): void {
 }
 
 /** 建筑交互日志 */
-function onBuildingLog(message: string): void {
-  game.value.setLogMessage(message)
-}
+function onBuildingLog(message: string): void {}
 
 /** 监听结局/CG模式，自动跳转 */
 watch(
@@ -763,6 +755,9 @@ watch(
   --special: #9a6a28;
   --special-bg: rgba(168, 122, 46, 0.06);
   --special-bg-hover: rgba(168, 122, 46, 0.14);
+  --madness: #6a4f9e;
+  --madness-bg: rgba(106, 79, 158, 0.08);
+  --madness-bg-hover: rgba(106, 79, 158, 0.16);
   --link: #2f8a5f;
   --link-hover: #237a51;
   --prefix-line: #a0804f;
@@ -828,6 +823,9 @@ watch(
   --special: #d9b878;
   --special-bg: rgba(217, 184, 120, 0.1);
   --special-bg-hover: rgba(217, 184, 120, 0.2);
+  --madness: #b39ddb;
+  --madness-bg: rgba(179, 157, 219, 0.12);
+  --madness-bg-hover: rgba(179, 157, 219, 0.22);
   --link: #9ad8ca;
   --link-hover: #b8e8dc;
   --prefix-line: #c9a86a;
@@ -881,6 +879,9 @@ watch(
   --special: #c2a468;
   --special-bg: rgba(184, 154, 96, 0.1);
   --special-bg-hover: rgba(184, 154, 96, 0.2);
+  --madness: #a98fd8;
+  --madness-bg: rgba(169, 143, 216, 0.12);
+  --madness-bg-hover: rgba(169, 143, 216, 0.22);
   --link: #88cdbd;
   --link-hover: #a6e0d0;
   --prefix-line: #a0804f;
@@ -927,24 +928,6 @@ watch(
   font-size: 16px;
 }
 
-/* ---- 底部消息 ---- */
-.bottom-message {
-  padding: 3px 12px;
-  background: rgba(0, 0, 0, 0.3);
-  min-height: 22px;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.log-text {
-  font-size: 12px;
-  color: #888;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* ---- 面板覆盖层 ---- */
 .panel-overlay {
   position: fixed;
@@ -962,27 +945,26 @@ watch(
    此处负责内容区整体滤镜、晃动与覆盖层（噪点/边缘变形/划痕）
    ═══════════════════════════════════════════════════════════ */
 
-/* 档位 1：轻微——整体色温微偏移 */
+/* 档位 1：轻微——内容区无特效（仅保留覆盖层） */
 .game-view[data-san='1'] .main-content {
+  filter: none;
+}
+
+/* 档位 2：明显——整体色温微偏移（原档 1） */
+.game-view[data-san='2'] .main-content {
   filter: contrast(0.985) saturate(1.03) hue-rotate(-2deg);
 }
 
-/* 档位 2：明显——色偏加重 + 轻微晃动 */
-.game-view[data-san='2'] .main-content {
-  filter: contrast(1.05) saturate(1.12) hue-rotate(-6deg);
-  animation: san-shake-soft 6s infinite;
-}
-
-/* 档位 3：混乱——重色偏 + 中等扭曲 + 晃动 */
+/* 档位 3：混乱——色偏加重 + 轻微晃动（原档 2） */
 .game-view[data-san='3'] .main-content {
-  filter: url(#san-distort-mid) contrast(1.1) saturate(1.26) hue-rotate(-12deg);
-  animation: san-shake-soft 4s infinite;
+  filter: contrast(1.05) saturate(1.12) hue-rotate(-6deg);
+  animation: san-shake-soft 15s infinite;
 }
 
-/* 档位 4：极度——强扭曲 + 模糊 + 剧烈晃动 */
+/* 档位 4：极度——重色偏 + 晃动（关闭扭曲） */
 .game-view[data-san='4'] .main-content {
-  filter: url(#san-distort-severe) contrast(1.15) saturate(1.42) hue-rotate(-18deg) blur(0.3px);
-  animation: san-shake-hard 1.4s infinite;
+  filter: contrast(1.1) saturate(1.26) hue-rotate(-12deg);
+  animation: san-shake-soft 8s infinite;
 }
 
 /* 晃动动画（轻/重两档，仅作用于内容区） */
@@ -1039,40 +1021,53 @@ watch(
 }
 
 .game-view[data-san='1'] .san-overlay {
-  opacity: 0.18;
+  opacity: 0.09;
 }
 .game-view[data-san='2'] .san-overlay {
-  opacity: 0.32;
+  opacity: 0.18;
 }
 .game-view[data-san='3'] .san-overlay {
-  opacity: 0.5;
+  opacity: 0.32;
 }
 .game-view[data-san='4'] .san-overlay {
-  opacity: 0.62;
+  opacity: 0.5;
 }
 
-/* 噪点层：低频闪烁颗粒 */
+/* 噪点层：低频闪烁颗粒（基础透明度由 --noise-scale 按档位缩放） */
 .san-noise {
   position: absolute;
   inset: -10%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 240px 240px;
   mix-blend-mode: overlay;
-  animation: san-noise-jitter 0.45s steps(2) infinite;
+  animation: san-noise-jitter 0.8s steps(2) infinite;
+}
+
+.game-view[data-san='1'] .san-noise {
+  --noise-scale: 0;
+}
+.game-view[data-san='2'] .san-noise {
+  --noise-scale: 0.15;
+}
+.game-view[data-san='3'] .san-noise {
+  --noise-scale: 0.6;
+}
+.game-view[data-san='4'] .san-noise {
+  --noise-scale: 1;
 }
 
 @keyframes san-noise-jitter {
   0% {
     transform: translate(0, 0);
-    opacity: 0.5;
+    opacity: calc(0.5 * var(--noise-scale, 1));
   }
   50% {
-    transform: translate(-8px, 6px);
-    opacity: 0.9;
+    transform: translate(-4px, 3px);
+    opacity: calc(0.4 * var(--noise-scale, 1));
   }
   100% {
-    transform: translate(6px, -8px);
-    opacity: 0.6;
+    transform: translate(3px, -4px);
+    opacity: calc(0.6 * var(--noise-scale, 1));
   }
 }
 

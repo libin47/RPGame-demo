@@ -214,7 +214,6 @@ export function createNewPlayerState(
 
   const skills: PlayerSkills = {
     weaponProficiencies,
-    battleSkills: {},
     unlockedBattleSkillIds: classConfig.initialBattleSkillIds ?? [],
     passiveSkillIds: classConfig.initialPassiveSkillIds,
   }

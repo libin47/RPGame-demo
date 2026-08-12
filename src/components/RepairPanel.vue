@@ -255,9 +255,9 @@ function onRepair(instanceId: string): void {
   font-size: var(--font-xs);
   padding: 0.05rem 0.35rem;
   border-radius: 3px;
-  color: #a5d6a7;
-  background: rgba(165, 214, 167, 0.12);
-  border: 1px solid rgba(165, 214, 167, 0.3);
+  color: var(--rc-suf);
+  background: var(--accent-bg);
+  border: 1px solid var(--rc-suf);
   white-space: nowrap;
 }
 
@@ -315,8 +315,8 @@ function onRepair(instanceId: string): void {
 }
 
 .mat-miss {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 /* ---- 操作区（右侧） ---- */
@@ -330,7 +330,7 @@ function onRepair(instanceId: string): void {
 
 .repair-time {
   font-size: var(--font-xs);
-  color: #90caf9;
+  color: var(--link);
   white-space: nowrap;
 }
 

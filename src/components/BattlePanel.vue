@@ -58,9 +58,20 @@
       </div>
     </div>
 
-    <!-- 战斗日志区 -->
+    <!-- 战斗日志区（伤害数值为可点击文本，点击弹窗查看计算过程） -->
     <div class="battle-log" ref="logRef">
-      <p v-for="(log, idx) in logs" :key="idx" class="log-line">{{ log }}</p>
+      <p v-for="(log, idx) in logs" :key="idx" class="log-line" :class="logClass(log)">
+        <template v-for="(seg, si) in logSegments(log)" :key="si">
+          <span
+            v-if="seg.dmg !== null"
+            class="log-dmg"
+            title="点击查看伤害计算详情"
+            @click="openCalc(log)"
+            >{{ seg.dmg }}</span
+          >
+          <template v-else>{{ seg.text }}</template>
+        </template>
+      </p>
     </div>
 
     <!-- 玩家技能区（攻击距离不足的技能禁用；胜利后隐藏） -->
@@ -69,13 +80,20 @@
         v-for="item in skills"
         :key="item.skill.id"
         class="skill-btn"
-        :class="{ 'skill-off-range': !item.inRange }"
-        :disabled="!item.inRange"
-        :title="item.skill.description"
+        :class="{ 'skill-off-range': !item.inRange, 'skill-on-cd': item.onCooldown }"
+        :disabled="!item.inRange || item.onCooldown"
+        :title="
+          item.onCooldown
+            ? `${item.skill.name} 冷却中（剩余 ${item.cooldown} 回合）`
+            : item.skill.description
+        "
         @click="onSkill(item.skill.id)"
       >
         <span class="skill-name">{{ item.skill.name }}</span>
-        <span class="skill-range">{{ item.distance === -1 ? '∞' : `射程${item.distance}` }}</span>
+        <span v-if="item.onCooldown" class="skill-cd">冷却 {{ item.cooldown }}</span>
+        <span v-else class="skill-range">{{
+          item.distance === -1 ? '∞' : `射程${item.distance}`
+        }}</span>
       </button>
     </div>
 
@@ -147,6 +165,45 @@
         </div>
       </div>
     </Transition>
+
+    <!-- 伤害计算弹窗（点击日志中的伤害数值打开） -->
+    <Transition name="item-fade">
+      <div v-if="calcDetail" class="item-modal" @click.self="calcDetail = null">
+        <div class="item-modal-box calc-modal">
+          <div class="item-modal-header">
+            <span class="item-modal-title">伤害计算</span>
+            <button class="item-modal-close" title="关闭" @click="calcDetail = null">×</button>
+          </div>
+          <div class="calc-body">
+            <div class="calc-title">
+              <span class="calc-actor">{{ calcDetail.attackerLabel }}</span>
+              <span class="calc-mid">使用</span>
+              <span class="calc-action">{{ calcDetail.actionLabel }}</span>
+              <span class="calc-mid">攻击</span>
+              <span class="calc-target">{{ calcDetail.targetName }}</span>
+            </div>
+            <div class="calc-result" :class="{ 'calc-crit': calcDetail.isCrit }">
+              {{ calcDetail.isCrit ? '暴击！' : '命中！' }}
+            </div>
+            <div class="calc-row">
+              <span class="calc-label">伤害骰</span>
+              <span class="calc-value">{{ calcDiceText(calcDetail) }}</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-label">伤害构成</span>
+              <span class="calc-value">{{ calcExpression(calcDetail) }}</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-label">防御减免</span>
+              <span class="calc-value">{{ calcDefenseText(calcDetail) }}</span>
+            </div>
+            <div class="calc-final">
+              最终伤害 <span class="calc-final-num">{{ calcDetail.finalDamage }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -159,8 +216,13 @@ import {
   getPlayerBattleSkills,
   getPlayerBattleSkillDistance,
   canSkillHitAtDistance,
+  LOG_ROLE_PLAYER,
+  LOG_ROLE_ENEMY,
+  LOG_CALC_SEP,
+  DMG_TOKEN_START,
+  DMG_TOKEN_END,
 } from '@/engine'
-import type { BattleEnemy } from '@/engine'
+import type { BattleEnemy, DamageCalcDetail } from '@/engine'
 import type { PlayerState, PlayerInventoryItem } from '@/types/player'
 import { ItemCategory, ConsumableType } from '@/types/item'
 import type { Item, ConsumableItem } from '@/types/item'
@@ -174,6 +236,8 @@ const props = defineProps<{
   player: PlayerState
   /** 玩家当前选中的攻击目标实例ID（null=自动取第一个存活敌人） */
   targetEnemyId: string | null
+  /** 玩家技能剩余冷却（技能ID → 剩余回合数） */
+  skillCooldowns: Record<string, number>
   /** 战斗结果（胜利后隐藏操作栏并显示"结束战斗"按钮） */
   result: BattleResult
 }>()
@@ -188,6 +252,9 @@ const logRef = ref<HTMLElement | null>(null)
 
 /** 物品选择面板是否打开 */
 const showItemPanel = ref(false)
+
+/** 当前查看的伤害计算详情（null=弹窗关闭） */
+const calcDetail = ref<DamageCalcDetail | null>(null)
 
 /** 是否战斗胜利（胜利后隐藏操作栏，显示"结束战斗"按钮） */
 const isVictory = computed(() => props.result === BattleResult.VICTORY)
@@ -219,17 +286,107 @@ function onSelectEnemy(enemy: BattleEnemy): void {
   emit('selectTarget', enemy.instanceId)
 }
 
-/** 玩家战斗技能（含普攻），附带解析后的射程与当前距离可用性 */
+/** 玩家战斗技能（含普攻），附带解析后的射程、当前距离可用性与剩余冷却 */
 const skills = computed(() =>
   getPlayerBattleSkills(props.player).map((skill) => {
     const skillDistance = getPlayerBattleSkillDistance(props.player, skill)
+    const cooldown = props.skillCooldowns[skill.id] ?? 0
     return {
       skill,
       distance: skillDistance,
       inRange: canSkillHitAtDistance(skillDistance, props.distance),
+      cooldown,
+      onCooldown: cooldown > 0,
     }
   }),
 )
+
+/** 日志角色样式类（我方绿 / 敌方红，颜色随昼夜主题变量自适应） */
+function logClass(log: string): string {
+  if (log.startsWith(LOG_ROLE_PLAYER)) return 'log-player'
+  if (log.startsWith(LOG_ROLE_ENEMY)) return 'log-enemy'
+  return ''
+}
+
+/** 剥离日志角色前缀，仅保留正文 */
+function logText(log: string): string {
+  if (log.startsWith(LOG_ROLE_PLAYER)) return log.slice(LOG_ROLE_PLAYER.length)
+  if (log.startsWith(LOG_ROLE_ENEMY)) return log.slice(LOG_ROLE_ENEMY.length)
+  return log
+}
+
+/** 解析日志行：正文 + 计算详情（可能为空） */
+function parseLog(log: string): { text: string; calc: DamageCalcDetail | null } {
+  const raw = logText(log)
+  const sep = raw.indexOf(LOG_CALC_SEP)
+  if (sep === -1) return { text: raw, calc: null }
+  const text = raw.slice(0, sep)
+  try {
+    return { text, calc: JSON.parse(raw.slice(sep + LOG_CALC_SEP.length)) as DamageCalcDetail }
+  } catch {
+    return { text, calc: null }
+  }
+}
+
+/** 将日志正文按 ⟦伤害数值⟧ 分段，供模板渲染可点击的伤害文本 */
+function logSegments(log: string): { text: string; dmg: number | null }[] {
+  const { text } = parseLog(log)
+  const segments: { text: string; dmg: number | null }[] = []
+  const parts = text.split(DMG_TOKEN_START)
+  parts.forEach((part, i) => {
+    if (i === 0) {
+      if (part) segments.push({ text: part, dmg: null })
+      return
+    }
+    const endIdx = part.indexOf(DMG_TOKEN_END)
+    if (endIdx === -1) {
+      segments.push({ text: DMG_TOKEN_START + part, dmg: null })
+      return
+    }
+    const value = Number(part.slice(0, endIdx))
+    segments.push({ text: '', dmg: Number.isFinite(value) ? value : null })
+    const rest = part.slice(endIdx + DMG_TOKEN_END.length)
+    if (rest) segments.push({ text: rest, dmg: null })
+  })
+  return segments
+}
+
+/** 点击伤害数值：解析并打开计算详情弹窗 */
+function openCalc(log: string): void {
+  calcDetail.value = parseLog(log).calc
+}
+
+/** 格式化数值：整数直接显示，小数保留 1 位 */
+function fmtNum(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1)
+}
+
+/** 伤害骰文本（直接伤害无骰子表达式） */
+function calcDiceText(c: DamageCalcDetail): string {
+  if (!c.dice) return `固定伤害 ${fmtNum(c.diceValue)}`
+  const critMark = c.isCrit ? '（暴击取满）' : ''
+  return `${c.dice} → ${fmtNum(c.diceValue)}${critMark}`
+}
+
+/** 伤害构成式子：骰值 ×倍率 +固定 +属性 = 原始伤害 */
+function calcExpression(c: DamageCalcDetail): string {
+  const parts = [fmtNum(c.diceValue)]
+  if (c.damageMultiplier !== 1) parts.push(`×${fmtNum(c.damageMultiplier)}`)
+  if (c.bonusDamage !== 0) parts.push(`${c.bonusDamage > 0 ? '+' : ''}${fmtNum(c.bonusDamage)}`)
+  if (c.attributeBonus !== 0) {
+    parts.push(`${c.attributeBonus > 0 ? '+' : ''}${c.attributeBonus}(属性)`)
+  }
+  return `${parts.join(' ')} = ${fmtNum(c.rawDamage)}`
+}
+
+/** 防御减免文本 */
+function calcDefenseText(c: DamageCalcDetail): string {
+  if (c.penetration >= 1) return `无视防御 → ${c.finalDamage}`
+  if (c.effectiveDefense === 0) return `无减免 → ${c.finalDamage}`
+  const pen = Math.round(c.penetration * 100)
+  const penMark = pen > 0 ? `（穿透${pen}%）` : ''
+  return `减免${Math.round(c.effectiveDefense * 100)}%${penMark} → ${c.finalDamage}`
+}
 
 /** 获取敌人 HP 百分比 */
 function getHpPercent(enemy: BattleEnemy): number {
@@ -404,7 +561,7 @@ function onAction(actionType: string): void {
 .dist-num {
   font-size: 13px;
   font-weight: 700;
-  color: #ffd700;
+  color: var(--special);
 }
 
 /* ---- 敌人状态 ---- */
@@ -439,7 +596,7 @@ function onAction(actionType: string): void {
 
 /* 当前选中攻击目标：金色高亮 */
 .enemy-card.enemy-selected {
-  border: 2px solid #ffd700;
+  border: 2px solid var(--special);
   background: rgba(255, 215, 0, 0.16);
   box-shadow: 0 0 14px rgba(255, 215, 0, 0.4);
 }
@@ -454,8 +611,8 @@ function onAction(actionType: string): void {
   padding: 1px 8px;
   border-radius: 10px;
   background: rgba(255, 215, 0, 0.25);
-  border: 1px solid #ffd700;
-  color: #ffd700;
+  border: 1px solid var(--special);
+  color: var(--special);
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
@@ -473,9 +630,9 @@ function onAction(actionType: string): void {
 .enemy-status {
   padding: 1px 8px;
   border-radius: 10px;
-  background: rgba(170, 90, 255, 0.18);
-  border: 1px solid rgba(170, 90, 255, 0.45);
-  color: #c9a0ff;
+  background: var(--madness-bg);
+  border: 1px solid var(--madness);
+  color: var(--madness);
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
@@ -496,16 +653,16 @@ function onAction(actionType: string): void {
 .enemy-name {
   font-size: 15px;
   font-weight: 700;
-  color: #ff6b6b;
+  color: var(--danger);
 }
 
 /* 蓄力中标签 */
 .enemy-charging {
   padding: 1px 8px;
   border-radius: 10px;
-  background: rgba(255, 152, 0, 0.2);
+  background: var(--special-bg);
   border: 1px solid rgba(255, 152, 0, 0.5);
-  color: #ffb74d;
+  color: var(--special);
   font-size: 11px;
   font-weight: 600;
   animation: charge-pulse 1.2s ease-in-out infinite;
@@ -589,8 +746,133 @@ function onAction(actionType: string): void {
   color: var(--text-primary);
 }
 
+/* 我方行动（绿字）/ 敌方行动（红字）——颜色取自昼夜主题令牌，自动适配明暗背景 */
+.log-player {
+  color: var(--link);
+}
+
+.log-enemy {
+  color: var(--danger);
+}
+
 .log-line:first-child {
   margin-top: 0;
+}
+
+/* 可点击伤害数值（点击弹窗查看计算过程） */
+.log-dmg {
+  display: inline-block;
+  margin: 0 2px;
+  padding: 0 6px;
+  font-weight: 800;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-bg-hover);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.log-dmg:hover {
+  color: var(--text-primary);
+  background: var(--danger-bg-hover);
+  box-shadow: 0 0 8px var(--danger-bg-hover);
+}
+
+/* ---- 伤害计算弹窗 ---- */
+.calc-modal {
+  width: min(400px, 92%);
+}
+
+.calc-body {
+  padding: 14px 18px 18px;
+}
+
+.calc-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.calc-actor {
+  font-weight: 800;
+  color: var(--link);
+}
+
+.calc-action {
+  font-weight: 700;
+  color: var(--special);
+}
+
+.calc-target {
+  font-weight: 700;
+  color: var(--danger);
+}
+
+.calc-mid {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.calc-result {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 2px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--link);
+  border: 1px solid var(--link);
+  border-radius: 6px;
+}
+
+.calc-result.calc-crit {
+  color: var(--special);
+  border-color: var(--special);
+}
+
+.calc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px dashed var(--line-soft);
+  font-size: 13px;
+}
+
+.calc-label {
+  flex-shrink: 0;
+  width: 62px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.calc-value {
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.calc-final {
+  margin-top: 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bar-bg);
+  border-radius: 8px;
+}
+
+.calc-final-num {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--danger);
 }
 
 /* ---- 玩家技能区 ---- */
@@ -637,6 +919,24 @@ function onAction(actionType: string): void {
   font-size: 11px;
   color: var(--text-muted);
   font-weight: 400;
+}
+
+.skill-cd {
+  font-size: 11px;
+  color: var(--danger);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.skill-btn.skill-on-cd {
+  opacity: 0.55;
+  border-color: var(--border-weak);
+  background: var(--card-bg);
+  color: var(--text-muted);
+}
+
+.skill-btn.skill-on-cd .skill-name {
+  color: var(--text-muted);
 }
 
 .skill-btn.skill-off-range {
@@ -692,13 +992,13 @@ function onAction(actionType: string): void {
 }
 
 .move-btn {
-  border-color: rgba(255, 193, 7, 0.45);
-  color: #ffc107;
+  border-color: var(--special);
+  color: var(--special);
 }
 
 .move-btn:hover:not(:disabled) {
-  background: rgba(255, 193, 7, 0.12);
-  border-color: #ffc107;
+  background: var(--special-bg);
+  border-color: var(--special);
 }
 
 .defend-btn {
@@ -712,13 +1012,13 @@ function onAction(actionType: string): void {
 }
 
 .item-btn {
-  border-color: rgba(139, 195, 74, 0.5);
-  color: #8bc34a;
+  border-color: var(--rc-suf);
+  color: var(--rc-suf);
 }
 
 .item-btn:hover:not(:disabled) {
-  background: rgba(139, 195, 74, 0.12);
-  border-color: #8bc34a;
+  background: var(--accent-bg);
+  border-color: var(--rc-suf);
 }
 
 .escape-btn {
@@ -747,7 +1047,7 @@ function onAction(actionType: string): void {
 .victory-banner {
   font-size: 18px;
   font-weight: 700;
-  color: #ffd700;
+  color: var(--special);
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.45);
   letter-spacing: 2px;
 }
@@ -755,13 +1055,13 @@ function onAction(actionType: string): void {
 .end-battle-btn {
   flex: none;
   width: 220px;
-  border-color: rgba(255, 215, 0, 0.6);
-  color: #ffd700;
+  border-color: var(--special);
+  color: var(--special);
 }
 
 .end-battle-btn:hover:not(:disabled) {
-  background: rgba(255, 215, 0, 0.15);
-  border-color: #ffd700;
+  background: var(--special-bg);
+  border-color: var(--special);
   color: #fff;
 }
 
@@ -844,10 +1144,10 @@ function onAction(actionType: string): void {
   margin-bottom: 6px;
 }
 .g-throw {
-  color: #ffa726;
+  color: var(--special);
 }
 .g-heal {
-  color: #66bb6a;
+  color: var(--rc-suf);
 }
 .g-tool {
   color: var(--special);
@@ -895,22 +1195,22 @@ function onAction(actionType: string): void {
   transition: all 0.15s;
 }
 .b-throw {
-  border-color: rgba(255, 167, 38, 0.5);
-  color: #ffa726;
-  background: rgba(255, 167, 38, 0.08);
+  border-color: var(--special);
+  color: var(--special);
+  background: var(--special-bg);
 }
 .b-throw:hover {
-  background: rgba(255, 167, 38, 0.18);
-  border-color: #ffa726;
+  background: var(--special-bg-hover);
+  border-color: var(--special);
 }
 .b-heal {
-  border-color: rgba(102, 187, 106, 0.5);
-  color: #66bb6a;
-  background: rgba(102, 187, 106, 0.08);
+  border-color: var(--rc-suf);
+  color: var(--rc-suf);
+  background: var(--accent-bg);
 }
 .b-heal:hover {
-  background: rgba(102, 187, 106, 0.18);
-  border-color: #66bb6a;
+  background: var(--accent-bg-hover);
+  border-color: var(--rc-suf);
 }
 .b-tool {
   border-color: var(--special);

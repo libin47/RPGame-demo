@@ -563,10 +563,10 @@ function getStaminaCoeff(): number {
   background: linear-gradient(90deg, #2ecc71, #4ecdc4);
 }
 .durability-fill.worn {
-  background: linear-gradient(90deg, #f39c12, #ffd54f);
+  background: linear-gradient(90deg, #f39c12, var(--special));
 }
 .durability-fill.broken {
-  background: linear-gradient(90deg, #e74c3c, #ff6b6b);
+  background: linear-gradient(90deg, #e74c3c, var(--danger));
 }
 .durability-num {
   color: var(--text-muted);
@@ -680,35 +680,35 @@ function getStaminaCoeff(): number {
 }
 
 .btn-collect {
-  border-color: rgba(255, 213, 79, 0.35);
-  background: linear-gradient(135deg, rgba(255, 213, 79, 0.06), rgba(255, 213, 79, 0.02));
-  color: #ffd54f;
+  border-color: var(--special);
+  background: var(--special-bg);
+  color: var(--special);
 }
 .btn-collect:hover {
-  border-color: rgba(255, 213, 79, 0.6);
-  background: linear-gradient(135deg, rgba(255, 213, 79, 0.15), rgba(255, 213, 79, 0.05));
+  border-color: var(--special);
+  background: var(--special-bg-hover);
   box-shadow: 0 3px 12px rgba(255, 213, 79, 0.15);
 }
 
 .btn-rest {
-  border-color: rgba(165, 214, 167, 0.35);
-  background: linear-gradient(135deg, rgba(165, 214, 167, 0.06), rgba(165, 214, 167, 0.02));
-  color: #a5d6a7;
+  border-color: var(--rc-suf);
+  background: var(--accent-bg);
+  color: var(--rc-suf);
 }
 .btn-rest:hover {
-  border-color: rgba(165, 214, 167, 0.6);
-  background: linear-gradient(135deg, rgba(165, 214, 167, 0.15), rgba(165, 214, 167, 0.05));
+  border-color: var(--rc-suf);
+  background: var(--accent-bg-hover);
   box-shadow: 0 3px 12px rgba(165, 214, 167, 0.15);
 }
 
 .btn-event {
-  border-color: rgba(206, 147, 216, 0.35);
-  background: linear-gradient(135deg, rgba(206, 147, 216, 0.06), rgba(206, 147, 216, 0.02));
-  color: #ce93d8;
+  border-color: var(--madness);
+  background: var(--madness-bg);
+  color: var(--madness);
 }
 .btn-event:hover {
-  border-color: rgba(206, 147, 216, 0.6);
-  background: linear-gradient(135deg, rgba(206, 147, 216, 0.15), rgba(206, 147, 216, 0.05));
+  border-color: var(--madness);
+  background: var(--madness-bg-hover);
   box-shadow: 0 3px 12px rgba(206, 147, 216, 0.15);
 }
 
@@ -801,24 +801,24 @@ function getStaminaCoeff(): number {
 }
 
 .btn-danger {
-  border-color: rgba(255, 107, 107, 0.35);
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.04);
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-bg);
 }
 .btn-danger:hover {
-  background: rgba(255, 107, 107, 0.12);
-  border-color: rgba(255, 107, 107, 0.55);
+  background: var(--danger-bg-hover);
+  border-color: var(--danger);
   box-shadow: 0 0 10px rgba(255, 107, 107, 0.1);
 }
 
 .btn-upgrade {
-  border-color: rgba(255, 213, 79, 0.35);
-  color: #ffd54f;
-  background: rgba(255, 213, 79, 0.04);
+  border-color: var(--special);
+  color: var(--special);
+  background: var(--special-bg);
 }
 .btn-upgrade:hover {
-  background: rgba(255, 213, 79, 0.12);
-  border-color: rgba(255, 213, 79, 0.55);
+  background: var(--special-bg-hover);
+  border-color: var(--special);
   box-shadow: 0 0 10px rgba(255, 213, 79, 0.1);
 }
 
@@ -883,7 +883,7 @@ function getStaminaCoeff(): number {
   gap: 0.3rem;
 }
 .upg-name {
-  color: #ffd54f;
+  color: var(--special);
   font-weight: bold;
   font-size: var(--font-md);
 }
@@ -902,23 +902,23 @@ function getStaminaCoeff(): number {
   color: var(--text-muted);
 }
 .cost-chip.miss {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .upgrade-card .btn-upgrade {
   padding: 0.35rem 0.9rem;
-  border: 1px solid rgba(255, 213, 79, 0.4);
+  border: 1px solid var(--special);
   border-radius: var(--radius-md);
-  background: rgba(255, 213, 79, 0.08);
-  color: #ffd54f;
+  background: var(--special-bg);
+  color: var(--special);
   font-size: var(--font-xs);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s;
 }
 .upgrade-card .btn-upgrade:hover:not(:disabled) {
-  background: rgba(255, 213, 79, 0.18);
+  background: var(--special-bg-hover);
   box-shadow: 0 0 8px rgba(255, 213, 79, 0.1);
 }
 .upgrade-card .btn-upgrade:disabled {
@@ -929,7 +929,7 @@ function getStaminaCoeff(): number {
 .fail-reason {
   margin: 0;
   font-size: var(--font-xs);
-  color: #ff6b6b;
+  color: var(--danger);
 }
 
 /* ============================================================
@@ -972,7 +972,7 @@ function getStaminaCoeff(): number {
 
 .dialog-title {
   margin: 0 0 0.3rem 0;
-  color: #ff6b6b;
+  color: var(--danger);
   font-size: var(--font-lg);
 }
 

@@ -49,20 +49,16 @@ export interface WeaponType {
 
 /**
  * 武器类型默认属性
+ * 创建该类型的具体武器物品时，可作为 WeaponStats 的默认值。
  */
 export interface WeaponTypeDefaultStats {
-  /** 基础伤害 */
-  baseDamage: number
-  /** 伤害浮动范围 */
-  damageVariance: number
+  /**
+   * 基础伤害（骰子表达式，如"1d6"、"2d4+3"，仅支持加减和d运算）
+   * 徒手攻击（未装备武器）时使用该骰子。
+   */
+  defaultDamageDice: string
   /** 攻击距离 */
   attackRange: number
-  /** 基础命中修正 */
-  accuracyModifier: number
-  /** 基础暴击率修正 */
-  criticalChanceModifier: number
-  /** 暴击倍率 */
-  criticalMultiplier: number
   /** 攻击速度 */
   attackSpeed: number
   /** 每次攻击基础消耗体力 */

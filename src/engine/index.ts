@@ -96,11 +96,17 @@ export {
   getPlayerBattleSkillDistance,
   canSkillHitAtDistance,
   getPlayerBattleSkills,
+  getPlayerSkillCooldown,
+  LOG_ROLE_PLAYER,
+  LOG_ROLE_ENEMY,
+  LOG_CALC_SEP,
+  DMG_TOKEN_START,
+  DMG_TOKEN_END,
   calcPlayerTotalDefense,
   MIN_BATTLE_DISTANCE,
   MAX_BATTLE_DISTANCE,
 } from './combat'
-export type { BattleState, BattleEnemy } from './combat'
+export type { BattleState, BattleEnemy, DamageCalcDetail } from './combat'
 
 // 配方系统（制作/烹饪/建造/修复）
 export {

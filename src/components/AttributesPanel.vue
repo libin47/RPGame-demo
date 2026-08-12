@@ -394,13 +394,13 @@ const warmthClass = computed<string>(() => {
 }
 
 .mod-positive {
-  color: #81c784;
-  background: rgba(129, 199, 132, 0.1);
+  color: var(--rc-suf);
+  background: var(--accent-bg);
 }
 
 .mod-negative {
-  color: #e57373;
-  background: rgba(229, 115, 115, 0.1);
+  color: var(--danger);
+  background: var(--danger-bg);
 }
 
 /* ═══════════════════════════════════════════
@@ -433,7 +433,7 @@ const warmthClass = computed<string>(() => {
 }
 
 .gold-value {
-  color: #ffd54f;
+  color: var(--special);
 }
 
 .warmth-text {
@@ -444,10 +444,10 @@ const warmthClass = computed<string>(() => {
   color: var(--accent, #81c784);
 }
 .warmth-cold {
-  color: #7ec8e3;
+  color: var(--link);
 }
 .warmth-hot {
-  color: #ff6b6b;
+  color: var(--danger);
 }
 
 /* ═══════════════════════════════════════════

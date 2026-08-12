@@ -237,9 +237,6 @@ export interface PlayerSkills {
   /** 武器熟练度 */
   weaponProficiencies: Record<string, PlayerSkillLevel>
 
-  /** 战斗技能等级 */
-  battleSkills: Record<string, PlayerSkillLevel>
-
   /** 已解锁的战斗技能ID列表 */
   unlockedBattleSkillIds: string[]
 

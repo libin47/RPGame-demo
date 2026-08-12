@@ -176,6 +176,7 @@ import { ref, computed } from 'vue'
 import type { PlayerState, PlayerInventoryItem } from '@/types/player'
 import { ItemCategory } from '@/types/item'
 import type { Item, WeaponItem } from '@/types/item'
+import { minDiceExpression, maxDiceExpression } from '@/engine/dice'
 import { getRegistry, calcPlayerTotalDefense } from '@/engine'
 
 const props = defineProps<{
@@ -460,11 +461,10 @@ const meleeDamage = computed<{ min: number; max: number } | null>(() => {
   const config = getItemConfig(weaponId)
   if (!config || !('weaponStats' in config)) return null
   const stats = (config as WeaponItem).weaponStats
-  const base = stats.baseDamage
-  const variance = stats.damageVariance ?? 0
+  const dice = stats.baseDamage
   return {
-    min: Math.round(base * (1 - variance)),
-    max: Math.round(base * (1 + variance)),
+    min: minDiceExpression(dice),
+    max: maxDiceExpression(dice),
   }
 })
 
@@ -555,11 +555,11 @@ function onUnequipFromDetail(): void {
   font-weight: 500;
 }
 .weight-value.overloaded {
-  color: #ff6b6b;
+  color: var(--danger);
 }
 
 .overloaded-warn {
-  color: #ff6b6b;
+  color: var(--danger);
   font-weight: bold;
   font-size: 11px;
 }
@@ -807,9 +807,9 @@ function onUnequipFromDetail(): void {
   padding: 1px 5px;
   font-size: 9px;
   border-radius: 2px;
-  border: 1px solid rgba(255, 167, 38, 0.3);
+  border: 1px solid var(--special);
   background: transparent;
-  color: #ffa726;
+  color: var(--special);
   cursor: pointer;
   transition: all 0.12s;
   white-space: nowrap;
@@ -817,8 +817,8 @@ function onUnequipFromDetail(): void {
   line-height: 1.2;
 }
 .cell-unequip:hover {
-  background: rgba(255, 167, 38, 0.1);
-  border-color: #ffa726;
+  background: var(--special-bg);
+  border-color: var(--special);
 }
 
 /* 属性行 */
@@ -985,12 +985,12 @@ function onUnequipFromDetail(): void {
 }
 
 .btn-use {
-  color: #81c784;
-  border-color: rgba(129, 199, 132, 0.3);
+  color: var(--rc-suf);
+  border-color: var(--rc-suf);
 }
 .btn-use:hover {
-  background: rgba(129, 199, 132, 0.1);
-  border-color: #81c784;
+  background: var(--accent-bg);
+  border-color: var(--rc-suf);
 }
 
 .btn-equip {
@@ -1003,11 +1003,11 @@ function onUnequipFromDetail(): void {
 }
 
 .btn-unequip {
-  color: #ffa726;
-  border-color: rgba(255, 167, 38, 0.3);
+  color: var(--special);
+  border-color: var(--special);
 }
 .btn-unequip:hover {
-  background: rgba(255, 167, 38, 0.1);
-  border-color: #ffa726;
+  background: var(--special-bg);
+  border-color: var(--special);
 }
 </style>

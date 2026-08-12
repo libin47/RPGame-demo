@@ -28,10 +28,10 @@ const survivor: CharacterClass = {
   difficulty: 2,
   difficultyDescription: '适合新手——均衡的属性让你可以应对各种情况',
   initialAttributes: {
-    strength: 10,
-    agility: 10,
-    intelligence: 10,
-    constitution: 10,
+    strength: 50,
+    agility: 50,
+    intelligence: 50,
+    constitution: 50,
   },
   initialEquipment: [],
   initialInventory: [
@@ -116,10 +116,10 @@ const hunter: CharacterClass = {
   difficulty: 2,
   difficultyDescription: '适合新手——初期战斗力强，生存能力高',
   initialAttributes: {
-    strength: 10,
-    agility: 14,
-    intelligence: 7,
-    constitution: 12,
+    strength: 50,
+    agility: 70,
+    intelligence: 35,
+    constitution: 60,
   },
   initialEquipment: [
     {

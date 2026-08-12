@@ -71,7 +71,6 @@ import { isSceneDescriptionEligible } from '@/engine/exploration'
 
 /** 掷骰判定结果 */
 type RollOutcome = 'bigSuccess' | 'success' | 'fail' | 'bigFail'
-
 /** 掷骰检定使用的属性（中文，与 rollResult.attribute 一致） */
 type RollAttribute = '力量' | '智力' | '敏捷' | '体质' | 'SAN'
 
@@ -203,9 +202,6 @@ interface GameRuntimeState {
   /** 当前场景描述中的事件入口是否已被点击（点击后该入口渲染为纯文本；场景描述被刷新/切换后恢复可点击） */
   eventEntryClicked: boolean
 
-  /** 游戏日志（底部提示信息） */
-  logMessage: string
-
   /** 当前触发的结局配置（仅在 mode === 'ending' 时有值） */
   currentEnding: EndingConfig | null
 
@@ -279,7 +275,6 @@ function createGameState(initialPlayer: PlayerState) {
     sceneTextPrefix: '',
     sceneTextAfter: '',
     eventEntryClicked: false,
-    logMessage: '',
     currentEnding: null,
     endingReason: '',
     currentCG: null,
@@ -388,7 +383,6 @@ export function useGame(initialPlayer: PlayerState) {
     const resolver = getEffectResolver()
     const logs = resolver.executeEffectResults(state.player, effects)
     if (logs.length > 0) {
-      state.logMessage = logs.filter(Boolean).join('；')
     }
   }
 
@@ -402,7 +396,6 @@ export function useGame(initialPlayer: PlayerState) {
   function enterEvent(eventId: string, fromEventEntry = false): void {
     const event = registry.getEvent(eventId)
     if (!event) {
-      state.logMessage = `事件 ${eventId} 未找到`
       return
     }
 
@@ -419,7 +412,6 @@ export function useGame(initialPlayer: PlayerState) {
     // 获取第一个可见帧（按 order 顺序，满足 displayFlag 和 displayCondition 的帧）
     const firstFrame = findFirstVisibleFrame(event.frames, state.player)
     if (!firstFrame) {
-      state.logMessage = `事件 ${eventId} 没有可见的帧`
       return
     }
 
@@ -702,7 +694,6 @@ export function useGame(initialPlayer: PlayerState) {
     branchResult: EventOptionResult | undefined,
   ): void {
     if (!branchResult) {
-      state.logMessage = `掷骰判定缺少${ROLL_OUTCOME_LABELS[info.outcome]}分支结果`
       return
     }
 
@@ -913,7 +904,6 @@ export function useGame(initialPlayer: PlayerState) {
         if (result.effects && result.effects.length > 0) {
           const logs = resolver.executeEffectResults(state.player, result.effects)
           if (logs.length > 0) {
-            state.logMessage = logs.filter(Boolean).join('；')
           }
         }
 
@@ -949,7 +939,6 @@ export function useGame(initialPlayer: PlayerState) {
             // 执行新帧的 onEnterEffects
             executeEffects(visibleFrame.onEnterEffects)
           } else {
-            state.logMessage = `目标帧 ${result.targetFrameId} 未找到`
           }
         }
         // 合并本次事件中获得的物品/属性变动提示到帧前缀（显示在下一帧顶部）
@@ -967,7 +956,6 @@ export function useGame(initialPlayer: PlayerState) {
         if (result.effects && result.effects.length > 0) {
           const logs = resolver.executeEffectResults(state.player, result.effects)
           if (logs.length > 0) {
-            state.logMessage = logs.filter(Boolean).join('；')
           }
         }
 
@@ -1004,7 +992,6 @@ export function useGame(initialPlayer: PlayerState) {
         if (result.effects && result.effects.length > 0) {
           const logs = resolver.executeEffectResults(state.player, result.effects)
           if (logs.length > 0) {
-            state.logMessage = logs.filter(Boolean).join('；')
           }
         }
 
@@ -1037,7 +1024,6 @@ export function useGame(initialPlayer: PlayerState) {
         if (result.effects && result.effects.length > 0) {
           const logs = resolver.executeEffectResults(state.player, result.effects)
           if (logs.length > 0) {
-            state.logMessage = logs.filter(Boolean).join('；')
           }
         }
 
@@ -1067,7 +1053,6 @@ export function useGame(initialPlayer: PlayerState) {
         startBattle(battle)
         // 战斗开始时为敌人施加开场状态（TriggerBattleResult.buffs）
         applyBattleStartStatuses(battle, result.buffs)
-        state.logMessage = battle.logs.filter(Boolean).join('；')
         break
       }
 
@@ -1076,7 +1061,6 @@ export function useGame(initialPlayer: PlayerState) {
         if (result.effects && result.effects.length > 0) {
           const logs = resolver.executeEffectResults(state.player, result.effects)
           if (logs.length > 0) {
-            state.logMessage = logs.filter(Boolean).join('；')
           }
         }
 
@@ -1093,7 +1077,6 @@ export function useGame(initialPlayer: PlayerState) {
           state.currentCG = cgPlay
           state.mode = 'cg'
         } else {
-          state.logMessage = 'CG未找到'
         }
         break
       }
@@ -1103,7 +1086,6 @@ export function useGame(initialPlayer: PlayerState) {
         if (result.effects && result.effects.length > 0) {
           const logs = resolver.executeEffectResults(state.player, result.effects)
           if (logs.length > 0) {
-            state.logMessage = logs.filter(Boolean).join('；')
           }
         }
 
@@ -1180,7 +1162,6 @@ export function useGame(initialPlayer: PlayerState) {
         const restMinutes = interaction.costTime ?? 60
         advanceGameTime(restMinutes)
         applyRestRecovery(restMinutes / 60, 1)
-        state.logMessage = '你休息了一会儿，恢复了一些体力'
         break
       }
 
@@ -1217,7 +1198,6 @@ export function useGame(initialPlayer: PlayerState) {
           }
           // 统一消耗（未配置 costTime 时默认 10 分钟）
           if (!consumeButtonCosts(interaction, 10)) return
-          state.logMessage = `你向 ${params.direction} 方向移动`
           break
         }
       }
@@ -1247,7 +1227,6 @@ export function useGame(initialPlayer: PlayerState) {
           }
           const targetScene = registry.getScene(params.targetSceneId)
           if (targetScene) {
-            state.logMessage = params.pathDescription
             enterScene(targetScene, null)
           }
           break
@@ -1259,14 +1238,12 @@ export function useGame(initialPlayer: PlayerState) {
           if (params.functionType === 'build') {
             handleBuild()
           } else {
-            state.logMessage = `功能 "${params.functionType}" 尚未实现`
           }
           break
         }
       }
 
       default:
-        state.logMessage = '未知交互类型'
     }
 
     handleFlag(interaction)
@@ -1328,7 +1305,6 @@ export function useGame(initialPlayer: PlayerState) {
     // 统一消耗（未配置 costTime 时默认 10 分钟）
     if (!consumeButtonCosts(explore, 10)) return
     refreshSceneDescription()
-    state.logMessage = '你在周围仔细探索了一番'
     handleFlag(explore)
   }
   /**
@@ -1336,7 +1312,6 @@ export function useGame(initialPlayer: PlayerState) {
    */
   function handleBuild(): void {
     refreshSceneDescription()
-    state.logMessage = '进入建造模式'
     state.mode = 'build'
   }
 
@@ -1414,7 +1389,6 @@ export function useGame(initialPlayer: PlayerState) {
         state.currentBattle = battle
         state.mode = 'battle'
       } else {
-        state.logMessage = '没有遇到敌人'
       }
     } else if (collect.resourceType === 'item' && collect.itemConfig) {
       const cfg = collect.itemConfig
@@ -1580,7 +1554,6 @@ export function useGame(initialPlayer: PlayerState) {
       if (tryTriggerPassiveEvents('leave')) {
         return
       }
-      state.logMessage = ''
       state.mode = 'map'
     }
     handleFlag(moveAction)
@@ -1641,7 +1614,6 @@ export function useGame(initialPlayer: PlayerState) {
   function moveToMapScene(sceneId: string): void {
     const targetScene = registry.getScene(sceneId)
     if (!targetScene) {
-      state.logMessage = `场景 ${sceneId} 不存在`
       state.mode = 'normal'
       return
     }
@@ -1649,7 +1621,6 @@ export function useGame(initialPlayer: PlayerState) {
     const currentMap =
       registry.getMap(state.player.currentLocation.mapId || registry.getInitialMapId()) ?? null
     if (!currentMap) {
-      state.logMessage = '当前地图不存在'
       state.mode = 'normal'
       return
     }
@@ -1657,7 +1628,6 @@ export function useGame(initialPlayer: PlayerState) {
     // 节点解锁校验（未解锁的目标节点不应出现在大地图上，此处为防御 UI 绕过）
     const targetNode = currentMap.nodes.find((n) => n.sceneId === sceneId)
     if (targetNode && !isMapNodeUnlocked(targetNode, state.player)) {
-      state.logMessage = `「${targetNode.displayName ?? targetScene.name}」尚未解锁，无法前往`
       return
     }
 
@@ -1665,13 +1635,11 @@ export function useGame(initialPlayer: PlayerState) {
 
     // 无可行路径 → 无法移动（仅影响配置了 paths 的地图）
     if (!cost) {
-      state.logMessage = `没有通往「${targetScene.name}」的可行路径，无法前往`
       return
     }
 
     // 体力校验
     if (cost.staminaCost > 0 && state.player.survival.stamina < cost.staminaCost) {
-      state.logMessage = `体力不足，无法前往${targetScene.name}（需要 ${cost.staminaCost} 点体力）`
       return
     }
 
@@ -1726,9 +1694,7 @@ export function useGame(initialPlayer: PlayerState) {
       if (result.timeUsed > 0) {
         advanceGameTime(result.timeUsed)
       }
-      state.logMessage = result.message
     } else {
-      state.logMessage = result.message
     }
 
     return result
@@ -1740,7 +1706,6 @@ export function useGame(initialPlayer: PlayerState) {
   function executeUpgradeBuildMode(buildId: string, targetSubBuildId: string): CraftResult {
     const subSceneId = state.currentSubScene?.id
     if (!subSceneId) {
-      state.logMessage = '当前不在营地场景中'
       return { success: false, message: '当前不在营地场景中', timeUsed: 0 }
     }
 
@@ -1756,9 +1721,7 @@ export function useGame(initialPlayer: PlayerState) {
       if (result.timeUsed > 0) {
         advanceGameTime(result.timeUsed)
       }
-      state.logMessage = result.message
     } else {
-      state.logMessage = result.message
     }
 
     return result
@@ -1770,7 +1733,6 @@ export function useGame(initialPlayer: PlayerState) {
   function executeDeconstructBuilding(buildId: string): CraftResult {
     const subSceneId = state.currentSubScene?.id
     if (!subSceneId) {
-      state.logMessage = '当前不在营地场景中'
       return { success: false, message: '当前不在营地场景中', timeUsed: 0 }
     }
 
@@ -1780,11 +1742,9 @@ export function useGame(initialPlayer: PlayerState) {
       if (result.timeUsed > 0) {
         advanceGameTime(result.timeUsed)
       }
-      state.logMessage = result.message
       // 退出建筑交互模式返回场景
       exitBuilding()
     } else {
-      state.logMessage = result.message
     }
 
     return result
@@ -1868,7 +1828,6 @@ export function useGame(initialPlayer: PlayerState) {
   function enterBuilding(buildId: string): void {
     state.mode = 'building'
     state.currentBuildingId = buildId
-    state.logMessage = ''
   }
 
   /**
@@ -1877,7 +1836,6 @@ export function useGame(initialPlayer: PlayerState) {
   function exitBuilding(): void {
     state.mode = 'normal'
     state.currentBuildingId = null
-    state.logMessage = ''
   }
 
   /**
@@ -1895,15 +1853,12 @@ export function useGame(initialPlayer: PlayerState) {
    */
   function closeInventory(): void {
     state.mode = state.previousMode
-    state.logMessage = ''
   }
 
   /**
    * 设置底部日志消息
    */
-  function setLogMessage(message: string): void {
-    state.logMessage = message
-  }
+  function setLogMessage(message: string): void {}
 
   // 设置场景文本下部描述
   function setSceneTextAfter(description: string): void {
@@ -2005,7 +1960,6 @@ export function useGame(initialPlayer: PlayerState) {
 
     // 收集被动效果日志
     if (result.logs.length > 0) {
-      state.logMessage = result.logs.filter(Boolean).join('；')
     }
 
     // 天气变化时，重新选取场景描述（因为部分描述可能依赖天气条件）
@@ -2034,7 +1988,6 @@ export function useGame(initialPlayer: PlayerState) {
       state.mode = 'event'
       executeEffects(frame.onEnterEffects)
     } else {
-      state.logMessage = `事件帧 ${frameId} 未找到`
     }
   }
 
@@ -2072,7 +2025,6 @@ export function useGame(initialPlayer: PlayerState) {
     itemInstanceId?: string,
   ): void {
     if (!state.currentBattle) {
-      state.logMessage = '当前没有进行中的战斗'
       return
     }
 
@@ -2089,7 +2041,6 @@ export function useGame(initialPlayer: PlayerState) {
     // 检查战斗是否结束
     if (battle.result === BattleResult.VICTORY) {
       // 战斗胜利：保留战斗界面，隐藏操作栏，等待玩家点击"结束战斗"按钮结算奖励并退出
-      state.logMessage = battle.logs.filter(Boolean).join('；')
     } else if (battle.result === BattleResult.DEFEAT) {
       // 尝试跳转到战败帧（事件帧或CG帧）
       const defeatFrameId = state.pendingBattleFrameIds?.defeatFrameId
@@ -2097,7 +2048,6 @@ export function useGame(initialPlayer: PlayerState) {
         jumpToBattleResultFrame(defeatFrameId)
         state.currentBattle = null
         state.pendingBattleFrameIds = null
-        state.logMessage = battle.logs.filter(Boolean).join('；')
       } else {
         // 没有战败帧则进入结局判定
         state.currentBattle = null
@@ -2106,7 +2056,6 @@ export function useGame(initialPlayer: PlayerState) {
         if (state.mode !== 'ending') {
           state.mode = 'normal'
         }
-        state.logMessage = battle.logs.filter(Boolean).join('；')
       }
     } else if (battle.result === BattleResult.ESCAPED) {
       // 尝试跳转到逃跑帧（事件帧或CG帧）
@@ -2119,10 +2068,8 @@ export function useGame(initialPlayer: PlayerState) {
 
       state.currentBattle = null
       state.pendingBattleFrameIds = null
-      state.logMessage = battle.logs.filter(Boolean).join('；')
     } else {
       // 战斗还在继续，显示日志
-      state.logMessage = battle.logs.filter(Boolean).join('；')
     }
   }
 
@@ -2145,7 +2092,6 @@ export function useGame(initialPlayer: PlayerState) {
 
     state.currentBattle = null
     state.pendingBattleFrameIds = null
-    state.logMessage = [...battle.logs, ...settleLogs].filter(Boolean).join('；')
   }
 
   /**
@@ -2221,7 +2167,6 @@ export function useGame(initialPlayer: PlayerState) {
     state.mode = 'ending'
     state.currentEnding = ending
     state.endingReason = reason
-    state.logMessage = `结局：${ending.name}`
   }
 
   /**
@@ -2245,24 +2190,19 @@ export function useGame(initialPlayer: PlayerState) {
   function handleUseItem(instanceId: string): void {
     const invItem = state.player.inventory.find((i) => i.instanceId === instanceId)
     if (!invItem) {
-      state.logMessage = '物品未找到'
       return
     }
 
     const config = registry.getItem(invItem.itemId)
     if (!config) {
-      state.logMessage = '物品配置未找到'
       return
     }
 
     if (config.category === ItemCategory.CONSUMABLE) {
       const log = useConsumable(state.player, instanceId)
-      state.logMessage = log
     } else if (config.category === ItemCategory.DOCUMENT) {
       // 阅读文档（暂仅显示名称）
-      state.logMessage = `你阅读了《${config.name}》`
     } else {
-      state.logMessage = `${config.name} 无法在此使用`
     }
   }
 
@@ -2272,16 +2212,13 @@ export function useGame(initialPlayer: PlayerState) {
   function handleEquipItem(instanceId: string): void {
     const invItem = state.player.inventory.find((i) => i.instanceId === instanceId)
     if (!invItem) {
-      state.logMessage = '物品未找到'
       return
     }
 
     const ok = engineEquipItem(state.player, instanceId)
     if (ok) {
       const config = registry.getItem(invItem.itemId)
-      state.logMessage = `装备了 ${config?.name || invItem.itemId}`
     } else {
-      state.logMessage = '装备失败：无法装备此物品'
     }
   }
 
@@ -2295,14 +2232,11 @@ export function useGame(initialPlayer: PlayerState) {
         const ok = unequipSlot(state.player, slot as keyof typeof state.player.equipment)
         if (ok) {
           const config = registry.getItem(itemId)
-          state.logMessage = `卸下了 ${config?.name || itemId}`
         } else {
-          state.logMessage = '卸下失败'
         }
         return
       }
     }
-    state.logMessage = '该物品未装备'
   }
 
   /**
@@ -2318,7 +2252,6 @@ export function useGame(initialPlayer: PlayerState) {
     if (result.success && result.timeUsed > 0) {
       advanceGameTime(result.timeUsed)
     }
-    state.logMessage = result.message
     return result
   }
 
@@ -2335,7 +2268,6 @@ export function useGame(initialPlayer: PlayerState) {
     if (result.success && result.timeUsed > 0) {
       advanceGameTime(result.timeUsed)
     }
-    state.logMessage = result.message
     return result
   }
 
@@ -2351,7 +2283,6 @@ export function useGame(initialPlayer: PlayerState) {
     if (result.success && result.timeUsed > 0) {
       advanceGameTime(result.timeUsed)
     }
-    state.logMessage = result.message
     return result
   }
 
@@ -2374,8 +2305,6 @@ export function useGame(initialPlayer: PlayerState) {
     const buildId = state.currentBuildingId
     if (!subSceneId || !buildId) return 0
     const added = addToStorage(state.player, subSceneId, buildId, itemId, quantity)
-    state.logMessage =
-      added > 0 ? `已将 ${registry.getItemName(itemId)} ×${added} 存入仓库` : '仓库已满'
     return added
   }
 
@@ -2390,7 +2319,6 @@ export function useGame(initialPlayer: PlayerState) {
     const target = storage.find((s) => s.instanceId === instanceId)
     const removed = removeFromStorage(state.player, subSceneId, buildId, instanceId, quantity)
     if (removed > 0 && target) {
-      state.logMessage = `已将 ${registry.getItemName(target.itemId)} ×${removed} 取出仓库`
     }
     return removed
   }
@@ -2409,7 +2337,6 @@ export function useGame(initialPlayer: PlayerState) {
       const count =
         getItemCount(state.player, mat.itemId) + (source ? source.countOf(mat.itemId) : 0)
       if (count < mat.quantity) {
-        state.logMessage = `维修材料不足：${registry.getItemName(mat.itemId)}`
         return
       }
     }
@@ -2420,7 +2347,6 @@ export function useGame(initialPlayer: PlayerState) {
         source.remove(mat.itemId, remaining)
       }
     }
-    state.logMessage = `${subBuild.buildName} 已修复`
   }
 
   /**
@@ -2475,7 +2401,6 @@ export function useGame(initialPlayer: PlayerState) {
       case 'nextFrame': {
         // 跳转到CG内指定帧
         if (!jumpToCGFrame(state.currentCG, result.nextFrameId)) {
-          state.logMessage = `CG帧 ${result.nextFrameId} 未找到`
         }
         break
       }
@@ -2486,7 +2411,6 @@ export function useGame(initialPlayer: PlayerState) {
         if (cgPlay) {
           state.currentCG = cgPlay
         } else {
-          state.logMessage = `CG ${result.nextCGId} 未找到`
         }
         break
       }
@@ -2537,7 +2461,6 @@ export function useGame(initialPlayer: PlayerState) {
         state.currentBattle = battle
         state.mode = 'battle'
         startBattle(battle)
-        state.logMessage = battle.logs.filter(Boolean).join('；')
         break
       }
 
@@ -2546,7 +2469,6 @@ export function useGame(initialPlayer: PlayerState) {
         if (ending) {
           triggerEnding(ending, 'CG结局')
         } else {
-          state.logMessage = `结局 ${result.endingId} 未找到`
           state.currentCG = null
           state.mode = 'normal'
         }

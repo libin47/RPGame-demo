@@ -185,21 +185,17 @@ export interface WeaponItem extends BaseItem {
  * 武器属性
  */
 export interface WeaponStats {
-  /** 基础伤害 */
-  baseDamage: number
+  /**
+   * 基础伤害（骰子表达式）
+   * 支持 NdM 形式（如"1d6"、"2d4"）以及加减常数（如"2d4+3"、"3d8-2"），
+   * 运算仅限加减和 d 骰子运算。
+   */
+  baseDamage: string
   /** 伤害类型ID（如'slash'、'pierce'、'blunt'等） */
   damageTypeId: string
-  /** 伤害浮动范围（最终伤害 = baseDamage * (1 ± damageVariance)） */
-  damageVariance: number
   /** 攻击距离（默认1.0，即直接攻击目标） */
   attackDistance?: number
-  /** 基础命中修正（加到命中计算中） */
-  accuracyModifier: number
-  /** 基础暴击率修正（0.1 = +10%暴击率） */
-  criticalChanceModifier: number
-  /** 暴击倍率（默认2.0，即暴击时伤害×2） */
-  criticalMultiplier: number
-  /** 投掷伤害倍率（战斗中投掷未装备武器时：伤害 = 基础伤害 × 倍率，默认 2） */
+  /** 投掷伤害倍率（战斗中投掷未装备武器时：伤害 = 骰子投掷结果 × 倍率，默认 2） */
   throwDamageMultiplier?: number
 }
 

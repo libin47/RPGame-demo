@@ -115,7 +115,7 @@
 import { computed } from 'vue'
 import type { PlayerState } from '@/types/player'
 import { SeasonPhase } from '@/types/seasonWeather'
-import { getRegistry, getTimeOfDay } from '@/engine'
+import { getRegistry, getTimeOfDay, getSanLevel } from '@/engine'
 
 const props = defineProps<{
   playerState: PlayerState
@@ -232,35 +232,36 @@ const hpBarMod = computed<Record<string, boolean>>(() => {
   }
 })
 
-/** SAN 条修饰类 */
+/** SAN 条修饰类（按 getSanLevel 级别对齐：
+ *  lv>=4 理性/不安 默认；lv=3 动摇 low；lv<=2 崩溃/疯狂/濒死 warning） */
 const sanBarMod = computed<Record<string, boolean>>(() => {
-  const pct = sanPercent.value
+  const lv = getSanLevel(props.playerState.survival.san)
   return {
-    low: pct < 40 && pct >= 20,
-    warning: pct < 20,
+    low: lv === 3,
+    warning: lv <= 2,
   }
 })
 
-/** SAN 文本等级 */
+/** SAN 文本等级（与 engine/event.ts getSanLevel 对齐：
+ *  5 理性 / 4 不安 / 3 动摇 / 2 崩溃 / 1 疯狂 / 0 濒死） */
 const sanLevelText = computed<string>(() => {
-  const ratio =
-    props.playerState.survival.maxSan > 0
-      ? props.playerState.survival.san / props.playerState.survival.maxSan
-      : 0
-  if (ratio >= 0.7) return '理智'
-  if (ratio >= 0.4) return '不安'
-  if (ratio >= 0.2) return '混乱'
-  return '疯狂'
+  const lv = getSanLevel(props.playerState.survival.san)
+  const map: Record<number, string> = {
+    5: '理性',
+    4: '不安',
+    3: '动摇',
+    2: '崩溃',
+    1: '疯狂',
+    0: '濒死',
+  }
+  return map[lv] ?? '疯狂'
 })
 
 const sanLevelClass = computed<string>(() => {
-  const ratio =
-    props.playerState.survival.maxSan > 0
-      ? props.playerState.survival.san / props.playerState.survival.maxSan
-      : 0
-  if (ratio >= 0.7) return 'san-rational'
-  if (ratio >= 0.4) return 'san-unrest'
-  if (ratio >= 0.2) return 'san-confused'
+  const lv = getSanLevel(props.playerState.survival.san)
+  if (lv >= 5) return 'san-rational'
+  if (lv === 4) return 'san-unrest'
+  if (lv === 3) return 'san-confused'
   return 'san-mad'
 })
 </script>
@@ -353,10 +354,10 @@ const sanLevelClass = computed<string>(() => {
   color: var(--accent);
 }
 .warmth-cold {
-  color: #7ec8e3;
+  color: var(--link);
 }
 .warmth-hot {
-  color: #ff6b6b;
+  color: var(--danger);
 }
 
 /* ═══════════════════════════════════════════
@@ -501,16 +502,16 @@ const sanLevelClass = computed<string>(() => {
   font-weight: 600;
 }
 .san-rational {
-  color: #81c784;
+  color: var(--rc-suf);
 }
 .san-unrest {
-  color: #ffb74d;
+  color: var(--special);
 }
 .san-confused {
-  color: #ff8a65;
+  color: var(--rc-low);
 }
 .san-mad {
-  color: #e57373;
+  color: var(--danger);
 }
 
 /* 温暖度文本行 */

@@ -4,24 +4,27 @@
 <template>
   <div class="event-panel">
     <!-- 事件文本区（带暗角氛围） -->
-    <div class="event-text">
+    <div class="event-text-wrap">
+      <!-- 纸面边缘晕影：固定在可视区，不随文本滚动 -->
       <div class="vignette-overlay"></div>
-      <div class="content">
-        <!-- 上一帧选项结果文本 -->
-        <div v-if="frameTextPrefix" class="result-prefix">
-          <RichText :text="frameTextPrefix" />
+      <div class="event-text">
+        <div class="content">
+          <!-- 上一帧选项结果文本 -->
+          <div v-if="frameTextPrefix" class="result-prefix">
+            <RichText :text="frameTextPrefix" />
+          </div>
+          <p class="frame-text">
+            <CorruptText :text="resolvedText" :tier="sanTier" />
+          </p>
+          <!-- 资源不足等拦截提示（显示在帧文本下方） -->
+          <div v-if="frameTextSuffix" class="result-suffix">
+            <RichText :text="frameTextSuffix" />
+          </div>
+          <!-- 文本变体（斜体、条件满足时显示） -->
+          <p v-for="v in props.variations" :key="v.content" class="text-variation">
+            <CorruptText :text="v.content" :tier="sanTier" />
+          </p>
         </div>
-        <p class="frame-text">
-          <CorruptText :text="resolvedText" :tier="sanTier" />
-        </p>
-        <!-- 资源不足等拦截提示（显示在帧文本下方） -->
-        <div v-if="frameTextSuffix" class="result-suffix">
-          <RichText :text="frameTextSuffix" />
-        </div>
-        <!-- 文本变体（斜体、条件满足时显示） -->
-        <p v-for="v in props.variations" :key="v.content" class="text-variation">
-          <CorruptText :text="v.content" :tier="sanTier" />
-        </p>
       </div>
     </div>
 
@@ -71,7 +74,7 @@ const props = defineProps<{
   /** 选项可用性映射（optionId -> 是否满足 availableCondition） */
   optionAvailability: Record<string, boolean>
   /** SAN 异常档位（0 正常 ~ 4 极度），用于事件主文本与变体的异常渲染 */
-  sanTier?: number
+  sanTier: number
 }>()
 
 // ============================================================
@@ -139,13 +142,19 @@ function optionResultIcon(option: EventOption): string {
 /* ═══════════════════════════════════════════
    事件主文本区（与 ScenePanel 的 scene-narrative 完全一致）
    ═══════════════════════════════════════════ */
-.event-text {
+.event-text-wrap {
+  position: relative;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.event-text {
+  height: 100%;
   overflow-y: auto;
   padding: 1.3rem 1.5rem 1.8rem;
   line-height: 1.9;
   font-size: var(--font-lg);
-  position: relative;
   background:
     radial-gradient(ellipse at 50% 0%, var(--narr-glow), transparent 55%),
     linear-gradient(180deg, var(--narr-top) 0%, var(--narr-bottom) 100%);
@@ -283,24 +292,24 @@ function optionResultIcon(option: EventOption): string {
 
 /* 危险选项（朱砂红，醒目） */
 .opt-danger {
-  border-color: rgba(255, 107, 107, 0.5);
-  color: #ff6b6b;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .opt-danger:hover {
-  background: rgba(255, 107, 107, 0.1);
-  border-color: #ff6b6b;
+  background: var(--danger-bg);
+  border-color: var(--danger);
 }
 
 /* 特殊选项（亮金，醒目） */
 .opt-special {
-  border-color: rgba(255, 213, 79, 0.5);
-  color: #ffd54f;
+  border-color: var(--special);
+  color: var(--special);
 }
 
 .opt-special:hover {
-  background: rgba(255, 213, 79, 0.1);
-  border-color: #ffd54f;
+  background: var(--special-bg);
+  border-color: var(--special);
 }
 
 /* 隐藏选项（半透明、虚线边框） */
@@ -315,13 +324,13 @@ function optionResultIcon(option: EventOption): string {
 
 /* 疯狂选项（亮紫） */
 .opt-madness {
-  border-color: rgba(168, 155, 200, 0.5);
-  color: #b8a8cc;
+  border-color: var(--madness);
+  color: var(--madness);
 }
 
 .opt-madness:hover {
-  background: rgba(168, 155, 200, 0.1);
-  border-color: #a89bc8;
+  background: var(--madness-bg);
+  border-color: var(--madness);
 }
 
 /* 不可用选项（条件不满足，灰色不可点击） */

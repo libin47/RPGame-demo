@@ -7,33 +7,32 @@
     <!-- 环境氛围层（营地暖光 / 地牢危险，覆盖整个面板） -->
     <div class="atmosphere-overlay"></div>
     <!-- 场景描述区域（带暗角氛围） -->
-    <div ref="narrativeRef" class="scene-narrative">
+    <div class="scene-narrative-wrap">
+      <!-- 纸面边缘晕影：固定在可视区，不随文本滚动 -->
       <div class="vignette-overlay"></div>
-      <div class="content">
-        <!-- 场景文本前缀 -->
-        <p v-if="props.sceneTextPrefix" class="scene-prefix">{{ props.sceneTextPrefix }}</p>
-        <p class="scene-line">
-          <template v-for="segment in parsedSegments" :key="segment.segmentKey">
-            <CorruptText
-              v-if="segment.type === 'text'"
-              :text="segment.content"
-              :tier="sanTier"
-            />
-            <button
-              v-else-if="segment.type === 'entry'"
-              type="button"
-              class="event-link"
-              @click="onEntryClick(segment.eventId)"
-            >
-              <span class="link-decoration"></span>
-              {{ segment.displayText }}
-            </button>
-          </template>
-        </p>
-        <!-- 场景文本后缀 -->
-        <p v-if="props.sceneTextAfter" class="scene-suffix">
-          <RichText :text="props.sceneTextAfter" />
-        </p>
+      <div ref="narrativeRef" class="scene-narrative">
+        <div class="content">
+          <!-- 场景文本前缀 -->
+          <p v-if="props.sceneTextPrefix" class="scene-prefix">{{ props.sceneTextPrefix }}</p>
+          <p class="scene-line">
+            <template v-for="segment in parsedSegments" :key="segment.segmentKey">
+              <CorruptText v-if="segment.type === 'text'" :text="segment.content" :tier="sanTier" />
+              <button
+                v-else-if="segment.type === 'entry'"
+                type="button"
+                class="event-link"
+                @click="onEntryClick(segment.eventId)"
+              >
+                <span class="link-decoration"></span>
+                {{ segment.displayText }}
+              </button>
+            </template>
+          </p>
+          <!-- 场景文本后缀 -->
+          <p v-if="props.sceneTextAfter" class="scene-suffix">
+            <RichText :text="props.sceneTextAfter" />
+          </p>
+        </div>
       </div>
     </div>
 
@@ -263,7 +262,7 @@ const props = defineProps<{
   overlay?: 'none' | 'campsite' | 'dungeon'
   playerState: PlayerState
   /** SAN 异常档位（0 正常 ~ 4 极度），用于场景主文本的异常渲染 */
-  sanTier?: number
+  sanTier: number
   /** 当前展开的分类（由 GameView 管理，场景切换时自动重置） */
   expandedCategory: string | null
   // 描述中事件是否点击
@@ -551,13 +550,19 @@ function interactionBtnClass(inter: SceneInteraction): string {
 /* ═══════════════════════════════════════════
    场景叙述区
    ═══════════════════════════════════════════ */
-.scene-narrative {
+.scene-narrative-wrap {
+  position: relative;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.scene-narrative {
+  height: 100%;
   overflow-y: auto;
   padding: 1rem 1.2rem 1.5rem;
   line-height: 1.75;
   font-size: var(--font-lg);
-  position: relative;
 }
 
 .vignette-overlay {

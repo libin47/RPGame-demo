@@ -6,8 +6,6 @@
     <!-- 头部 -->
     <div class="rp-header">
       <h2 class="rp-title">休息</h2>
-      
-      
     </div>
     <h2 class="rp-title-text">{{ resetButton?.restDescription }}</h2>
 
@@ -25,7 +23,9 @@
             </div>
           </div>
           <!-- 右侧操作 -->
-          <button class="rest-btn" @click="$emit('rest', opt.hours, props.resetButton)">休息</button>
+          <button class="rest-btn" @click="$emit('rest', opt.hours, props.resetButton)">
+            休息
+          </button>
         </div>
       </div>
 
@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import type { buildOption } from '@/types/build';
+import type { buildOption } from '@/types/build'
 
 const props = defineProps<{
   /** 休息按钮选项 */
@@ -56,8 +56,16 @@ interface RestOption {
 const restOptions: RestOption[] = [
   { hours: 1, label: '休息 1 小时', desc: `小憩片刻。` },
   { hours: 2, label: '休息 2 小时', desc: `运气好的话，应该能做一个小小美梦。` },
-  { hours: 4, label: '休息 4 小时', desc: `休息 4 小时，预计恢复约 ${Math.round(240 / 10)} 点体力。` },
-  { hours: 8, label: '休息 8 小时', desc: `休息 8 小时，预计恢复约 ${Math.round(480 / 10)} 点体力。` },
+  {
+    hours: 4,
+    label: '休息 4 小时',
+    desc: `休息 4 小时，预计恢复约 ${Math.round(240 / 10)} 点体力。`,
+  },
+  {
+    hours: 8,
+    label: '休息 8 小时',
+    desc: `休息 8 小时，预计恢复约 ${Math.round(480 / 10)} 点体力。`,
+  },
 ]
 
 defineEmits<{
@@ -92,7 +100,6 @@ defineEmits<{
   margin: 0;
   font-size: var(--font-lg);
   color: var(--text-primary);
-  
 }
 
 .rp-title-text {
@@ -131,7 +138,7 @@ defineEmits<{
 }
 
 .rest-card:hover {
-  border-color: rgba(165, 214, 167, 0.4);
+  border-color: var(--rc-suf);
   background: var(--card-hover);
 }
 
@@ -171,10 +178,10 @@ defineEmits<{
 .rest-btn {
   flex-shrink: 0;
   padding: 0.4rem 1rem;
-  border: 1px solid rgba(165, 214, 167, 0.4);
+  border: 1px solid var(--rc-suf);
   border-radius: var(--radius-md);
-  background: rgba(165, 214, 167, 0.1);
-  color: #a5d6a7;
+  background: var(--accent-bg);
+  color: var(--rc-suf);
   font-size: var(--font-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -182,7 +189,7 @@ defineEmits<{
 }
 
 .rest-btn:hover {
-  background: rgba(165, 214, 167, 0.22);
+  background: var(--accent-bg-hover);
   box-shadow: 0 0 10px rgba(165, 214, 167, 0.1);
 }
 

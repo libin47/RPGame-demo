@@ -181,16 +181,16 @@ export interface EnemySkill {
   /** 技能描述（玩家观察成功时可见） */
   description?: string
 
-  /** 使用优先级（数字越大越优先，优先级相同时按概率选取） */
-  priority: number
-  /** 使用概率权重（同一优先级下按权重比例随机） */
-  weight: number
+  /** 使用优先级（数字越大越优先，优先级相同时按概率选取，默认0） */
+  priority?: number
+  /** 使用概率权重（同一优先级下按权重比例随机，默认1） */
+  weight?: number
 
   /** 使用条件（不满足时此技能不会被选取） */
   useCondition?: EnemySkillCondition
 
-  /** 一场战斗中最多使用次数（-1表示无限） */
-  maxUses: number
+  /** 一场战斗中最多使用次数（默认-1，表示无限次使用） */
+  maxUses?: number
 
   /** 伤害类型 */
   damageTypeId: string
@@ -198,28 +198,22 @@ export interface EnemySkill {
   /** 攻击距离（默认1，即贴身攻击；-1为不限制距离） */
   attackDistance?: number
 
-  /** 技能数值 */
+  /** 技能数值（含效果与描述文本） */
   stats: EnemySkillStats
 
   /** 技能消耗（敌人通常不消耗资源，留空即可；特殊敌人可消耗自身HP等） */
   costs?: EnemySkillCost[]
 
-  /** 冷却（回合数，0表示无冷却） */
-  cooldown: number
+  /** 冷却（回合数，默认0，表示无冷却） */
+  cooldown?: number
 
-  /** 目标类型 */
-  targetType: EnemySkillTargetType
+  /** 目标类型（默认玩家） */
+  targetType?: EnemySkillTargetType
 
-  /** 发动延迟（蓄力回合数，0表示立即生效） */
-  chargeTime: number
+  /** 发动延迟（蓄力回合数，默认0，表示立即生效） */
+  chargeTime?: number
   /** 蓄力时的提示文本列表（如"敌人正在蓄力..."） */
   chargeText?: string[]
-
-  /** 命中后施加的效果 */
-  onHitEffects?: EffectResult[]
-
-  /** 技能使用时的描述文本（用于战斗日志） */
-  useTextTemplate?: string
 }
 
 /**
@@ -240,23 +234,36 @@ export interface EnemySkillCondition {
 
 /**
  * 敌人技能数值
+ * 所有字段均为可选，未填写时使用默认值。
  */
 export interface EnemySkillStats {
-  /** 基础伤害 */
-  baseDamage: number
-  /** 伤害浮动范围（最终伤害 = baseDamage * (1 ± variance)） */
-  damageVariance: number
-  /** 力量对伤害的加成系数 */
-  strengthScaling: number
-  /** 敏捷对伤害的加成系数 */
-  agilityScaling: number
-
-  /** 命中修正 */
-  accuracyModifier: number
-  /** 暴击率（0-1） */
-  criticalChance: number
-  /** 暴击倍率 */
-  criticalMultiplier: number
+  /**
+   * 基础伤害（骰子表达式）
+   * 支持 NdM 形式（如"1d6"、"2d4"）以及加减常数（如"2d4+3"），
+   * 运算仅限加减和 d 骰子运算。
+   */
+  baseDamage?: string
+  /** 命中修正（d100判定修正，加到命中阈值上，可为负数，默认0） */
+  accuracyModifier?: number
+  /** 暴击修正（d100暴击阈值修正，加到暴击阈值上，可为负数，默认0） */
+  criticalModifier?: number
+  /** 加成属性（敌人仅有力量/敏捷，默认力量） */
+  scalingAttribute?: 'strength' | 'agility'
+  /** 释放次数（默认1，大于1时依次进行d100判定并结算） */
+  hitCount?: number
+  /** 命中后施加的效果 */
+  onHitEffects?: EffectResult[]
+  /** 描述文本（使用时随机抽取，支持占位符如 {damage}、{target}） */
+  narrativeTexts?: {
+    /** 普通命中文本 */
+    hit?: string[]
+    /** 未命中文本 */
+    miss?: string[]
+    /** 暴击命中文本 */
+    critHit?: string[]
+    /** 暴击未命中文本 */
+    critMiss?: string[]
+  }
 }
 
 /**
@@ -271,16 +278,15 @@ export interface EnemySkillCost {
 
 /**
  * 敌人技能目标类型
+ * 注意：此处的"敌人"指敌人自身阵营（友方单位），即治疗/增益类技能的目标。
  */
 export enum EnemySkillTargetType {
-  /** 单个玩家 */
+  /** 玩家 */
   SINGLE_PLAYER = 'singlePlayer',
-  /** 全体（仅玩家，单人游戏中等同于singlePlayer） */
-  ALL_PLAYERS = 'allPlayers',
-  /** 自身 */
+  /** 敌人自身 */
   SELF = 'self',
-  /** 随机目标（若有多个友方） */
-  RANDOM = 'random',
+  /** 全体敌人（敌人阵营全体，即友方单位） */
+  ALL_ENEMIES = 'allEnemies',
 }
 
 // ============================================================

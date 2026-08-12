@@ -8,7 +8,7 @@ import {
   LogicOperator,
 } from '@/types/effect'
 import type { Enemy, EnemyRegistry } from '../types/enemy'
-import { EnemyType, EnemySkillTargetType } from '../types/enemy'
+import { EnemyType } from '../types/enemy'
 
 const 大螃蟹: Enemy = {
   id: '大螃蟹',
@@ -17,8 +17,8 @@ const 大螃蟹: Enemy = {
   imageId: 'enemy_mutated_crab',
   enemyType: EnemyType.MUTATED,
   hp: 40,
-  strength: 12,
-  agility: 6,
+  strength: 60,
+  agility: 30,
   // 减免比例（0~1，1=完全免疫）；键为伤害类型ID
   defenses: {
     slash: 0.4,
@@ -34,21 +34,19 @@ const 大螃蟹: Enemy = {
       description: '用巨大的螯钳猛烈挥击',
       priority: 1,
       weight: 70,
-      maxUses: -1,
       damageTypeId: 'slash',
       stats: {
-        baseDamage: 8,
-        damageVariance: 0.2,
-        strengthScaling: 0.8,
-        agilityScaling: 0.0,
-        accuracyModifier: 0.0,
-        criticalChance: 0.1,
-        criticalMultiplier: 1.8,
+        baseDamage: '2d8+6',
+        scalingAttribute: 'strength',
+        accuracyModifier: 0,
+        criticalModifier: 10,
+        narrativeTexts: {
+          hit: ['大螃蟹挥动巨螯，重重砸在你身上，造成{damage}点伤害'],
+          miss: ['大螃蟹的螯钳挥过，被你闪身躲开'],
+          critHit: ['大螃蟹的巨螯撕裂空气砸中你，造成{damage}点暴击伤害！'],
+          critMiss: ['大螃蟹致命的一击竟被你惊险避开！'],
+        },
       },
-      cooldown: 0,
-      targetType: EnemySkillTargetType.SINGLE_PLAYER,
-      chargeTime: 0,
-      useTextTemplate: '大螃蟹挥动巨螯，向你猛击过来',
     },
     {
       id: 'crab_foam_spray',
@@ -62,30 +60,30 @@ const 大螃蟹: Enemy = {
       maxUses: 3,
       damageTypeId: 'poison',
       stats: {
-        baseDamage: 5,
-        damageVariance: 0.1,
-        strengthScaling: 0.3,
-        agilityScaling: 0.0,
-        accuracyModifier: 0.1,
-        criticalChance: 0.05,
-        criticalMultiplier: 1.5,
+        baseDamage: '1d6+2',
+        scalingAttribute: 'strength',
+        accuracyModifier: 10,
+        criticalModifier: 5,
+        onHitEffects: [
+          {
+            effect: {
+              type: EffectType.STATUS,
+              statusId: 'poisoned',
+              apply: true,
+              duration: 15,
+            },
+            probability: 0.4,
+            description: '有概率使玩家中毒',
+          },
+        ],
+        narrativeTexts: {
+          hit: ['大螃蟹向你喷射出一股绿色毒沫，造成{damage}点伤害'],
+          miss: ['毒沫从你身边飞过，没有喷中'],
+          critHit: ['毒沫正中你的脸，造成{damage}点暴击伤害！'],
+          critMiss: ['你偏头躲过了致命的毒沫喷射！'],
+        },
       },
       cooldown: 3,
-      targetType: EnemySkillTargetType.SINGLE_PLAYER,
-      chargeTime: 0,
-      onHitEffects: [
-        {
-          effect: {
-            type: EffectType.STATUS,
-            statusId: 'poisoned',
-            apply: true,
-            duration: 15,
-          },
-          probability: 0.4,
-          description: '有概率使玩家中毒',
-        },
-      ],
-      useTextTemplate: '大螃蟹向你喷射出一股绿色毒沫',
     },
   ],
   behavior: {
@@ -135,8 +133,8 @@ const 变异猴王: Enemy = {
   imageId: 'enemy_mutated_monkey_king',
   enemyType: EnemyType.MUTATED,
   hp: 200,
-  strength: 15,
-  agility: 6,
+  strength: 75,
+  agility: 30,
   // 减免比例（0~1，1=完全免疫）；键为伤害类型ID
   defenses: {
     slash: 0.4,
@@ -152,21 +150,19 @@ const 变异猴王: Enemy = {
       description: '用巨大的螯钳猛烈挥击',
       priority: 1,
       weight: 70,
-      maxUses: -1,
       damageTypeId: 'slash',
       stats: {
-        baseDamage: 8,
-        damageVariance: 0.2,
-        strengthScaling: 0.8,
-        agilityScaling: 0.0,
-        accuracyModifier: 0.0,
-        criticalChance: 0.1,
-        criticalMultiplier: 1.8,
+        baseDamage: '3d8+8',
+        scalingAttribute: 'strength',
+        accuracyModifier: 0,
+        criticalModifier: 10,
+        narrativeTexts: {
+          hit: ['变异猴王挥动巨螯，重重砸在你身上，造成{damage}点伤害'],
+          miss: ['变异猴王的螯钳挥过，被你闪身躲开'],
+          critHit: ['变异猴王的巨螯撕裂空气砸中你，造成{damage}点暴击伤害！'],
+          critMiss: ['变异猴王致命的一击竟被你惊险避开！'],
+        },
       },
-      cooldown: 0,
-      targetType: EnemySkillTargetType.SINGLE_PLAYER,
-      chargeTime: 0,
-      useTextTemplate: '大螃蟹挥动巨螯，向你猛击过来',
     },
     {
       id: 'crab_foam_spray',
@@ -180,30 +176,30 @@ const 变异猴王: Enemy = {
       maxUses: 3,
       damageTypeId: 'poison',
       stats: {
-        baseDamage: 5,
-        damageVariance: 0.1,
-        strengthScaling: 0.3,
-        agilityScaling: 0.0,
-        accuracyModifier: 0.1,
-        criticalChance: 0.05,
-        criticalMultiplier: 1.5,
+        baseDamage: '1d8+3',
+        scalingAttribute: 'strength',
+        accuracyModifier: 10,
+        criticalModifier: 5,
+        onHitEffects: [
+          {
+            effect: {
+              type: EffectType.STATUS,
+              statusId: 'poisoned',
+              apply: true,
+              duration: 15,
+            },
+            probability: 0.4,
+            description: '有概率使玩家中毒',
+          },
+        ],
+        narrativeTexts: {
+          hit: ['变异猴王向你喷射出一股绿色毒沫，造成{damage}点伤害'],
+          miss: ['毒沫从你身边飞过，没有喷中'],
+          critHit: ['毒沫正中你的脸，造成{damage}点暴击伤害！'],
+          critMiss: ['你偏头躲过了致命的毒沫喷射！'],
+        },
       },
       cooldown: 3,
-      targetType: EnemySkillTargetType.SINGLE_PLAYER,
-      chargeTime: 0,
-      onHitEffects: [
-        {
-          effect: {
-            type: EffectType.STATUS,
-            statusId: 'poisoned',
-            apply: true,
-            duration: 15,
-          },
-          probability: 0.4,
-          description: '有概率使玩家中毒',
-        },
-      ],
-      useTextTemplate: '大螃蟹向你喷射出一股绿色毒沫',
     },
   ],
   behavior: {
@@ -214,7 +210,7 @@ const 变异猴王: Enemy = {
       params: {
         damageMultiplier: 1.5,
       },
-      triggerText: '大螃蟹受到重创，变得更加狂暴',
+      triggerText: '变异猴王受到重创，变得更加狂暴',
     },
   },
   corruptionScaling: {
@@ -271,8 +267,8 @@ const dreamStalker: Enemy = {
   imageId: 'enemy_dream_stalker',
   enemyType: EnemyType.DREAM_CREATURE,
   hp: 25,
-  strength: 10,
-  agility: 14,
+  strength: 50,
+  agility: 70,
   // 减免比例（0~1，1=完全免疫）；键为伤害类型ID
   defenses: {
     slash: 0.1,
@@ -288,21 +284,19 @@ const dreamStalker: Enemy = {
       description: '用无形的利爪撕裂现实',
       priority: 1,
       weight: 60,
-      maxUses: -1,
       damageTypeId: 'slash',
       stats: {
-        baseDamage: 6,
-        damageVariance: 0.3,
-        strengthScaling: 0.5,
-        agilityScaling: 0.5,
-        accuracyModifier: 0.15,
-        criticalChance: 0.2,
-        criticalMultiplier: 2.0,
+        baseDamage: '1d8+4',
+        scalingAttribute: 'agility',
+        accuracyModifier: 5,
+        criticalModifier: 10,
+        narrativeTexts: {
+          hit: ['暗影中伸出一只利爪，向你抓来，造成{damage}点伤害'],
+          miss: ['利爪从你身边掠过，抓了个空'],
+          critHit: ['暗影利爪狠狠撕开你的身体，造成{damage}点暴击伤害！'],
+          critMiss: ['你堪堪避开了暗影中致命的利爪！'],
+        },
       },
-      cooldown: 0,
-      targetType: EnemySkillTargetType.SINGLE_PLAYER,
-      chargeTime: 0,
-      useTextTemplate: '暗影中伸出一只利爪，向你抓来',
     },
     {
       id: 'madness_whisper',
@@ -316,30 +310,30 @@ const dreamStalker: Enemy = {
       },
       maxUses: 2,
       stats: {
-        baseDamage: 0,
-        damageVariance: 0,
-        strengthScaling: 0,
-        agilityScaling: 0,
-        accuracyModifier: 1.0,
-        criticalChance: 0,
-        criticalMultiplier: 1,
+        baseDamage: '1d1',
+        scalingAttribute: 'strength',
+        accuracyModifier: 100,
+        criticalModifier: 0,
+        onHitEffects: [
+          {
+            effect: {
+              type: EffectType.ATTRIBUTE,
+              attribute: AttributeType.SAN,
+              operation: AttributeOperation.SUBTRACT,
+              value: 10,
+            },
+            probability: 1.0,
+            description: '损失10点SAN值',
+          },
+        ],
+        narrativeTexts: {
+          hit: ['梦魇潜行者发出令人头皮发麻的低语，你的理智在动摇'],
+          miss: ['低语声在你脑中回响，但你没有受到影响'],
+          critHit: ['疯狂的呓语灌入你的脑海，你的理智受到重创！'],
+          critMiss: ['低语触及你的意识边缘，被你强行驱散！'],
+        },
       },
       cooldown: 4,
-      targetType: EnemySkillTargetType.SINGLE_PLAYER,
-      chargeTime: 0,
-      onHitEffects: [
-        {
-          effect: {
-            type: EffectType.ATTRIBUTE,
-            attribute: AttributeType.SAN,
-            operation: AttributeOperation.SUBTRACT,
-            value: 10,
-          },
-          probability: 1.0,
-          description: '损失10点SAN值',
-        },
-      ],
-      useTextTemplate: '梦魇潜行者发出令人头皮发麻的低语，你的理智在动摇',
     },
   ],
   behavior: {

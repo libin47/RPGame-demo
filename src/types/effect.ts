@@ -226,8 +226,6 @@ export interface GainExpEffect {
 export enum GainExpTarget {
   /** 武器熟练度 */
   WEAPON_PROFICIENCY = 'weaponProficiency',
-  /** 战斗技能 */
-  BATTLE_SKILL = 'battleSkill',
   /** 基础属性（力量/敏捷/智力/体质） */
   ATTRIBUTE = 'attribute',
 }
