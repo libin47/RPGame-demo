@@ -18,17 +18,17 @@ import { AttributeType } from '@/types/effect'
 import { Season, SeasonPhase } from '@/types/seasonWeather'
 
 /**
- * 计算生命值上限：体质 × 10
+ * 计算生命值上限：体质 × 2
  */
 function calculateMaxHp(constitution: number): number {
-  return constitution * 10
+  return constitution * 2
 }
 
 /**
- * 计算最大负重：力量 × 5 + 负重修正
+ * 计算最大负重：力量 × 2 + 负重修正
  */
 function calculateMaxCarryWeight(strength: number, carryWeightModifier: number): number {
-  return strength * 5 + carryWeightModifier
+  return strength * 2 + carryWeightModifier
 }
 
 /**
