@@ -6,11 +6,9 @@ import type {
   Scene,
   SceneDescription,
   SubScene,
-  SceneInteraction,
-  InteractionType,
-  InteractionBehaviorParams,
   ResourceInteraction,
   MoveInteraction,
+  CharacterInteraction,
   PassiveEventSource,
 } from '@/types/scene'
 import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
@@ -33,7 +31,7 @@ import {
 } from '@/engine'
 import type { AttributeChangeRecord } from '@/engine'
 import { getVisibleOptions, findFirstVisibleFrame, resolveTextVariation } from '@/engine'
-import { findMapRoute, isMapNodeUnlocked } from '@/engine'
+import { findMapRoute, isMapNodeUnlocked, calcMoveTime } from '@/engine'
 import {
   createBattle,
   startBattle,
@@ -61,11 +59,12 @@ import {
 import { addToStorage, removeFromStorage, getStorageItems } from '@/engine'
 import { getSubSceneStorageItemCount, removeFromSubSceneStorage } from '@/engine'
 import { removeItem, getItemCount } from '@/engine'
+import { buyFromTrader as tradeBuyFromTrader, sellToTrader as tradeSellToTrader } from '@/engine'
 import { nextCGFrame, jumpToCGFrame } from '@/engine'
 import type { CraftResult, ItemSource } from '@/engine'
-import type { ButtonOption } from '@/types/option'
+import type { ButtonOption, textVariation } from '@/types/option'
 import { OptionCostType } from '@/types/option'
-import type { buildOption } from '@/types/build'
+import type { buildOption, CampsiteFunction } from '@/types/build'
 import type { GameMap } from '@/types/map'
 import { isSceneDescriptionEligible } from '@/engine/exploration'
 
@@ -148,11 +147,30 @@ export type GameMode =
   | 'inventory' // 背包界面
   | 'build' // 建造界面
   | 'building' // 建筑交互界面
+  | 'camp' // 营地建筑界面（仅展示已有建筑）
   | 'craft' // 制作界面（后续实现）
   | 'map' // 地图界面（后续实现）
   | 'ending' // 结局界面
   | 'cg' // CG过场界面
   | 'trade' // 交易界面
+
+/**
+ * 回营地信息（由 getCampsiteMoveInfo 返回）
+ * 耗时 = 当前场景母场景在大地图上移动到营地母场景的时间；
+ * 同母场景时固定 10 分钟
+ */
+export interface CampsiteMoveInfo {
+  /** 营地子场景ID */
+  subSceneId: string
+  /** 营地子场景名称 */
+  subSceneName: string
+  /** 移动时间（分钟，尚未应用敏捷系数） */
+  minutes: number
+  /** 体力消耗（原值，尚未应用体力消耗系数） */
+  staminaCost: number
+  /** 是否可回营地（营地存在且路径可达） */
+  available: boolean
+}
 
 /**
  * 游戏运行时状态
@@ -214,6 +232,9 @@ interface GameRuntimeState {
   /** 当前交易商人ID（仅在 mode === 'trade' 时有值） */
   currentTraderId: string | null
 
+  /** 角色攻击战斗待结算事件（胜利→winEventId，失败→failEventId） */
+  pendingCharacterResult: { winEventId?: string; failEventId?: string } | null
+
   /** 当前交互的建筑ID（仅在 mode === 'building' 时有值） */
   currentBuildingId: string | null
 
@@ -226,16 +247,6 @@ interface GameRuntimeState {
 
   /** 进入背包前的模式（关闭背包后恢复） */
   previousMode: GameMode
-}
-
-/**
- * 营地建筑基本信息（用于场景中显示"营地设施"入口）
- */
-export interface CampsiteBuildingInfo {
-  buildId: string
-  buildName: string
-  description: string
-  emoji: string
 }
 
 /**
@@ -279,6 +290,7 @@ function createGameState(initialPlayer: PlayerState) {
     endingReason: '',
     currentCG: null,
     currentTraderId: null,
+    pendingCharacterResult: null,
     currentBuildingId: null,
     pendingBattleFrameIds: null,
     previousMode: 'normal',
@@ -369,6 +381,10 @@ function formatAttributeChangeNotices(change: AttributeChangeRecord): string[] {
  * 在 Vue 组件中通过此函数获取和操作游戏状态
  */
 export function useGame(initialPlayer: PlayerState) {
+  // 旧存档兜底：缺少 campsiteSceneId 时重置为"未建立营地"
+  if (initialPlayer.progress.campsiteSceneId === undefined) {
+    initialPlayer.progress.campsiteSceneId = null
+  }
   const state = createGameState(initialPlayer)
   const registry = getRegistry()
 
@@ -407,6 +423,15 @@ export function useGame(initialPlayer: PlayerState) {
     // 从描述事件入口进入：该入口转为纯文本（场景描述刷新/切换后恢复可点击）
     if (fromEventEntry) {
       state.eventEntryClicked = true
+    }
+    // 从描述事件入口进入：如果entry设置了removeAfterClick，且已点击过该入口，将该入口的usedFlag设置为true，后续点击将不触发事件
+    const entry = state.currentDescriptionConfig?.eventEntries?.find((e) => e.eventId === eventId)
+    if (fromEventEntry && entry && entry.removeAfterClick) {
+      if (entry.usedFlag) {
+        state.player.flags[entry.usedFlag] = true
+      } else {
+        state.player.flags[entry.key] = false
+      }
     }
 
     // 获取第一个可见帧（按 order 顺序，满足 displayFlag 和 displayCondition 的帧）
@@ -794,6 +819,10 @@ export function useGame(initialPlayer: PlayerState) {
         }
       }
     }
+    // 实际体力消耗 = 原消耗体力 × 体力消耗系数（100/(力量+100)），向上取整
+    needStamina = Math.ceil(
+      needStamina * state.player.attributes.coefficients.staminaConsumptionCoefficient,
+    )
     return { needStamina, needSatiety, needSan, needHp, itemCosts }
   }
 
@@ -840,9 +869,15 @@ export function useGame(initialPlayer: PlayerState) {
    * @param button - 交互按钮（事件选项或场景交互）
    * @param defaultMinutes - 未配置 costTime 时的默认消耗分钟数
    * @param extraStamina - 额外的体力消耗（如 moveToScene 的 staminaCost）
+   * @param isMoveAction - 是否为移动操作（移动时间受敏捷影响：原时间 × 100/(敏捷+50)，向上取整）
    * @returns 是否消耗成功（false = 资源不足，调用方应中止交互）
    */
-  function consumeButtonCosts(button: ButtonOption, defaultMinutes = 0, extraStamina = 0): boolean {
+  function consumeButtonCosts(
+    button: ButtonOption,
+    defaultMinutes = 0,
+    extraStamina = 0,
+    isMoveAction = false,
+  ): boolean {
     // 资源校验：不足则拦截并给出提示
     const error = checkButtonCosts(button, extraStamina)
     if (error) {
@@ -864,8 +899,11 @@ export function useGame(initialPlayer: PlayerState) {
       removeItem(state.player, ic.itemId, ic.quantity)
     }
 
-    // 时间消耗（未配置 costTime 时使用默认值）
-    const minutes = button.costTime ?? defaultMinutes
+    // 时间消耗（未配置 costTime 时使用默认值；移动操作按敏捷折算实际时间）
+    let minutes = button.costTime ?? defaultMinutes
+    if (isMoveAction && minutes > 0) {
+      minutes = calcMoveTime(minutes, state.player.attributes.agility)
+    }
     if (minutes > 0) {
       advanceGameTime(minutes)
     }
@@ -1105,149 +1143,6 @@ export function useGame(initialPlayer: PlayerState) {
     // 判定帧已被消费，清除判定展示信息
     state.rollResultInfo = null
   }
-  /**
-   * 处理场景交互按钮点击
-   */
-  function handleInteraction(interactionId: string): void {
-    // 从当前场景或子场景中查找交互
-    const target = state.currentSubScene || state.currentScene
-    if (!target.interactions) return
-    const interaction = target.interactions.find((i) => i.id === interactionId)
-    if (!interaction) return
-    // 检查可用条件
-    if (!evaluateConditions(interaction.availableCondition, state.player)) {
-      setSceneTextAfter(interaction.unavailableTooltip || '该操作当前不可用')
-      return
-    }
-
-    // 根据交互类型执行不同操作
-    const interactionType = interaction.interactionType
-    const params = interaction.behaviorParams
-
-    switch (interactionType) {
-      case 'explore': {
-        // 探索：推进时间（costTime ?? 10）、刷新场景描述（复用 handleExplore）
-        // 注意：handleExplore 内部已调用 handleFlag，故此处 return 避免与末尾 handleFlag 重复执行
-        handleExplore(interaction)
-        return
-      }
-
-      case 'event': {
-        if (params?.interactionType === 'event') {
-          // 统一消耗（未配置 costTime 时默认 5 分钟）
-          if (!consumeButtonCosts(interaction, 5)) return
-          enterEvent(params.eventId)
-          break
-        }
-      }
-
-      case 'enterSubScene': {
-        state.sceneTextAfter = ''
-        if (params?.interactionType === 'enterSubScene') {
-          // 内部含被动拦截与统一消耗（默认 5 分钟）
-          if (!enterSubSceneById(params.subSceneId, interaction)) return
-          break
-        }
-      }
-
-      case 'exitSubScene': {
-        state.sceneTextAfter = ''
-        // 内部含被动拦截与统一消耗（默认 5 分钟）
-        if (!exitSubSceneToParent(interaction)) return
-        break
-      }
-
-      case 'rest': {
-        // 休息：消耗 costTime（默认 60 分钟）作为休息时长，按比例恢复体力/HP/SAN，移除休息状态
-        const restMinutes = interaction.costTime ?? 60
-        advanceGameTime(restMinutes)
-        applyRestRecovery(restMinutes / 60, 1)
-        break
-      }
-
-      case 'talk': {
-        if (params?.interactionType === 'talk') {
-          // 统一消耗（未配置 costTime 时默认 10 分钟）
-          if (!consumeButtonCosts(interaction, 10)) return
-          enterEvent(params.eventId)
-          break
-        }
-      }
-
-      case 'trade': {
-        if (params?.interactionType === 'trade') {
-          // 打开交易面板（无消耗）
-          state.currentTraderId = params.traderId
-          state.mode = 'trade'
-          break
-        }
-      }
-
-      case 'move': {
-        state.sceneTextAfter = ''
-        if (params?.interactionType === 'move') {
-          // 前置校验：资源不足立即提示并中止（不触发被动事件）
-          const error = checkButtonCosts(interaction)
-          if (error) {
-            showBlockedMessage(error)
-            return
-          }
-          // 被动事件拦截（触发后覆盖移动操作，不消耗）
-          if (tryTriggerPassiveEvents('leave')) {
-            return
-          }
-          // 统一消耗（未配置 costTime 时默认 10 分钟）
-          if (!consumeButtonCosts(interaction, 10)) return
-          break
-        }
-      }
-
-      case 'moveToScene': {
-        state.sceneTextAfter = ''
-        if (params?.interactionType === 'moveToScene') {
-          // 前置校验：资源不足立即提示并中止（不触发被动事件）
-          const error = checkButtonCosts(interaction, params.staminaCost || 0)
-          if (error) {
-            showBlockedMessage(error)
-            return
-          }
-          // 离开当前场景前被动事件拦截（触发后覆盖移动操作，不消耗）
-          if (tryTriggerPassiveEvents('leave')) {
-            return
-          }
-          // 统一消耗：travelTimeMinutes 时间 + staminaCost 体力
-          if (
-            !consumeButtonCosts(
-              interaction,
-              params.travelTimeMinutes || 15,
-              params.staminaCost || 0,
-            )
-          ) {
-            return
-          }
-          const targetScene = registry.getScene(params.targetSceneId)
-          if (targetScene) {
-            enterScene(targetScene, null)
-          }
-          break
-        }
-      }
-
-      case 'function': {
-        if (params?.interactionType === 'function') {
-          if (params.functionType === 'build') {
-            handleBuild()
-          } else {
-          }
-          break
-        }
-      }
-
-      default:
-    }
-
-    handleFlag(interaction)
-  }
 
   // ============================================================
   // 建筑相关操作
@@ -1268,8 +1163,12 @@ export function useGame(initialPlayer: PlayerState) {
       state.player.survival.maxHp,
       state.player.survival.hp + Math.round((timeHours * 60) / 10) * buildLevel,
     )
-    // 回复SAN（buildLevel - 1）
-    applySanDelta(state.player, Math.round((timeHours * 60) / 10) * (buildLevel - 1))
+    // 回复SAN（buildLevel - 1），受智力SAN恢复系数影响
+    const baseSanRecovery = Math.round((timeHours * 60) / 10) * (buildLevel - 1)
+    applySanDelta(
+      state.player,
+      Math.round(baseSanRecovery * state.player.attributes.coefficients.sanRecoveryCoefficient),
+    )
     // 移除休息时应移除的状态
     removeRestStatuses(state.player)
   }
@@ -1430,6 +1329,112 @@ export function useGame(initialPlayer: PlayerState) {
     handleFlag(collect)
   }
 
+  // ============================================================
+  // 角色交互（攻击 / 对话 / 交易）
+  // ============================================================
+
+  /**
+   * 攻击角色：按 enemyConfig 解析敌人组并进入战斗
+   * 胜利后进入 enemyConfig.winEventId 对应事件，失败后进入 failEventId 对应事件
+   */
+  function attackCharacter(character: CharacterInteraction): void {
+    const cfg = character.enemyConfig
+    if (!cfg) return
+
+    // 依次检查 extend：条件满足且概率命中（含幸运加成）的第一个生效，否则使用基础配置
+    let hitText: string | undefined
+    let groups = cfg.enemy
+    if (cfg.extend) {
+      const playerLuck = state.player.attributes.luck + state.player.attributes.luckModifier
+      for (const ext of cfg.extend) {
+        if (ext.condition && !evaluateConditions(ext.condition, state.player)) continue
+        if (rollLuckAdjusted(ext.probability, ext.luck, playerLuck)) {
+          groups = ext.enemy
+          hitText = ext.text
+          break
+        }
+      }
+    }
+
+    // 按解析出的敌人组展开敌人ID
+    const enemyIds: string[] = []
+    for (const g of groups) {
+      const quantity = resolveQuantity(g.quantity)
+      for (let i = 0; i < quantity; i++) {
+        enemyIds.push(g.enemyId)
+      }
+    }
+
+    // 根据命中情况显示对应文本
+    if (hitText) {
+      setSceneTextAfter(hitText)
+    } else if (cfg.text) {
+      setSceneTextAfter(cfg.text)
+    }
+
+    if (enemyIds.length === 0) return
+
+    const battle = createBattle(state.player, enemyIds)
+    state.currentBattle = battle
+    state.pendingCharacterResult = { winEventId: cfg.winEventId, failEventId: cfg.failEventId }
+    state.mode = 'battle'
+    startBattle(battle)
+  }
+
+  /**
+   * 与角色对话：进入 dialogConfig 列表中第一个满足显示条件的对话事件
+   */
+  function startCharacterDialog(character: CharacterInteraction): void {
+    const dialog = (character.dialogConfig ?? []).find(
+      (d) => !d.displayCondition || evaluateConditions(d.displayCondition, state.player),
+    )
+    if (dialog) {
+      enterEvent(dialog.dialogEventId)
+    }
+  }
+
+  /**
+   * 打开角色交易界面（mode = 'trade'，由 TradePanel 渲染）
+   */
+  function openCharacterTrade(character: CharacterInteraction): void {
+    const trader = character.tradeConfig
+    if (!trader) return
+    state.currentTraderId = trader.id
+    state.mode = 'trade'
+  }
+
+  /**
+   * 退出交易界面（回到事件/场景模式）
+   */
+  function exitTradeMode(): void {
+    state.currentTraderId = null
+    state.mode = state.currentEvent ? 'event' : state.currentCG ? 'cg' : 'normal'
+  }
+
+  /**
+   * 从当前商人处购买物品
+   */
+  function buyFromTrader(goodsItemId: string, quantity = 1): void {
+    const trader = state.currentTraderId ? registry.getTrader(state.currentTraderId) : undefined
+    if (!trader) return
+    const result = tradeBuyFromTrader(state.player, trader, goodsItemId, quantity)
+    if (!result.success) {
+      setLogMessage(result.message)
+    }
+  }
+
+  /**
+   * 向当前商人出售物品
+   */
+  function sellToTrader(itemId: string, quantity = 1): void {
+    const trader = state.currentTraderId ? registry.getTrader(state.currentTraderId) : undefined
+    if (!trader) return
+    const result = tradeSellToTrader(state.player, trader, itemId, quantity)
+    if (!result.success) {
+      setLogMessage(result.message)
+    }
+  }
+
   /**
    * 切换进入目标场景（选择描述 + 标记已见 + 更新位置 + 被动事件判定）
    * 注意：不修改 mode，由调用方负责模式切换
@@ -1468,8 +1473,8 @@ export function useGame(initialPlayer: PlayerState) {
     if (tryTriggerPassiveEvents('leave')) {
       return false
     }
-    // 统一消耗（未配置 costTime 时默认 5 分钟）
-    if (button && !consumeButtonCosts(button, 5)) {
+    // 统一消耗（未配置 costTime 时默认 5 分钟；移动时间受敏捷影响）
+    if (button && !consumeButtonCosts(button, 5, 0, true)) {
       return false
     }
     const scene = registry.getScene(sceneId)
@@ -1522,8 +1527,8 @@ export function useGame(initialPlayer: PlayerState) {
     if (tryTriggerPassiveEvents('leave')) {
       return false
     }
-    // 统一消耗（未配置 costTime 时默认 5 分钟）
-    if (button && !consumeButtonCosts(button, 5)) {
+    // 统一消耗（未配置 costTime 时默认 5 分钟；移动时间受敏捷影响）
+    if (button && !consumeButtonCosts(button, 5, 0, true)) {
       return false
     }
     enterScene(state.currentScene, null)
@@ -1548,6 +1553,12 @@ export function useGame(initialPlayer: PlayerState) {
       if (!exitSubSceneToParent(moveAction)) return
     } else if (moveType === 'enterScene' && moveAction.sceneId) {
       if (!enterSceneById(moveAction.sceneId, moveAction.subSceneId, moveAction)) return
+    } else if (moveType === 'toCampsite') {
+      // 回到营地：耗时由大地图路线（同母场景固定 10 分钟）决定
+      if (!moveToCampsite()) {
+        setSceneTextAfter('暂时无法回到营地')
+        return
+      }
     } else {
       // 普通 move 类型：打开大地图界面（不消耗时间，移动时再结算）
       state.sceneTextAfter = ''
@@ -1638,8 +1649,13 @@ export function useGame(initialPlayer: PlayerState) {
       return
     }
 
+    // 实际体力消耗 = 原消耗体力 × 体力消耗系数（100/(力量+100)），向上取整
+    const actualStaminaCost = Math.ceil(
+      cost.staminaCost * state.player.attributes.coefficients.staminaConsumptionCoefficient,
+    )
+
     // 体力校验
-    if (cost.staminaCost > 0 && state.player.survival.stamina < cost.staminaCost) {
+    if (actualStaminaCost > 0 && state.player.survival.stamina < actualStaminaCost) {
       return
     }
 
@@ -1648,11 +1664,11 @@ export function useGame(initialPlayer: PlayerState) {
       return
     }
 
-    // 扣除体力并推进时间
-    if (cost.staminaCost > 0) {
-      state.player.survival.stamina = Math.max(0, state.player.survival.stamina - cost.staminaCost)
+    // 扣除体力并推进时间（移动时间受敏捷影响：原时间 × 100/(敏捷+50)，向上取整）
+    if (actualStaminaCost > 0) {
+      state.player.survival.stamina = Math.max(0, state.player.survival.stamina - actualStaminaCost)
     }
-    advanceGameTime(cost.minutes)
+    advanceGameTime(calcMoveTime(cost.minutes, state.player.attributes.agility))
 
     // 移动到目标场景
     state.sceneTextAfter = ''
@@ -1667,6 +1683,77 @@ export function useGame(initialPlayer: PlayerState) {
   function closeMap(): void {
     state.sceneTextAfter = ''
     state.mode = 'normal'
+  }
+
+  /**
+   * 回营地信息（供"回到营地"按钮显示与移动结算）
+   * 耗时 = 当前场景母场景在大地图上移动到营地母场景的时间；
+   * 同母场景时固定 10 分钟。无营地或路径不可达时 available 为 false。
+   */
+  function getCampsiteMoveInfo(): CampsiteMoveInfo | null {
+    const campsiteId = state.player.progress.campsiteSceneId
+    if (!campsiteId) return null
+    const campSub = registry.getSubScene(campsiteId)
+    if (!campSub) return null
+    const campParent = registry.getScene(campSub.parentSceneId)
+    if (!campParent) return null
+
+    const base = {
+      subSceneId: campsiteId,
+      subSceneName: campSub.name,
+      minutes: 0,
+      staminaCost: 0,
+      available: true,
+    }
+
+    // 同母场景：固定 10 分钟
+    if (campParent.id === state.currentScene?.id) {
+      return { ...base, minutes: 10 }
+    }
+
+    // 跨母场景：按大地图移动耗时
+    const currentMap =
+      registry.getMap(state.player.currentLocation.mapId || registry.getInitialMapId()) ?? null
+    if (!currentMap) return { ...base, available: false }
+    const cost = calculateMoveCost(currentMap, state.currentScene, campParent, state.player)
+    if (!cost) return { ...base, available: false }
+    return { ...base, minutes: cost.minutes, staminaCost: cost.staminaCost }
+  }
+
+  /**
+   * 回到营地：移动到当前营地的子场景
+   * 耗时/体力与大地图移动规则一致（同母场景固定 10 分钟），时间受敏捷影响
+   */
+  function moveToCampsite(): boolean {
+    const info = getCampsiteMoveInfo()
+    if (!info || !info.available) return false
+
+    // 实际体力消耗 = 原消耗体力 × 体力消耗系数（100/(力量+100)），向上取整
+    const actualStaminaCost = Math.ceil(
+      info.staminaCost * state.player.attributes.coefficients.staminaConsumptionCoefficient,
+    )
+    if (actualStaminaCost > 0 && state.player.survival.stamina < actualStaminaCost) {
+      return false
+    }
+
+    // 离开前被动事件拦截（触发后覆盖离开操作，不消耗时间/体力）
+    if (tryTriggerPassiveEvents('leave')) {
+      return false
+    }
+
+    if (actualStaminaCost > 0) {
+      state.player.survival.stamina = Math.max(0, state.player.survival.stamina - actualStaminaCost)
+    }
+    advanceGameTime(calcMoveTime(info.minutes, state.player.attributes.agility))
+
+    // 进入营地子场景（跨母场景时同时切换到营地母场景）
+    const campSub = registry.getSubScene(info.subSceneId)
+    const campParent = campSub ? registry.getScene(campSub.parentSceneId) : null
+    state.sceneTextAfter = ''
+    state.sceneTextPrefix = ''
+    state.mode = 'normal'
+    enterScene(campParent ?? state.currentScene, info.subSceneId)
+    return true
   }
 
   /**
@@ -1758,40 +1845,30 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
-   * 获取当前场景中已有建筑的基本信息列表（建筑名 + 等级）
-   * 用于在营地子场景中显示"营地设施"入口
+   * 判断当前子场景是否为"当前营地"
+   * 唯一营地由 player.progress.campsiteSceneId 记录；
+   * 场景配置 isCampsite 仅表示"候选营地"（可建立/搬入），不直接决定 UI 渲染。
    */
-  function getCampsiteBuildings(): CampsiteBuildingInfo[] {
+  function isCurrentCampsite(): boolean {
     const subScene = state.currentSubScene
-    if (!subScene || !subScene.isCampsite) return []
+    if (!subScene) return false
+    return subScene.id === state.player.progress.campsiteSceneId
+  }
+
+  /**
+   * 获取当前营地的可用功能列表
+   * 遍历已有建筑（buildingInit + 玩家建造）的交互配置，按 interactionType 聚合成功能按钮。
+   * 多个建筑提供同一功能时，取建筑（交互）等级最高的那个；collect/special 类型不展示。
+   */
+  function getCampsiteFunctions(): CampsiteFunction[] {
+    if (!isCurrentCampsite()) return []
+    const subScene = state.currentSubScene!
 
     const initIds: string[] = subScene.buildingInit ?? []
     const builtIds: string[] = state.player.progress.campBuildings[subScene.id] ?? []
     const allIds = new Set([...initIds, ...builtIds])
 
-    const result: CampsiteBuildingInfo[] = []
-
-    // 建筑 emoji 映射
-    const buildingEmojiMap: Record<string, string> = {
-      营火: '🔥',
-      加固营火: '🔥',
-      大型营火: '🔥',
-      木墙: '🧱',
-      石墙: '🧱',
-      金属墙: '🧱',
-      工作台: '🔨',
-      简易工作台: '🔨',
-      高级工作台: '🔨',
-      储物箱: '📦',
-      大型储物箱: '📦',
-      床铺: '🛏️',
-      简易床铺: '🛏️',
-      舒适床铺: '🛏️',
-      篝火: '🔥',
-      围栏: '🪵',
-      水井: '🪣',
-    }
-
+    const funcMap = new Map<CampsiteFunction['interactionType'], CampsiteFunction>()
     for (const bldId of allIds) {
       const build = registry.getBuilding(bldId)
       if (!build) continue
@@ -1801,25 +1878,57 @@ export function useGame(initialPlayer: PlayerState) {
       const currentSub = build.subBuild.find((s) => s.buildId === currentSubId)
       if (!currentSub) continue
 
-      result.push({
-        buildId: bldId,
-        buildName: currentSub.buildName,
-        description: currentSub.descriptionConfig.description,
-        emoji: buildingEmojiMap[bldId] ?? buildingEmojiMap[currentSub.buildName] ?? '🏗️',
-      })
+      for (const act of currentSub.interactions ?? []) {
+        if (act.interactionType === 'collect' || act.interactionType === 'special') continue
+        const level = act.buildLevel ?? 0
+        const existing = funcMap.get(act.interactionType)
+        if (existing && level <= existing.buildLevel) continue
+        funcMap.set(act.interactionType, {
+          interactionType: act.interactionType,
+          name: resolveOptionName(act.name, state.player),
+          buildLevel: level,
+          buildId: bldId,
+          eventId: act.eventId,
+          interaction: act,
+        })
+      }
     }
 
-    // 按 buildingList 顺序排序（未在列表中的排在后面）
-    if (subScene.buildingList && subScene.buildingList.length > 0) {
-      const orderMap = new Map(subScene.buildingList.map((id, i) => [id, i]))
-      result.sort((a, b) => {
-        const ia = orderMap.get(a.buildId) ?? 999
-        const ib = orderMap.get(b.buildId) ?? 999
-        return ia - ib
-      })
-    }
+    // 按固定优先级排序展示
+    const priority: CampsiteFunction['interactionType'][] = [
+      'craft',
+      'cook',
+      'rest',
+      'store',
+      'repair',
+      'event',
+    ]
+    return [...funcMap.values()].sort(
+      (a, b) => priority.indexOf(a.interactionType) - priority.indexOf(b.interactionType),
+    )
+  }
 
-    return result
+  /**
+   * 解析交互名称（支持 textVariation 变体：取第一个满足条件的变体文本）
+   */
+  function resolveOptionName(value: string | textVariation[], player: PlayerState): string {
+    if (typeof value === 'string') return value
+    const matched = value.find((v) => evaluateConditions(v.displayCondition, player))
+    return matched?.content ?? value[0]?.content ?? ''
+  }
+
+  /**
+   * 打开营地建筑界面（仅显示已有建筑）
+   */
+  function openCampsitePanel(): void {
+    state.mode = 'camp'
+  }
+
+  /**
+   * 关闭营地建筑界面，返回场景
+   */
+  function closeCampsitePanel(): void {
+    state.mode = 'normal'
   }
 
   /**
@@ -2042,6 +2151,16 @@ export function useGame(initialPlayer: PlayerState) {
     if (battle.result === BattleResult.VICTORY) {
       // 战斗胜利：保留战斗界面，隐藏操作栏，等待玩家点击"结束战斗"按钮结算奖励并退出
     } else if (battle.result === BattleResult.DEFEAT) {
+      // 角色攻击战斗：失败后进入配置的失败事件
+      const charResult = state.pendingCharacterResult
+      state.pendingCharacterResult = null
+      if (charResult?.failEventId) {
+        state.currentBattle = null
+        state.pendingBattleFrameIds = null
+        enterEvent(charResult.failEventId)
+        return
+      }
+
       // 尝试跳转到战败帧（事件帧或CG帧）
       const defeatFrameId = state.pendingBattleFrameIds?.defeatFrameId
       if (defeatFrameId && (state.currentEvent || state.currentCG)) {
@@ -2058,6 +2177,8 @@ export function useGame(initialPlayer: PlayerState) {
         }
       }
     } else if (battle.result === BattleResult.ESCAPED) {
+      // 角色攻击战斗逃跑：清除待结算事件
+      state.pendingCharacterResult = null
       // 尝试跳转到逃跑帧（事件帧或CG帧）
       const escapeFrameId = state.pendingBattleFrameIds?.escapeFrameId
       if (escapeFrameId && (state.currentEvent || state.currentCG)) {
@@ -2082,16 +2203,25 @@ export function useGame(initialPlayer: PlayerState) {
     const battle = state.currentBattle
     const settleLogs = settleBattle(state.player, battle)
 
-    // 尝试跳转到胜利帧（事件帧或CG帧）
+    const charResult = state.pendingCharacterResult
     const victoryFrameId = state.pendingBattleFrameIds?.victoryFrameId
+
+    state.currentBattle = null
+    state.pendingBattleFrameIds = null
+    state.pendingCharacterResult = null
+
+    // 角色攻击战斗：胜利后进入配置的胜利事件
+    if (charResult?.winEventId) {
+      enterEvent(charResult.winEventId)
+      return
+    }
+
+    // 尝试跳转到胜利帧（事件帧或CG帧）
     if (victoryFrameId && (state.currentEvent || state.currentCG)) {
       jumpToBattleResultFrame(victoryFrameId)
     } else {
       state.mode = state.currentEvent ? 'event' : state.currentCG ? 'cg' : 'normal'
     }
-
-    state.currentBattle = null
-    state.pendingBattleFrameIds = null
   }
 
   /**
@@ -2481,7 +2611,6 @@ export function useGame(initialPlayer: PlayerState) {
     state: readonly(state) as GameRuntimeState,
     enterEvent,
     selectEventOption,
-    handleInteraction,
     handleExplore,
     handleBuild,
     handleRest,
@@ -2490,7 +2619,11 @@ export function useGame(initialPlayer: PlayerState) {
     getCurrentMap,
     moveToMapScene,
     closeMap,
-    getCampsiteBuildings,
+    getCampsiteFunctions,
+    getCampsiteMoveInfo,
+    isCurrentCampsite,
+    openCampsitePanel,
+    closeCampsitePanel,
     enterBuilding,
     exitBuilding,
     setLogMessage,
@@ -2519,6 +2652,12 @@ export function useGame(initialPlayer: PlayerState) {
     handleUseItem,
     handleEquipItem,
     handleUnequipItem,
+    attackCharacter,
+    startCharacterDialog,
+    openCharacterTrade,
+    exitTradeMode,
+    buyFromTrader,
+    sellToTrader,
   }
 }
 

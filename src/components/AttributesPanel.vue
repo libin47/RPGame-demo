@@ -128,8 +128,8 @@
             <span class="coeff-value">{{ coeffs.carryWeightModifier.toFixed(1) }} kg</span>
           </div>
           <div class="coeff-row">
-            <span class="coeff-label">SAN保护</span>
-            <span class="coeff-value">{{ (coeffs.sanProtection * 100).toFixed(0) }}%</span>
+            <span class="coeff-label">SAN恢复</span>
+            <span class="coeff-value">{{ coeffs.sanRecoveryCoefficient.toFixed(2) }}</span>
           </div>
         </div>
       </section>

@@ -1,7 +1,7 @@
 // sceneConfig/beach_海岸哨岩.ts
 // 子场景：海岸哨岩
 
-import { InteractionType, type SubScene } from '../../types/scene'
+import { type SubScene } from '../../types/scene'
 import { ConditionTargetType, ComparisonOperator } from '../../types/effect'
 import { exploreButton, exitSubSceneMove } from './shared'
 
@@ -26,6 +26,28 @@ const beach_海岸哨岩: SubScene = {
           key: 'beach_rock_event_3',
           displayText: '岩顶',
           eventId: 'event_beach_海岸哨岩_攀爬',
+        },
+      ],
+    },
+    {
+      id: 'beach_海岸哨岩_看日落',
+      priority: 10,
+      text: '太阳渐渐沉入大海，有时间的话你可以坐下来看看{beach_rock_event_rl}。',
+      isOneTime: false,
+      displayCondition: {
+        flag: ['flag_海岸哨岩_已登顶'],
+        condition: {
+          target: { type: ConditionTargetType.TIME },
+          operator: ComparisonOperator.BETWEEN,
+          value: 60 * 18,
+          value2: 60 * 19,
+        },
+      },
+      eventEntries: [
+        {
+          key: 'beach_rock_event_rl',
+          displayText: '日落',
+          eventId: 'event_beach_海岸哨岩_日落',
         },
       ],
     },
@@ -64,27 +86,6 @@ const beach_海岸哨岩: SubScene = {
   ],
   temperatureModifier: -2,
   explore: exploreButton,
-  interactions: [
-    {
-      id: '日落',
-      name: '看日落',
-      description: '这里视野绝佳，看太阳慢慢沉向大海，是孤岛上难得的治愈。',
-      interactionType: InteractionType.EVENT,
-      behaviorParams: {
-        eventId: 'event_beach_海岸哨岩_日落',
-        interactionType: InteractionType.EVENT,
-      },
-      displayCondition: {
-        flag: ['flag_海岸哨岩_已登顶'],
-        condition: {
-          target: { type: ConditionTargetType.TIME },
-          operator: ComparisonOperator.BETWEEN,
-          value: 60 * 18,
-          value2: 60 * 19,
-        },
-      },
-    },
-  ],
   moves: [
     exitSubSceneMove({
       id: 'beach_海岸哨岩_返回海滩',

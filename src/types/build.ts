@@ -102,6 +102,25 @@ export interface buildOption extends ButtonOption {
   description?: string
 }
 
+/**
+ * 营地功能入口（由已有建筑交互聚合而来）
+ * 多个建筑提供同一功能时，指向等级最高的建筑
+ */
+export interface CampsiteFunction {
+  /** 交互类型 */
+  interactionType: 'craft' | 'cook' | 'rest' | 'store' | 'repair' | 'event'
+  /** 功能名称 */
+  name: string
+  /** 功能等级（取提供该功能建筑的最高 buildLevel） */
+  buildLevel: number
+  /** 提供该功能的建筑ID */
+  buildId: string
+  /** 事件类型：事件ID */
+  eventId?: string
+  /** 完整交互配置（rest 等功能需要） */
+  interaction: buildOption
+}
+
 // 建筑描述配置
 export interface BuildingDescriptionConfig {
   /** 建筑描述 */

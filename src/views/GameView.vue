@@ -39,8 +39,9 @@
         v-if="game.state.mode === 'normal'"
         :description-config="game.state.currentDescriptionConfig"
         :scene="currentSceneForPanel"
-        :campsite-buildings="game.getCampsiteBuildings()"
-        :is-campsite="!!game.state.currentSubScene?.isCampsite"
+        :campsite-functions="game.getCampsiteFunctions()"
+        :is-campsite="game.isCurrentCampsite()"
+        :campsite-move-info="campsiteMoveInfo"
         :scene-text-prefix="game.state.sceneTextPrefix"
         :scene-text-after="game.state.sceneTextAfter"
         :theme="sceneTheme"
@@ -54,10 +55,12 @@
         @explore="onExplore"
         @build="onBuild"
         @collect="onCollect"
-        @scene-interaction="onSceneInteraction"
         @move="onMoveAction"
-        @character="onCharacter"
-        @enter-building="onEnterBuilding"
+        @character-attack="onCharacterAttack"
+        @character-dialog="onCharacterDialog"
+        @character-trade="onCharacterTrade"
+        @campsite="onOpenCampsite"
+        @campsite-function="onCampsiteFunction"
       />
 
       <!-- 地图模式（moveType === 'move' 时打开大地图） -->
@@ -125,6 +128,15 @@
         :player-state="game.state.player"
         @close="game.exitBuildMode()"
         @build="onBuildRecipe"
+      />
+
+      <!-- 营地建筑模式（仅已有建筑） -->
+      <CampsitePanel
+        v-else-if="game.state.mode === 'camp'"
+        :sub-scene="game.state.currentSubScene"
+        :player-state="game.state.player"
+        @close="onCloseCampsite"
+        @enter-building="onEnterBuilding"
         @upgrade="onUpgradeBuild"
       />
 
@@ -185,6 +197,16 @@
         @enter-rest="onEnterRest"
         @enter-store="onEnterStore"
         @enter-repair="onEnterRepair"
+      />
+
+      <!-- 交易模式 -->
+      <TradePanel
+        v-else-if="game.state.mode === 'trade'"
+        :trader-id="game.state.currentTraderId"
+        :player-state="game.state.player"
+        @buy="onTradeBuy"
+        @sell="onTradeSell"
+        @close="onExitTrade"
       />
 
       <!-- 其他模式（占位提示） -->
@@ -267,11 +289,13 @@ import InventoryPanel from '@/components/InventoryPanel.vue'
 import SystemMenu from '@/components/SystemMenu.vue'
 import AttributesPanel from '@/components/AttributesPanel.vue'
 import BuildPanel from '@/components/BuildPanel.vue'
+import CampsitePanel from '@/components/CampsitePanel.vue'
 import BuildingDetail from '@/components/BuildingDetail.vue'
 import RecipePanel from '@/components/RecipePanel.vue'
 import RestPanel from '@/components/RestPanel.vue'
 import StorePanel from '@/components/StorePanel.vue'
 import RepairPanel from '@/components/RepairPanel.vue'
+import TradePanel from '@/components/TradePanel.vue'
 import MapPanel from '@/components/MapPanel.vue'
 import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
 import { getVisibleOptions, getVisibleVariations, isOptionAvailable, getSanLevel } from '@/engine'
@@ -280,7 +304,7 @@ import type { GameInstance } from '@/runtime/gameInstance'
 import { useUI } from '@/runtime/useUI'
 import { TimeOfDay } from '@/types/seasonWeather'
 import type { ButtonOption } from '@/types/option'
-import type { buildOption } from '@/types/build'
+import type { buildOption, CampsiteFunction } from '@/types/build'
 
 const router = useRouter()
 const { uiState, toggleSettings, toggleAttributes } = useUI()
@@ -423,12 +447,11 @@ const sceneTheme = computed<'day' | 'dusk' | 'night'>(() => {
   }
 })
 
-/** 场景环境叠加：营地暖光 / 地牢危险（子场景优先） */
+/** 场景环境叠加：营地暖光 / 地牢危险（有效营地优先） */
 const sceneOverlay = computed<'none' | 'campsite' | 'dungeon'>(() => {
   const state = game.value.state
-  if (state.currentSubScene?.isCampsite) return 'campsite'
+  if (game.value.isCurrentCampsite()) return 'campsite'
   if (state.currentSubScene?.isDungeon) return 'dungeon'
-  console.log(state.currentScene)
   return 'none'
 })
 
@@ -599,11 +622,6 @@ function onCollect(collect: import('@/types/scene').ResourceInteraction): void {
   game.value.handleCollect(collect)
 }
 
-/** 场景交互（代替旧的 @interaction） */
-function onSceneInteraction(interactionId: string): void {
-  game.value.handleInteraction(interactionId)
-}
-
 /** 移动 */
 function onMoveAction(moveAction: import('@/types/scene').MoveInteraction): void {
   game.value.handleSceneMove(moveAction)
@@ -611,6 +629,9 @@ function onMoveAction(moveAction: import('@/types/scene').MoveInteraction): void
 
 /** 当前大地图配置（地图模式下显示） */
 const currentMap = computed(() => game.value.getCurrentMap())
+
+/** 回营地信息（无营地时 null） */
+const campsiteMoveInfo = computed(() => game.value.getCampsiteMoveInfo())
 
 /** 关闭大地图，返回场景 */
 function onCloseMap(): void {
@@ -622,8 +643,35 @@ function onMoveToMapScene(sceneId: string): void {
   game.value.moveToMapScene(sceneId)
 }
 
-/** 人物交互（暂未实现） */
-function onCharacter(char: import('@/types/scene').CharacterInteraction): void {}
+/** 攻击人物（enemyConfig → 战斗，胜利/失败进入对应事件） */
+function onCharacterAttack(char: import('@/types/scene').CharacterInteraction): void {
+  game.value.attackCharacter(char)
+}
+
+/** 与人物对话（dialogConfig → 进入第一个满足条件的对话事件） */
+function onCharacterDialog(char: import('@/types/scene').CharacterInteraction): void {
+  game.value.startCharacterDialog(char)
+}
+
+/** 与人物交易（tradeConfig → 打开交易界面） */
+function onCharacterTrade(char: import('@/types/scene').CharacterInteraction): void {
+  game.value.openCharacterTrade(char)
+}
+
+/** 交易：从商人购买 */
+function onTradeBuy(goodsItemId: string, quantity: number): void {
+  game.value.buyFromTrader(goodsItemId, quantity)
+}
+
+/** 交易：向商人出售 */
+function onTradeSell(itemId: string, quantity: number): void {
+  game.value.sellToTrader(itemId, quantity)
+}
+
+/** 交易：关闭交易界面 */
+function onExitTrade(): void {
+  game.value.exitTradeMode()
+}
 
 /** 当前交互的建筑数据（用于 BuildingDetail） */
 const currentBuildingData = computed<{
@@ -660,6 +708,51 @@ function onEnterBuilding(buildId: string): void {
   recipeMode.value = null
   storeMode.value = false
   game.value.enterBuilding(buildId)
+}
+
+/** 打开营地建筑界面 */
+function onOpenCampsite(): void {
+  game.value.openCampsitePanel()
+}
+
+/** 关闭营地建筑界面，返回场景 */
+function onCloseCampsite(): void {
+  game.value.closeCampsitePanel()
+}
+
+/** 营地功能按钮：直接进入对应功能的实际界面 */
+function onCampsiteFunction(fn: CampsiteFunction): void {
+  // event 类型直接进入事件（不进入建筑交互模式）
+  if (fn.interactionType === 'event') {
+    if (fn.eventId) onEnterEventFromEntry(fn.eventId)
+    return
+  }
+  // 其余类型：进入提供该功能的建筑，并打开对应子界面
+  restMode.value = false
+  recipeMode.value = null
+  storeMode.value = false
+  repairMode.value = false
+  game.value.enterBuilding(fn.buildId)
+  switch (fn.interactionType) {
+    case 'craft':
+      recipeMode.value = 'craft'
+      recipeDeviceLevel.value = fn.buildLevel
+      break
+    case 'cook':
+      recipeMode.value = 'cook'
+      recipeDeviceLevel.value = fn.buildLevel
+      break
+    case 'rest':
+      restMode.value = true
+      resetButton.value = fn.interaction
+      break
+    case 'store':
+      storeMode.value = true
+      break
+    case 'repair':
+      repairMode.value = true
+      break
+  }
 }
 
 /** 退出建筑交互模式 */
@@ -723,7 +816,7 @@ watch(
 /* ---- 令牌：白天（默认） ---- */
 .game-view {
   /* 墨色 */
-  --ink: #332d22;
+  --ink: #000000;
   --ink-mid: #5f5545;
   --ink-weak: #93876f;
   /* 纸面 */

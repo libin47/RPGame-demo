@@ -110,7 +110,7 @@ function checkCosts(player: PlayerState, costs: RecipeCost[]): string | null {
   for (const cost of costs) {
     let actualValue = cost.value
     if (cost.affectedByCoefficient && cost.costType === RecipeCostType.STAMINA) {
-      actualValue = Math.round(
+      actualValue = Math.ceil(
         actualValue * player.attributes.coefficients.staminaConsumptionCoefficient,
       )
     }
@@ -148,7 +148,7 @@ function applyCosts(player: PlayerState, costs: RecipeCost[]): void {
   for (const cost of costs) {
     let actualValue = cost.value
     if (cost.affectedByCoefficient && cost.costType === RecipeCostType.STAMINA) {
-      actualValue = Math.round(
+      actualValue = Math.ceil(
         actualValue * player.attributes.coefficients.staminaConsumptionCoefficient,
       )
     }

@@ -138,6 +138,10 @@ export {
 } from './trade'
 export type { TradeResult } from './trade'
 
+// 营地系统（建立/搬家）
+export { executeMoveCampsite } from './campsite'
+export type { CampsiteMoveResult } from './campsite'
+
 // 仓库存储系统
 export {
   getStorageItems,

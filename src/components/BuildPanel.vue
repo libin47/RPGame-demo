@@ -8,71 +8,6 @@
     </div>
 
     <div class="panel-body">
-      <!-- ==================== 已有建筑 ==================== -->
-      <div class="section" v-if="existingItems.length > 0">
-        <h3 class="section-title">已有建筑</h3>
-        <div class="building-grid">
-          <div v-for="item in existingItems" :key="item.buildId" class="building-card existing">
-            <div class="building-header">
-              <span class="building-name">{{ item.subBuild.buildName }}</span>
-              <span v-if="item.subBuild.isDecorativeOnly" class="tag-deco">装饰</span>
-            </div>
-            <p class="building-desc">{{ item.subBuild.descriptionConfig.description }}</p>
-            <!-- 建筑提供的交互 -->
-            <div
-              v-if="item.subBuild.interactions && item.subBuild.interactions.length > 0"
-              class="provided-actions"
-            >
-              <span v-for="act in item.subBuild.interactions" :key="act.id" class="action-tag">{{
-                act.name
-              }}</span>
-            </div>
-            <!-- 升级按钮 -->
-            <div v-if="item.availableUpgrades.length > 0" class="upgrade-section">
-              <div
-                v-for="upg in item.availableUpgrades"
-                :key="upg.targetBuildId"
-                class="upgrade-item"
-              >
-                <span class="upgrade-label">升级至 {{ upg.targetName }}</span>
-                <span v-if="upg.staminaCost > 0" class="cost-badge stamina-badge" title="体力消耗">
-                  ⚡{{ upg.staminaCost }}
-                </span>
-                <span class="cost-badge time-badge" title="所需时间"> ⏱{{ upg.timeStr }} </span>
-                <div class="upgrade-materials">
-                  <span
-                    v-for="mat in upg.materialDetails"
-                    :key="mat.itemId"
-                    class="material-item"
-                    :class="mat.hasEnough ? 'mat-ok' : 'mat-miss'"
-                  >
-                    {{ mat.itemName }} {{ mat.current }}/{{ mat.required }}
-                  </span>
-                </div>
-                <div v-if="getDisplayCosts(upg.costDetails).length > 0" class="upgrade-costs">
-                  <span
-                    v-for="cost in getDisplayCosts(upg.costDetails)"
-                    :key="cost.type"
-                    class="cost-item"
-                    :class="cost.hasEnough ? 'cost-ok' : 'cost-miss'"
-                  >
-                    {{ cost.label }}: {{ cost.current }}/{{ cost.required }}
-                  </span>
-                </div>
-                <p v-if="upg.failReason" class="fail-reason">{{ upg.failReason }}</p>
-                <button
-                  class="btn-upgrade"
-                  :disabled="!upg.canUpgrade"
-                  @click="onUpgrade(item.buildId, upg.targetBuildId)"
-                >
-                  升级
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- ==================== 可建造 ==================== -->
       <div class="section">
         <h3 class="section-title">可建造</h3>
@@ -138,7 +73,6 @@
 import { computed } from 'vue'
 import type { SubScene } from '@/types/scene'
 import type { PlayerState } from '@/types/player'
-import type { Build, SubBuild, buildUpgrade } from '@/types/build'
 import { getRegistry, getSubSceneStorageItemCount } from '@/engine'
 
 const props = defineProps<{
@@ -149,7 +83,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'build', buildId: string): void
-  (e: 'upgrade', buildId: string, targetSubBuildId: string): void
 }>()
 
 const registry = getRegistry()
@@ -168,138 +101,6 @@ function getExistingBuildIds(): string[] {
   const builtIds = props.playerState.progress.campBuildings[ssId] ?? []
   return [...new Set([...initIds, ...builtIds])]
 }
-
-function getCurrentSubBuildId(buildId: string): string {
-  const ssId = getSubScene()
-  if (!ssId) return ''
-  return props.playerState.progress.campBuildingLevels[ssId]?.[buildId] ?? ''
-}
-
-// ============================================================
-// 已有建筑详情
-// ============================================================
-interface ExistingBuildingItem {
-  buildId: string
-  subBuild: SubBuild
-  availableUpgrades: UpgradeDisplayItem[]
-}
-
-interface UpgradeDisplayItem {
-  targetBuildId: string
-  targetName: string
-  staminaCost: number
-  timeStr: string
-  canUpgrade: boolean
-  failReason: string | null
-  materialDetails: Array<{
-    itemId: string
-    itemName: string
-    required: number
-    current: number
-    hasEnough: boolean
-  }>
-  costDetails: Array<{
-    type: string
-    label: string
-    required: number
-    current: number
-    hasEnough: boolean
-  }>
-}
-
-const existingItems = computed<ExistingBuildingItem[]>(() => {
-  const ids = getExistingBuildIds()
-  const result: ExistingBuildingItem[] = []
-
-  for (const bldId of ids) {
-    const build = registry.getBuilding(bldId)
-    if (!build) continue
-
-    const currentSubId = getCurrentSubBuildId(bldId) || build.defaultBuild
-    const currentSub = build.subBuild.find((s) => s.buildId === currentSubId)
-    if (!currentSub) continue
-
-    // 计算可用升级
-    const upgrades: UpgradeDisplayItem[] = (currentSub.upgrade ?? []).map((u) => {
-      const targetSub = build.subBuild.find((s) => s.buildId === u.targetBuildId)
-      const targetName = targetSub?.buildName ?? u.targetBuildId
-
-      // 体力消耗（含系数）
-      const staminaCost = u.upgradeCost
-        .filter((c) => c.costType === 'stamina')
-        .reduce(
-          (sum, c) =>
-            sum + (c.affectedByCoefficient ? Math.round(c.value * getStaminaCoeff()) : c.value),
-          0,
-        )
-      // 升级耗时（与 engine 的 timeUsed 一致：全部升级消耗之和）
-      const upgradeTime = u.upgradeCost.reduce((sum, c) => sum + c.value, 0)
-
-      // 材料详情
-      const materialDetails = u.upgradeItems.map((m) => {
-        const count = countItem(m.itemId)
-        return {
-          itemId: m.itemId,
-          itemName: registry.getItemName(m.itemId),
-          required: m.quantity,
-          current: count,
-          hasEnough: count >= m.quantity,
-        }
-      })
-
-      // 消耗详情
-      const costDetails = u.upgradeCost.map((c) => {
-        const labelMap: Record<string, string> = {
-          stamina: '体力',
-          satiety: '饱食度',
-          san: '理智',
-          hp: '生命值',
-        }
-        const current = getSurvivalValue(c.costType)
-        const required = c.affectedByCoefficient ? Math.round(c.value * getStaminaCoeff()) : c.value
-        return {
-          type: c.costType,
-          label: labelMap[c.costType] ?? c.costType,
-          required,
-          current,
-          hasEnough: current >= required,
-        }
-      })
-
-      // 检查前置建筑
-      let prereqFail: string | null = null
-      if (u.prerequisiteBuildings && u.prerequisiteBuildings.length > 0) {
-        for (const prereq of u.prerequisiteBuildings) {
-          if (!ids.includes(prereq.buildId)) {
-            const prereqBuild = registry.getBuilding(prereq.buildId)
-            prereqFail = `需要先建造 ${prereqBuild?.defaultBuild ?? prereq.buildId}`
-            break
-          }
-        }
-      }
-
-      const canUpgrade =
-        materialDetails.every((m) => m.hasEnough) &&
-        costDetails.every((c) => c.hasEnough) &&
-        prereqFail === null
-
-      return {
-        targetBuildId: u.targetBuildId,
-        targetName,
-        staminaCost,
-        timeStr: formatTime(upgradeTime),
-        canUpgrade,
-        failReason: prereqFail,
-        materialDetails,
-        costDetails,
-      }
-    })
-
-    result.push({ buildId: bldId, subBuild: currentSub, availableUpgrades: upgrades })
-  }
-
-  return result
-})
 
 // ============================================================
 // 可建造列表
@@ -497,10 +298,6 @@ function getDisplayCosts(costs: CostDetail[]): CostDetail[] {
 function onBuild(buildId: string): void {
   emit('build', buildId)
 }
-
-function onUpgrade(buildId: string, targetSubBuildId: string): void {
-  emit('upgrade', buildId, targetSubBuildId)
-}
 </script>
 
 <style scoped>
@@ -568,95 +365,6 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   padding: 1rem 0;
 }
 
-/* ---- 已有建筑 ---- */
-.building-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.building-card {
-  padding: 0.7rem;
-  border: 1px solid var(--border-weak);
-  border-radius: var(--radius-md);
-  background: var(--card-bg);
-}
-
-.building-card.existing {
-  border-color: var(--accent);
-}
-
-.building-header {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.2rem;
-}
-
-.building-name {
-  font-weight: bold;
-  font-size: var(--font-base);
-  color: var(--accent);
-}
-
-.tag-deco {
-  padding: 0.05rem 0.35rem;
-  border-radius: 3px;
-  background: var(--special-bg);
-  color: var(--special);
-  font-size: var(--font-xs);
-}
-
-.building-desc {
-  margin: 0 0 0.3rem 0;
-  font-size: var(--font-xs);
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-.provided-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  margin-bottom: 0.3rem;
-}
-
-.action-tag {
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
-  background: var(--accent-bg);
-  color: var(--accent);
-  font-size: var(--font-xs);
-}
-
-/* ---- 升级 ---- */
-.upgrade-section {
-  margin-top: 0.4rem;
-  padding-top: 0.4rem;
-  border-top: 1px dashed var(--border-weak);
-}
-
-.upgrade-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.3rem;
-}
-
-.upgrade-label {
-  font-size: var(--font-xs);
-  color: var(--special);
-  min-width: 5rem;
-}
-
-.upgrade-materials,
-.upgrade-costs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.2rem;
-}
-
 .material-item,
 .cost-item {
   padding: 0.1rem 0.35rem;
@@ -681,25 +389,6 @@ function onUpgrade(buildId: string, targetSubBuildId: string): void {
   margin: 0;
   font-size: var(--font-xs);
   color: var(--danger);
-}
-
-.btn-upgrade {
-  padding: 0.2rem 0.7rem;
-  border: 1px solid var(--special);
-  border-radius: var(--radius-md);
-  background: var(--special-bg);
-  color: var(--special);
-  font-size: var(--font-xs);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-upgrade:hover:not(:disabled) {
-  background: var(--special-bg-hover);
-}
-.btn-upgrade:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
 }
 
 /* 体力/时间消耗徽章（与制作面板一致） */

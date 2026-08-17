@@ -56,20 +56,23 @@ function calculateDefenses(): PlayerDefenses {
 
 /**
  * 根据职业和初始配置计算系数属性
- * 初始全部为默认值
+ * 初始值由基础属性派生（体力消耗系数=100/(力量+100)、体力恢复系数=体质/50、SAN恢复系数=智力/50），
+ * 职业加成在此基础上叠加修正
  */
 function calculateCoefficients(classConfig: CharacterClass): PlayerCoefficients {
+  const { strength, constitution, intelligence } = classConfig.initialAttributes
   // 从职业加成中提取系数修正
   let recoveryRateCoefficient = 1
   let satietyUpperLimitCoefficient = 1
   let satietyLossCoefficient = 1
-  let staminaConsumptionCoefficient = 1
-  let staminaRecoveryCoefficient = 1
+  let staminaConsumptionCoefficient = 100 / (strength + 100)
+  let staminaRecoveryCoefficient = constitution / 50
   let staminaRecoveryFix = 0
   let sanModifier = 0
   let temperatureLowModifier = 0
   let temperatureHighModifier = 0
   let carryWeightModifier = 0
+  const sanRecoveryCoefficient = intelligence / 50
 
   // 遍历职业加成，提取属性修正
   for (const bonus of classConfig.classBonuses) {
@@ -131,7 +134,7 @@ function calculateCoefficients(classConfig: CharacterClass): PlayerCoefficients 
     temperatureLowModifier,
     temperatureHighModifier,
     carryWeightModifier,
-    sanProtection: 0,
+    sanRecoveryCoefficient,
   }
 }
 
@@ -237,6 +240,7 @@ export function createNewPlayerState(
     isGameCompleted: false,
     unlockedEndingIds: [],
     baseLocation: null,
+    campsiteSceneId: null,
     campBuildings: {},
     campBuildingLevels: {},
     campStorage: {},

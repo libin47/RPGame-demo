@@ -8,6 +8,13 @@
     <div class="atmosphere-overlay"></div>
     <!-- 场景描述区域（带暗角氛围） -->
     <div class="scene-narrative-wrap">
+      <!-- 背景图：来自 scene.backgroundImage（public/scene/ 目录），缩放至短边填满画面，固定不随文本滚动 -->
+      <div
+        v-if="sceneBackgroundUrl"
+        class="scene-bg"
+        :style="{ backgroundImage: `url('${sceneBackgroundUrl}')` }"
+        aria-hidden="true"
+      ></div>
       <!-- 纸面边缘晕影：固定在可视区，不随文本滚动 -->
       <div class="vignette-overlay"></div>
       <div ref="narrativeRef" class="scene-narrative">
@@ -36,40 +43,24 @@
       </div>
     </div>
 
-    <!-- ═══════ 场景交互条 — 始终固定显示 ═══════ -->
-    <div v-if="hasInteractions" class="scene-interactions-bar">
-      <div v-for="inter in visibleInteractions" :key="inter.id ?? inter.name" class="inter-row">
-        <div class="inter-info">
-          <span class="inter-title">{{ inter.name }}</span>
-          <span v-if="inter.description" class="inter-desc">{{ inter.description }}</span>
-        </div>
-        <button
-          class="inter-btn"
-          :class="interactionBtnClass(inter)"
-          @click="onSceneInteraction(inter)"
-        >
-          {{ inter.name }}
-        </button>
-      </div>
-    </div>
-
-    <!--═══════ 营地建筑入口 ═══════-->
+    <!--═══════ 营地功能入口 ═══════-->
     <div
-      v-if="props.isCampsite && (props.campsiteBuildings?.length ?? 0) > 0"
+      v-if="isValidCampsite && (props.campsiteFunctions?.length ?? 0) > 0"
       class="building-interactions"
     >
       <div class="building-section-label">🏕 营地设施</div>
       <div class="building-grid">
-        <div
-          v-for="bld in props.campsiteBuildings"
-          :key="bld.buildId"
-          class="building-entry-card"
-          @click="onEnterBuilding(bld.buildId)"
+        <button
+          v-for="fn in props.campsiteFunctions"
+          :key="fn.interactionType"
+          type="button"
+          class="function-btn"
+          @click="onCampsiteFunction(fn)"
         >
-          <span class="entry-icon">{{ bld.emoji }}</span>
-          <span class="entry-name">{{ bld.buildName }}</span>
-          <span class="entry-desc">{{ bld.description }}</span>
-        </div>
+          <span class="entry-icon">{{ functionIcon(fn.interactionType) }}</span>
+          <span class="entry-name">{{ fn.name }}</span>
+          <span v-if="fn.buildLevel > 0" class="entry-level">Lv.{{ fn.buildLevel }}</span>
+        </button>
       </div>
     </div>
 
@@ -117,30 +108,63 @@
         <div v-if="visibleCollects.length === 0" class="sub-empty">当前没有可用的资源点</div>
       </template>
 
-      <!-- ── 人物：占位 ── -->
+      <!-- ── 人物：攻击（名字后）/ 对话 / 交易（对话下方） ── -->
       <template v-if="expandedCategory === 'characters'">
         <div v-for="ch in visibleCharacters" :key="ch.id ?? ch.name" class="sub-row">
           <div class="sub-info">
-            <span class="sub-title">{{ ch.descriptionTitle ?? ch.name }}</span>
+            <span class="sub-title">
+              <span class="sub-title-text">{{ ch.descriptionTitle ?? ch.name }}</span>
+              <button v-if="ch.enemyConfig" class="attack-btn" @click="onCharacterAttack(ch)">
+                攻击
+              </button>
+            </span>
             <span class="sub-desc">{{ ch.description }}</span>
           </div>
-          <button class="sub-btn btn-primary" @click="onCharacter(ch)">
-            {{ typeof ch.name === 'string' ? ch.name : '交互' }}
-          </button>
+          <div v-if="hasDialog(ch) || ch.tradeConfig" class="sub-action-area">
+            <button v-if="hasDialog(ch)" class="sub-btn btn-primary" @click="onCharacterDialog(ch)">
+              {{ typeof ch.name === 'string' ? ch.name : '对话' }}
+            </button>
+            <button v-if="ch.tradeConfig" class="sub-btn btn-trade" @click="onCharacterTrade(ch)">
+              交易
+            </button>
+          </div>
         </div>
         <div v-if="visibleCharacters.length === 0" class="sub-empty">当前场景没有可交互的人物</div>
       </template>
 
       <!-- ── 移动 ── -->
       <template v-if="expandedCategory === 'moves'">
-        <div v-for="mv in visibleMoves" :key="mv.id ?? mv.name" class="sub-row">
+        <!-- 回到营地：整行大按钮（有营地且路径可达时显示） -->
+        <button
+          v-if="campsiteCampsiteBtn"
+          type="button"
+          class="move-big-btn"
+          @click="onMove(campsiteCampsiteBtn)"
+        >
+          <span class="move-big-title">🏕 回到营地</span>
+          <span class="move-big-sub">
+            {{ campsiteMoveInfo?.subSceneName }} · ⏱ {{ campsiteMoveMinutes }}m
+          </span>
+        </button>
+        <!-- 大地图移动：整行大按钮 -->
+        <button
+          v-for="mv in visibleBigMoves"
+          :key="mv.id ?? mv.name"
+          type="button"
+          class="move-big-btn"
+          @click="onMove(mv)"
+        >
+          <span class="move-big-title">🗺 移动至其他场景</span>
+        </button>
+        <!-- 其他移动（进出子场景/进入其他场景） -->
+        <div v-for="mv in visibleSmallMoves" :key="mv.id ?? mv.name" class="sub-row">
           <div class="sub-info">
             <span class="sub-title">
               <span class="sub-title-text">{{ mv.descriptionTitle ?? mv.name }}</span>
               <span v-if="mv.costTime != null || mv.costEnergy" class="sub-cost-inline">
-                <span class="cost-icon">⏱</span>{{ mv.costTime ?? 0 }}m
+                <span class="cost-icon">⏱</span>{{ getMoveTime(mv) }}m
                 <template v-if="mv.costEnergy">
-                  <span class="cost-icon">⚡</span>{{ mv.costEnergy }}
+                  <span class="cost-icon">⚡</span>{{ getStaminaCost(mv.costEnergy) }}
                 </template>
               </span>
             </span>
@@ -150,7 +174,9 @@
             {{ typeof mv.name === 'string' ? mv.name : '前往' }}
           </button>
         </div>
-        <div v-if="visibleMoves.length === 0" class="sub-empty">当前没有可前往的区域</div>
+        <div v-if="visibleSmallMoves.length === 0 && !campsiteCampsiteBtn" class="sub-empty">
+          当前没有可前往的区域
+        </div>
       </template>
     </div>
 
@@ -167,8 +193,12 @@
         </button>
       </div>
       <div class="cat-cell">
+        <button v-if="isValidCampsite" class="cat-btn" @click="onCampsite">
+          <span class="cat-icon">🏕</span>
+          <span class="cat-label">营地</span>
+        </button>
         <button
-          v-if="hasCollects"
+          v-else-if="hasCollects"
           class="cat-btn"
           :class="{ active: expandedCategory === 'collects' }"
           @click="onToggleCategory('collects')"
@@ -207,7 +237,6 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import type {
   SceneDescription,
-  SceneInteraction,
   BaseScene,
   ResourceInteraction,
   MoveInteraction,
@@ -215,22 +244,19 @@ import type {
   SubScene,
 } from '@/types/scene'
 import type { ButtonOption } from '@/types/option'
-import { evaluateConditions, getResolvedDescriptionText } from '@/engine'
+import {
+  evaluateConditions,
+  getResolvedDescriptionText,
+  calcMoveTime,
+  calcStaminaCost,
+} from '@/engine'
 import type { PlayerState } from '@/types/player'
 import { paramRegistry } from '@/config/params'
 import type { Conditions } from '@/types/effect'
+import type { CampsiteFunction } from '@/types/build'
+import type { CampsiteMoveInfo } from '@/runtime/useGame'
 import RichText from './RichText.vue'
 import CorruptText from './CorruptText.vue'
-
-/**
- * 营地建筑基本信息
- */
-interface CampsiteBuildingInfo {
-  buildId: string
-  buildName: string
-  description: string
-  emoji: string
-}
 
 // ============================================================
 // 解析后的文本段类型
@@ -252,8 +278,12 @@ const props = defineProps<{
   descriptionConfig: SceneDescription | null
   /** 当前场景/子场景数据（用于获取 explores/collects/characters/interactions/moves） */
   scene: BaseScene
-  campsiteBuildings?: CampsiteBuildingInfo[]
+  /** 营地可用功能列表（聚合已有建筑交互） */
+  campsiteFunctions?: CampsiteFunction[]
+  /** 当前子场景是否为有效营地（isCampsite 且 campsiteCondition 满足） */
   isCampsite?: boolean
+  /** 回营地信息（无营地时为 null，用于"回到营地"按钮显示与耗时） */
+  campsiteMoveInfo?: CampsiteMoveInfo | null
   sceneTextPrefix: string
   sceneTextAfter: string
   /** 时段主题：day（白天·浅色纸）/ dusk（黄昏黎明·暗纸）/ night（夜晚·深色纸） */
@@ -270,6 +300,13 @@ const props = defineProps<{
 }>()
 
 const narrativeRef = ref<HTMLElement | null>(null)
+
+/** 场景背景图 URL（存储于 public/scene/ 目录），未配置时返回空串 */
+const sceneBackgroundUrl = computed(() => {
+  const bg = props.scene.backgroundImage
+  if (!bg) return ''
+  return `/scene/${bg}`
+})
 
 // 主文本内容变化时自动滚动到底部
 watch(
@@ -348,10 +385,15 @@ const sceneExplore = computed<ButtonOption | null>(() => {
   return null
 })
 
+/** 是否当前营地（由 useGame 的 isCurrentCampsite 判定：campsiteSceneId 匹配当前子场景） */
+const isValidCampsite = computed<boolean>(() => props.isCampsite ?? false)
+
 /** 场景建造按钮配置 */
 const sceneBuild = computed<ButtonOption | null>(() => {
   const target = props.scene as SubScene & { build?: ButtonOption }
-  if (target.isCampsite && target.build && isInteractionVisible(target.build)) return target.build
+  if (isValidCampsite.value && target.build && isInteractionVisible(target.build)) {
+    return target.build
+  }
   return null
 })
 
@@ -373,14 +415,6 @@ const visibleCharacters = computed<CharacterInteraction[]>(() => {
 
 const hasCharacters = computed(() => visibleCharacters.value.length > 0)
 
-/** 可见的交互按钮列表（场景 tab） */
-const visibleInteractions = computed<SceneInteraction[]>(() => {
-  const target = props.scene as BaseScene & { interactions?: SceneInteraction[] }
-  return (target.interactions ?? []).filter((i) => isInteractionVisible(i))
-})
-
-const hasInteractions = computed(() => visibleInteractions.value.length > 0)
-
 /** 可见的移动列表 */
 const visibleMoves = computed<MoveInteraction[]>(() => {
   const target = props.scene as BaseScene & { moves?: MoveInteraction[] }
@@ -388,7 +422,58 @@ const visibleMoves = computed<MoveInteraction[]>(() => {
   return all.filter((m) => isInteractionVisible(m))
 })
 
-const hasMoves = computed(() => visibleMoves.value.length > 0)
+const hasMoves = computed(() => visibleMoves.value.length > 0 || !!campsiteCampsiteBtn.value)
+
+/** 大地图移动按钮（moveType 为 move 或未设置） */
+const visibleBigMoves = computed<MoveInteraction[]>(() =>
+  visibleMoves.value.filter((m) => (m.moveType ?? 'move') === 'move'),
+)
+
+/** 其他移动按钮（进出子场景/进入其他场景） */
+const visibleSmallMoves = computed<MoveInteraction[]>(() =>
+  visibleMoves.value.filter((m) => {
+    const t = m.moveType ?? 'move'
+    return t !== 'move' && t !== 'toCampsite'
+  }),
+)
+
+/** 回到营地按钮：优先使用场景配置的 toCampsite 按钮；未配置且营地可回时自动生成 */
+const campsiteCampsiteBtn = computed<MoveInteraction | null>(() => {
+  // 当前已在营地时不显示回营地按钮
+  if (props.isCampsite) return null
+  if (!props.campsiteMoveInfo?.available) return null
+  const configured = visibleMoves.value.find((m) => m.moveType === 'toCampsite')
+  if (configured) return configured
+  // 地牢场景不自动显示（仅手动配置的 toCampsite 按钮可显示）
+  if (props.scene.isDungeon) return null
+  return {
+    id: '__campsite__',
+    name: '回到营地',
+    moveType: 'toCampsite',
+  } as MoveInteraction
+})
+
+/** 回营地实际耗时（分钟，含敏捷系数） */
+const campsiteMoveMinutes = computed(() =>
+  calcMoveTime(props.campsiteMoveInfo?.minutes ?? 0, props.playerState.attributes.agility),
+)
+
+/**
+ * 移动实际耗时（分钟）：受敏捷影响，原时间 × 100/(敏捷+50)，向上取整
+ */
+function getMoveTime(mv: MoveInteraction): number {
+  return calcMoveTime(mv.costTime ?? 0, props.playerState.attributes.agility)
+}
+
+/**
+ * 实际体力消耗：原消耗 × 体力消耗系数（100/(力量+100)），向上取整
+ */
+function getStaminaCost(baseCost: number): number {
+  return calcStaminaCost(
+    baseCost,
+    props.playerState.attributes.coefficients.staminaConsumptionCoefficient,
+  )
+}
 
 // ============================================================
 // 事件
@@ -406,10 +491,16 @@ const emit = defineEmits<{
   (e: 'sceneInteraction', interactionId: string): void
   /** 执行移动 */
   (e: 'move', moveAction: MoveInteraction): void
-  /** 人物交互（暂未实现） */
-  (e: 'character', char: CharacterInteraction): void
-  /** 点击营地建筑名进入建筑交互模式 */
-  (e: 'enterBuilding', buildId: string): void
+  /** 攻击人物（enemyConfig） */
+  (e: 'characterAttack', char: CharacterInteraction): void
+  /** 与人物对话（dialogConfig） */
+  (e: 'characterDialog', char: CharacterInteraction): void
+  /** 与人物交易（tradeConfig） */
+  (e: 'characterTrade', char: CharacterInteraction): void
+  /** 点击营地按钮，打开营地建筑界面 */
+  (e: 'campsite'): void
+  /** 点击营地功能按钮（烹饪/休息等） */
+  (e: 'campsiteFunction', fn: CampsiteFunction): void
   /** 更新展开的分类（v-model 支持） */
   (e: 'update:expandedCategory', value: string | null): void
 }>()
@@ -450,6 +541,18 @@ const parsedSegments = computed<TextSegment[]>(() => {
     const entry = entries.find((e) => e.key === key)
     if (entry) {
       if (props.isEventClicked) {
+        segments.push({
+          type: 'text',
+          content: entry.displayText,
+          segmentKey: `entry-${entry.key}`,
+          eventId: entry.eventId,
+          displayText: entry.displayText,
+        })
+      } else if (
+        entry.removeAfterClick &&
+        ((entry.usedFlag && props.playerState.flags[entry.usedFlag]) ||
+          (!entry.usedFlag && props.playerState.flags[entry.key]))
+      ) {
         segments.push({
           type: 'text',
           content: entry.displayText,
@@ -508,31 +611,58 @@ function onCollect(collect: ResourceInteraction): void {
   emit('collect', collect)
 }
 
-function onSceneInteraction(inter: SceneInteraction): void {
-  if (inter.id) {
-    emit('sceneInteraction', inter.id)
-  }
-}
-
 function onMove(moveAction: MoveInteraction): void {
   emit('move', moveAction)
 }
 
-function onCharacter(char: CharacterInteraction): void {
-  emit('character', char)
+function onCharacterAttack(char: CharacterInteraction): void {
+  emit('characterAttack', char)
 }
 
-function onEnterBuilding(buildId: string): void {
-  emit('enterBuilding', buildId)
+function onCharacterDialog(char: CharacterInteraction): void {
+  emit('characterDialog', char)
 }
 
-/** 交互按钮样式类 */
-function interactionBtnClass(inter: SceneInteraction): string {
-  const style = inter.buttonStyle
-  if (style === 'danger') return 'btn-danger'
-  if (style === 'primary') return 'btn-primary'
-  if (style === 'special') return 'btn-special'
-  return 'btn-default'
+function onCharacterTrade(char: CharacterInteraction): void {
+  emit('characterTrade', char)
+}
+
+/**
+ * 是否有满足显示条件的对话（dialogConfig 列表中第一个满足条件的项可用）
+ */
+function hasDialog(ch: CharacterInteraction): boolean {
+  return (ch.dialogConfig ?? []).some(
+    (d) => !d.displayCondition || evaluateConditions(d.displayCondition, props.playerState),
+  )
+}
+
+function onCampsite(): void {
+  emit('update:expandedCategory', null)
+  emit('campsite')
+}
+
+function onCampsiteFunction(fn: CampsiteFunction): void {
+  emit('campsiteFunction', fn)
+}
+
+/** 营地功能图标 */
+function functionIcon(type: CampsiteFunction['interactionType']): string {
+  switch (type) {
+    case 'craft':
+      return '🔨'
+    case 'cook':
+      return '🍳'
+    case 'rest':
+      return '🛏'
+    case 'store':
+      return '📦'
+    case 'repair':
+      return '🔧'
+    case 'event':
+      return '📜'
+    default:
+      return '⚡'
+  }
 }
 </script>
 
@@ -987,12 +1117,81 @@ function interactionBtnClass(inter: SceneInteraction): string {
   background: rgba(255, 213, 79, 0.18);
 }
 
+/* 交易按钮（金色，位于对话按钮下方） */
+.sub-btn.btn-trade {
+  border-color: rgba(255, 193, 7, 0.5);
+  background: rgba(255, 193, 7, 0.08);
+  color: #ffc107;
+}
+
+.sub-btn.btn-trade:hover {
+  background: rgba(255, 193, 7, 0.18);
+}
+
+/* 攻击按钮（名字后内联，红色警示） */
+.attack-btn {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid rgba(255, 107, 107, 0.6);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff6b6b;
+  font-size: var(--font-xs);
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  vertical-align: middle;
+}
+
+.attack-btn:hover {
+  background: rgba(255, 107, 107, 0.28);
+  color: #ff8a8a;
+}
+
 .sub-empty {
   text-align: center;
   padding: 0.6rem 0;
   color: var(--text-muted);
   font-size: var(--font-xs);
   font-style: italic;
+}
+
+/* ---- 整行大按钮（大地图移动/回到营地） ---- */
+.move-big-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.move-big-btn:hover {
+  border-color: var(--accent);
+  background: var(--card-hover);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+.move-big-title {
+  font-size: var(--font-base);
+  font-weight: bold;
+  line-height: 1.3;
+}
+
+.move-big-sub {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  line-height: 1.3;
 }
 
 /* ---- 营地建筑交互 ---- */
@@ -1017,21 +1216,25 @@ function interactionBtnClass(inter: SceneInteraction): string {
   gap: 0.5rem;
 }
 
-.building-entry-card {
+.function-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.25rem;
   padding: 0.6rem 0.4rem;
   border: 1px solid rgba(78, 205, 196, 0.3);
   border-radius: var(--radius-md);
   background: rgba(78, 205, 196, 0.06);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--font-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-.building-entry-card:hover {
+.function-btn:hover {
   background: rgba(78, 205, 196, 0.14);
   border-color: var(--accent);
   box-shadow: 0 3px 8px rgba(78, 205, 196, 0.2);
@@ -1052,15 +1255,10 @@ function interactionBtnClass(inter: SceneInteraction): string {
   line-height: 1.2;
 }
 
-.entry-desc {
+.entry-level {
   font-size: var(--font-xs);
-  color: var(--text-muted);
-  text-align: center;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  color: var(--accent);
+  line-height: 1.2;
 }
 
 /* ═════════════════════════════════════════════════════════
@@ -1118,7 +1316,7 @@ function interactionBtnClass(inter: SceneInteraction): string {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
 }
 
-/* 正文纸面：顶部受光、略亮，营造纸张起伏 */
+/* 正文纸面：顶部受光、略亮，营造纸张起伏（保持原纸面效果） */
 .scene-panel .scene-narrative {
   padding: 1.3rem 1.5rem 1.8rem;
   line-height: 1.9;
@@ -1148,9 +1346,21 @@ function interactionBtnClass(inter: SceneInteraction): string {
   background: var(--vignette);
 }
 
+/* 场景背景图：缩放至短边填满画面（cover），50% 透明度覆盖在纸面之上，固定不随文本滚动 */
+.scene-panel .scene-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
 /* 正文墨字 */
 .scene-panel .scene-line {
   color: var(--text-primary);
+  /* color: #000; */
   text-shadow: var(--text-shadow);
   line-height: 1.9;
 }
@@ -1359,7 +1569,7 @@ function interactionBtnClass(inter: SceneInteraction): string {
   color: var(--accent);
 }
 
-.scene-panel .building-entry-card {
+.scene-panel .function-btn {
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--card-bg);
@@ -1367,7 +1577,7 @@ function interactionBtnClass(inter: SceneInteraction): string {
   transition: all 0.15s ease;
 }
 
-.scene-panel .building-entry-card:hover {
+.scene-panel .function-btn:hover {
   background: var(--card-hover);
   border-color: var(--accent);
   box-shadow: 0 3px 8px var(--shadow-strong);

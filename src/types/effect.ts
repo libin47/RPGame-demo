@@ -32,6 +32,8 @@ export enum EffectType {
   SKILL = 'skill',
   /** 获得经验 */
   GAIN_EXP = 'gainExp',
+  /** 营地建立/搬家 */
+  CAMPSITE_MOVE = 'campsiteMove',
   /** 条件判断 */
   CONDITION = 'condition',
   /** 复合效果（多个效果组合） */
@@ -230,6 +232,13 @@ export enum GainExpTarget {
   ATTRIBUTE = 'attribute',
 }
 
+/** 营地建立/搬家效果 */
+export interface CampsiteMoveEffect {
+  type: EffectType.CAMPSITE_MOVE
+  /** 目标营地子场景ID（建立首个营地时传当前场景ID，搬家时传新候选营地ID） */
+  targetSceneId: string
+}
+
 /** 复合效果 */
 export interface CompositeEffect {
   type: EffectType.COMPOSITE
@@ -255,6 +264,7 @@ export type Effect =
   | RecipeEffect
   | SkillEffect
   | GainExpEffect
+  | CampsiteMoveEffect
   | CompositeEffect
 
 // ============================================================

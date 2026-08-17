@@ -834,6 +834,7 @@ SCP基金会在十年前首次发现岛屿的异常，并开始收容与研究�
 17、角色（玩家可选角色职业） √
 
 ## 战斗修正
+
 现在完善优化一下战斗系统的逻辑，你可以先看一下现在武器数据类型的定义types/item.ts。武器的数据结构仅调整WeaponStats：
 1、取消伤害浮动、命中修正、暴击率修正、暴击倍率。
 2、将baseDamage改为string类型，存储骰子表达式，例如"1d6"、"2d4+3"等，string中的运算仅限于加减和d。
@@ -891,7 +892,7 @@ SCP基金会在十年前首次发现岛屿的异常，并开始收容与研究�
   - 采集 √
 
 - 显示效果
-  - 属性变动 场景/事件
+  - 属性变动 场景/事件 √
   - 经验变动
   - 状态效果
 
@@ -903,15 +904,174 @@ SCP基金会在十年前首次发现岛屿的异常，并开始收容与研究�
 
 - 图片生成和显示
 
+力量： 负重上限 体力消耗 √
+敏捷： 战斗顺序 闪避概率 移动时间 √
+智力： SAN回复 √ SAN豁免
+体质： HP上限 体力回复 √ 状态豁免
 
+# qos
 
+## IP地址配置
 
+<!-- ip地址配置 -->
 
-力量： 负重上限 体力上限
-敏捷： 战斗顺序 闪避概率 暴击概率
-智力： SAN回复 SAN豁免 
-体质： HP上限 状态豁免
+set interfaces ethernet eth1 address 100.0.0.102/24
+set interfaces ethernet eth2 address 100.0.0.103/24
+set interfaces loopback lo address 1.1.1.1/32
 
+<!-- 主机ip -->
 
-HP 饱食 体力 SAN
-闪避 状态豁免 战斗顺序
+ip addr add 10.0.0.104/24 dev ens4
+
+<!-- 下一跳 -->
+
+ip route add 10.0.1.0/24 via 10.0.0.1 dev ens4
+
+## ebgp配置
+
+set protocols bgp system-as 65000
+set protocols bgp parameters router-id 1.1.1.1
+set protocols bgp neighbor 10.0.0.1 remote-as 65001
+set protocols bgp neighbor 10.0.0.1 address-family ipv4-unicast
+
+run show bgp summary
+[leaf]
+
+<!-- 声明发布网段 -->
+
+set protocols bgp address-family ipv4-unicast network 10.0.0.0/24
+
+run show ip route bgp
+
+## Qos
+
+set qos policy shaper BBB bandwidth '100mbit'
+
+set qos policy shaper BBB class 10 bandwidth '50mbit'
+set qos policy shaper BBB class 10 ceiling '100mbit'
+set qos policy shaper BBB class 10 priority '1'
+set qos policy shaper BBB class 10 match ROCE ip dscp AF31
+set qos policy shaper BBB class 10 queue-type fq-codel
+
+set qos policy shaper BBB class 20 bandwidth 40mbit
+set qos policy shaper BBB class 20 ceiling 100mbit
+set qos policy shaper BBB class 20 priority 3
+set qos policy shaper BBB class 20 match STORAGE ip desp AF21
+set qos policy shaper BBB class 20 queue-type fq-codel
+
+set qos policy shaper BBB default bandwidth 10mbit
+set qos policy shaper BBB default ceiling 100mbit
+set qos policy shaper BBB default priority 7
+set qos policy shaper BBB default queue-type fq-codel
+
+set qos interface eth2 egress BBB
+
+## 打压测试
+
+iperf3 -s -p 5201
+iperf3 -c 10.0.0.104 -p 5201 -u -b 100M -S 72 -t 300
+
+# 改名
+
+set system host-name spine2
+commit
+exit
+
+# 配置接口
+
+<!-- 描述、回环地址、使能ipv6、使能RA服务 -->
+
+set interfaces ethernet eth1 description 'To leaf1'
+set interfaces ethernet eth2 description 'To leaf2'
+set interfaces ethernet eth3 description 'To leaf3'
+set interfaces loopback lo address 100.0.0.102/32
+set interfaces ethernet eth1 ipv6
+set interfaces ethernet eth2 ipv6
+set interfaces ethernet eth3 ipv6
+set service router-advert interface eth1
+set service router-advert interface eth2
+set service router-advert interface eth3
+commit
+
+set interfaces ethernet eth1 description 'To spine1'
+set interfaces ethernet eth2 description 'To spine2'
+set interfaces ethernet eth3 description 'To host3'
+set interfaces loopback lo address 10.0.0.3/32
+set interfaces ethernet eth1 ipv6
+set interfaces ethernet eth2 ipv6
+set service router-advert interface eth1
+set service router-advert interface eth2
+commit
+
+# BGP配置
+
+<!-- 设置本地AS号、router-id、允许aspath相同形成ECMP -->
+
+set protocols bgp system-as 65000
+set protocols bgp parameters router-id 100.0.0.102
+set protocols bgp parameters bestpath as-path multipath-relax
+set protocols bgp peer-group leaf remote-as external
+set protocols bgp peer-group leaf capability extended-nexthop
+set protocols bgp peer-group leaf address-family ipv4-unicast
+set protocols bgp address-family ipv4-unicast redistribute connected
+set protocols bgp peer-group leaf address-family l2vpn-evpn
+set protocols bgp neighbor eth1 interface v6only peer-group leaf
+set protocols bgp neighbor eth2 interface v6only peer-group leaf
+set protocols bgp neighbor eth3 interface v6only peer-group leaf
+
+set protocols bgp system-as 65003
+set protocols bgp parameters router-id 10.0.0.3
+set protocols bgp peer-group spine remote-as external
+set protocols bgp peer-group spine capability dynamic
+set protocols bgp peer-group spine capability extended-nexthop
+set protocols bgp peer-group spine address-family ipv4-unicast
+set protocols bgp peer-group spine address-family l2vpn-evpn
+set protocols bgp address-family ipv4-unicast redistribute connected
+set protocols bgp neighbor eth1 interface v6only peer-group spine
+set protocols bgp neighbor eth2 interface v6only peer-group spine
+
+# Overlay EVPN-VXLAN配置
+
+重要：设置RT值
+set protocols bgp address-family l2vpn-evpn advertise-all-vni
+set interfaces vxlan vxlan100 parameters nolearning
+set interfaces vxlan vxlan100 port 4789
+set interfaces vxlan vxlan100 source-address 10.0.0.1
+set interfaces vxlan vxlan100 vni 100
+set interfaces bridge br100 description customer-blue
+set interfaces bridge br100 member interface eth3
+set interfaces bridge br100 member interface vxlan100
+
+# BFD
+
+set protocols bfd profile aaa interval receive 500
+set protocols bfd profile aaa interval transmit 500
+set protocols bfd profile aaa interval multiplier 3
+set protocols bgp peer-group leaf bfd profile aaa
+
+# 大模型
+
+# 测试
+
+命名1.1.1
+第一部分
+1、修改leaf1的RD为100:1， leaf2为200:1， L2evpnvni1100的RT为300：1
+2、bfd监测时间500ms，3个周期
+3、设置BGP协议联动BFD协议
+4、修改接口的MTU值为1300
+
+第二部分
+1、限制R1路由器，入口流量限制为25mbit，完整命令
+2、创建1个策略，流量总带宽100mbit，
+第一个类别class10，调度优先级3，固定带宽70mbit，峰值带宽100mbit，
+第二个类别class30，调度优先级7，固定带宽30mbit，峰值带宽100mbit，
+3、配置流量分类匹配规则，识别目的端口为5202的数据包进入队列10，识别DSCP值为AF21的数据包进行队列30
+4、设置队列10的长度为48、延时为100ms
+5、在host1和host2上测试带宽并使用tee命令保留结果（不截图）
+
+第三部分
+1、window下手写Dockerfile的WORKDIR、COPY两个部分的内容，直接和环境一样即可。
+2、设置宿主机和容器端口映射，宿主机端口8010
+3、设置模型加载权限为读写
+4、将检测的批量请求总次数、批量请求耗时分布、所有批量请求内包含的\*\*提示词总数，参数写入word
+5、将监控参数引入main函数变量中（不必截图）

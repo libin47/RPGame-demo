@@ -1,9 +1,10 @@
 // sceneConfig/beach_机翼营地.ts
-// 子场景：机翼营地（营地）
+// 子场景：机翼营地（候选营地：isCampsite 标记此位置可作为营地，
+// 玩家完成"搭建营地"事件后，通过 campsiteSceneId 才成为唯一营地并渲染营地 UI）
 
 import type { SubScene } from '../../types/scene'
 import { ConditionTargetType, ComparisonOperator } from '../../types/effect'
-import { buildButton, exitSubSceneMove, eventInteraction } from './shared'
+import { buildButton, exitSubSceneMove } from './shared'
 
 const beach_机翼营地: SubScene = {
   id: 'beach_机翼营地',
@@ -15,42 +16,20 @@ const beach_机翼营地: SubScene = {
   descriptions: [
     {
       id: 'beach_机翼营地_1',
-      priority: 10,
-      text: '只有半截机翼和沙子，你需要完善它才可以作为营地。',
-      textVariations: [
-        {
-          content:
-            '地上铺着一层防水布，算是勉强有一个栖身之所了。\n\n但是海风太大，或许这里并不适合旧居。',
-          displayCondition: { flag: ['event_机翼营地_铺地'] },
-        },
-      ],
-      isOneTime: true,
-      seenFlag: 'beach_抵达机翼营地',
+      priority: 2,
+      text: '地上铺着一层防水布，算是勉强有一个栖身之所了。\n\n但是海风太大，或许这里并不适合旧居。',
+      displayCondition: { flag: ['flag_抵达机翼营地'] },
+      isOneTime: false,
     },
     {
       id: 'beach_机翼营地_2',
       priority: 1,
-      text: '半截机翼插在地上，是一个"天然"的庇护所。',
-      textVariations: [
+      text: '半截机翼插在地上，是一个"天然"的{event_beach_jy_1}。',
+      eventEntries: [
         {
-          content: '半截机翼插在地上，是一个"天然"的庇护所。',
-        },
-        {
-          content: '地上铺着一层防水布，算是勉强有一个栖身之所了。',
-          displayCondition: { flag: ['event_机翼营地_铺地'] },
-        },
-        {
-          content: '地上铺着一层防水布，算是勉强有一个栖身之所了。',
-          displayCondition: {
-            condition: {
-              target: {
-                type: ConditionTargetType.PARAM,
-                id: 'beach_椰子',
-              },
-              operator: ComparisonOperator.EQUAL,
-              value: 0,
-            },
-          },
+          key: 'event_beach_jy_1',
+          displayText: '庇护所',
+          eventId: 'event_机翼营地_搭建营地',
         },
       ],
       isOneTime: false,
@@ -64,14 +43,14 @@ const beach_机翼营地: SubScene = {
       descriptionTitle: '坠机海滩',
     }),
   ],
-  interactions: [
-    eventInteraction({
-      id: 'beach_机翼营地_搭建营地',
-      eventId: 'event_机翼营地_搭建营地',
-      displayCondition: { hideFlag: ['event_机翼营地_铺地'] },
-    }),
-  ],
-  build: buildButton,
+  build: {
+    id: 'build',
+    name: '建造',
+    description: '建造建筑',
+    costTime: 0,
+    costEnergy: 0,
+    displayCondition: { flag: ['flag_抵达机翼营地'] },
+  },
   isDungeon: false,
 }
 

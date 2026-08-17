@@ -5,7 +5,7 @@
 
 import { shallowRef } from 'vue'
 import { useGame } from './useGame'
-import type { CampsiteBuildingInfo, RollResultInfo } from './useGame'
+import type { RollResultInfo, CampsiteMoveInfo } from './useGame'
 import { createNewPlayerState } from '@/engine'
 import { getRegistry } from '@/engine'
 import { addItem } from '@/engine'
@@ -18,7 +18,7 @@ import type { GameMap } from '@/types/map'
 import type { EndingConfig } from '@/types/ending'
 import type { CraftResult } from '@/engine'
 import type { ButtonOption } from '@/types/option'
-import type { buildOption } from '@/types/build'
+import type { buildOption, CampsiteFunction } from '@/types/build'
 
 /** 游戏运行时实例的接口定义 */
 export interface GameInstance {
@@ -49,8 +49,6 @@ export interface GameInstance {
   enterEvent: (eventId: string, fromEventEntry?: boolean) => void
   /** 选择事件选项 */
   selectEventOption: (optionId: string) => void
-  /** 处理场景交互 */
-  handleInteraction: (interactionId: string) => void
   /** 探索周围 */
   handleExplore: (explore: ButtonOption) => void
   /** 建造 */
@@ -67,8 +65,16 @@ export interface GameInstance {
   moveToMapScene: (sceneId: string) => void
   /** 关闭大地图，返回进入地图前的场景 */
   closeMap: () => void
-  /** 获取当前场景中营地建筑基本信息列表 */
-  getCampsiteBuildings: () => CampsiteBuildingInfo[]
+  /** 判断当前子场景是否为"有效营地"（isCampsite 且 campsiteCondition 满足） */
+  isCurrentCampsite: () => boolean
+  /** 获取回营地信息（耗时/体力/营地名称；无营地或不可达时返回 null/available=false） */
+  getCampsiteMoveInfo: () => CampsiteMoveInfo | null
+  /** 获取当前营地的可用功能列表（聚合已有建筑交互） */
+  getCampsiteFunctions: () => CampsiteFunction[]
+  /** 打开营地建筑界面（仅显示已有建筑） */
+  openCampsitePanel: () => void
+  /** 关闭营地建筑界面，返回场景 */
+  closeCampsitePanel: () => void
   /** 进入建筑交互模式 */
   enterBuilding: (buildId: string) => void
   /** 退出建筑交互模式返回场景 */
@@ -128,6 +134,18 @@ export interface GameInstance {
   equipItem: (instanceId: string) => void
   /** 卸下装备（按物品ID） */
   unequipItem: (itemId: string) => void
+  /** 攻击人物（enemyConfig → 战斗，胜利/失败进入对应事件） */
+  attackCharacter: (character: import('@/types/scene').CharacterInteraction) => void
+  /** 与人物对话（进入第一个满足条件的对话事件） */
+  startCharacterDialog: (character: import('@/types/scene').CharacterInteraction) => void
+  /** 打开人物交易界面 */
+  openCharacterTrade: (character: import('@/types/scene').CharacterInteraction) => void
+  /** 退出交易界面 */
+  exitTradeMode: () => void
+  /** 从商人处购买物品 */
+  buyFromTrader: (goodsItemId: string, quantity?: number) => void
+  /** 向商人出售物品 */
+  sellToTrader: (itemId: string, quantity?: number) => void
 }
 
 /** 全局唯一的游戏运行实例（未开始时为 null；使用 shallowRef 以便读档替换实例时触发响应式更新） */
@@ -171,7 +189,6 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     state: game.state,
     enterEvent: game.enterEvent,
     selectEventOption: game.selectEventOption,
-    handleInteraction: game.handleInteraction,
     handleExplore: game.handleExplore,
     handleBuild: game.handleBuild,
     handleRest: game.handleRest,
@@ -180,7 +197,11 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     getCurrentMap: game.getCurrentMap,
     moveToMapScene: game.moveToMapScene,
     closeMap: game.closeMap,
-    getCampsiteBuildings: game.getCampsiteBuildings,
+    isCurrentCampsite: game.isCurrentCampsite,
+    getCampsiteMoveInfo: game.getCampsiteMoveInfo,
+    getCampsiteFunctions: game.getCampsiteFunctions,
+    openCampsitePanel: game.openCampsitePanel,
+    closeCampsitePanel: game.closeCampsitePanel,
     enterBuilding: game.enterBuilding,
     exitBuilding: game.exitBuilding,
     executeBuildRecipe: game.executeBuildRecipe,
@@ -208,6 +229,12 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     useItem: game.handleUseItem,
     equipItem: game.handleEquipItem,
     unequipItem: game.handleUnequipItem,
+    attackCharacter: game.attackCharacter,
+    startCharacterDialog: game.startCharacterDialog,
+    openCharacterTrade: game.openCharacterTrade,
+    exitTradeMode: game.exitTradeMode,
+    buyFromTrader: game.buyFromTrader,
+    sellToTrader: game.sellToTrader,
   }
 
   return currentInstance.value
@@ -234,7 +261,6 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     state: game.state,
     enterEvent: game.enterEvent,
     selectEventOption: game.selectEventOption,
-    handleInteraction: game.handleInteraction,
     handleExplore: game.handleExplore,
     handleBuild: game.handleBuild,
     handleRest: game.handleRest,
@@ -243,7 +269,11 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     getCurrentMap: game.getCurrentMap,
     moveToMapScene: game.moveToMapScene,
     closeMap: game.closeMap,
-    getCampsiteBuildings: game.getCampsiteBuildings,
+    isCurrentCampsite: game.isCurrentCampsite,
+    getCampsiteMoveInfo: game.getCampsiteMoveInfo,
+    getCampsiteFunctions: game.getCampsiteFunctions,
+    openCampsitePanel: game.openCampsitePanel,
+    closeCampsitePanel: game.closeCampsitePanel,
     enterBuilding: game.enterBuilding,
     exitBuilding: game.exitBuilding,
     executeBuildRecipe: game.executeBuildRecipe,
@@ -271,6 +301,12 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     useItem: game.handleUseItem,
     equipItem: game.handleEquipItem,
     unequipItem: game.handleUnequipItem,
+    attackCharacter: game.attackCharacter,
+    startCharacterDialog: game.startCharacterDialog,
+    openCharacterTrade: game.openCharacterTrade,
+    exitTradeMode: game.exitTradeMode,
+    buyFromTrader: game.buyFromTrader,
+    sellToTrader: game.sellToTrader,
   }
   return currentInstance.value
 }

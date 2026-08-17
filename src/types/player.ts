@@ -222,8 +222,8 @@ export interface PlayerCoefficients {
   temperatureHighModifier: number
   /** 负重修正值（kg） */
   carryWeightModifier: number
-  /** SAN值保护系数（0-1，减少SAN损失比例） */
-  sanProtection: number
+  /** SAN值恢复系数（智力/50，默认1，影响SAN恢复量） */
+  sanRecoveryCoefficient: number
 }
 
 // ============================================================
@@ -380,6 +380,9 @@ export interface PlayerProgress {
 
   /** 基地位置（无基地则为null） */
   baseLocation: PlayerLocation | null
+
+  /** 当前营地的子场景ID（唯一营地，null 表示尚未建立；搬家时更新此字段） */
+  campsiteSceneId: string | null
 
   /** 营地建筑记录（subSceneId -> buildId[]），追踪每个营地已经建造的建筑 */
   campBuildings: Record<string, string[]>

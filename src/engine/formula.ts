@@ -11,10 +11,10 @@ import type { Enemy } from '@/types/enemy'
 
 /**
  * 计算生命值上限
- * 公式：体质 × 10
+ * 公式：体质 × 2
  */
 export function calcMaxHp(constitution: number): number {
-  return constitution * 10
+  return constitution * 2
 }
 
 /**
@@ -43,10 +43,10 @@ export function calcMaxSan(sanModifier: number): number {
 
 /**
  * 计算最大负重
- * 公式：力量 × 5 + 负重修正
+ * 公式：力量 × 2 + 负重修正
  */
 export function calcMaxCarryWeight(strength: number, carryWeightModifier: number): number {
-  return strength * 5 + carryWeightModifier
+  return strength * 2 + carryWeightModifier
 }
 
 /**
@@ -246,10 +246,48 @@ export function calcDefenseDamageReduction(originalDamage: number): number {
 
 /**
  * 计算实际体力消耗
- * 公式：基础消耗 × 体力消耗系数
+ * 公式：基础消耗 × 体力消耗系数，向上取整
  */
 export function calcStaminaCost(baseCost: number, consumptionCoefficient: number): number {
-  return Math.max(0, Math.round(baseCost * consumptionCoefficient))
+  return Math.max(0, Math.ceil(baseCost * consumptionCoefficient))
+}
+
+// ============================================================
+// 基础属性 → 次级属性派生公式
+// ============================================================
+
+/**
+ * 计算体力消耗系数
+ * 公式：100 / (力量 + 100)
+ * 力量越高，体力消耗越低（系数越小）
+ */
+export function calcStaminaConsumptionCoefficient(strength: number): number {
+  return 100 / (strength + 100)
+}
+
+/**
+ * 计算体力恢复系数
+ * 公式：体质 / 50
+ */
+export function calcStaminaRecoveryCoefficient(constitution: number): number {
+  return constitution / 50
+}
+
+/**
+ * 计算SAN值恢复系数
+ * 公式：智力 / 50
+ */
+export function calcSanRecoveryCoefficient(intelligence: number): number {
+  return intelligence / 50
+}
+
+/**
+ * 计算实际移动时间（分钟）
+ * 公式：原移动时间 × 100 / (敏捷 + 50)，向上取整（分钟）
+ * 敏捷越高，移动越快（耗时越少）
+ */
+export function calcMoveTime(baseMinutes: number, agility: number): number {
+  return Math.max(0, Math.ceil(baseMinutes * (100 / (agility + 50))))
 }
 
 // ============================================================

@@ -2,8 +2,7 @@
 // 场景通用按钮与移动/交互工厂
 // 仅当配置在多个场景间完全同构时提取为工厂，场景特有内容留在场景文件内联
 
-import type { MoveInteraction, SceneInteraction } from '../../types/scene'
-import { InteractionType } from '../../types/scene'
+import type { MoveInteraction } from '../../types/scene'
 import type { Conditions } from '../../types/effect'
 import type { ButtonOption } from '../../types/option'
 
@@ -95,43 +94,5 @@ export function exitSubSceneMove(opts: ExitSubSceneMoveOptions): MoveInteraction
     costTime: 10,
     ...(opts.flag ? { displayCondition: { flag: [opts.flag] } } : {}),
     moveType: 'exitSubScene',
-  }
-}
-
-// ============================================================
-// 交互按钮工厂
-// ============================================================
-
-interface EventInteractionOptions {
-  id: string
-  /** 触发的事件ID */
-  eventId: string
-  /** 按钮显示名（默认取 id） */
-  name?: string
-  description?: string
-  displayCondition?: Conditions
-  /** 是否只能触发一次（默认 false） */
-  isOneTime?: boolean
-  /** 使用后设置的标志位（默认取 id） */
-  usedFlag?: string
-}
-
-/** 事件触发型交互按钮（默认消耗10分钟/10体力） */
-export function eventInteraction(opts: EventInteractionOptions): SceneInteraction {
-  const name = opts.name ?? opts.id
-  return {
-    id: opts.id,
-    name,
-    description: opts.description ?? name,
-    interactionType: InteractionType.EVENT,
-    behaviorParams: {
-      interactionType: InteractionType.EVENT,
-      eventId: opts.eventId,
-    },
-    costTime: 10,
-    ...(opts.displayCondition ? { displayCondition: opts.displayCondition } : {}),
-    ...(opts.isOneTime ? { isOneTime: true, usedFlag: opts.usedFlag ?? opts.id } : {}),
-    // 仅传 usedFlag（未设 isOneTime）时也生效
-    ...(!opts.isOneTime && opts.usedFlag ? { usedFlag: opts.usedFlag } : {}),
   }
 }

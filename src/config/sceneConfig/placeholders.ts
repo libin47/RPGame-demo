@@ -18,7 +18,6 @@ const forest: Scene = {
   moves: [moveButton],
   temperatureModifier: -2,
   explore: exploreButton,
-  interactions: [],
   isDungeon: false,
 }
 
@@ -36,7 +35,6 @@ const mountain: Scene = {
   moves: [moveButton],
   temperatureModifier: -5,
   explore: exploreButton,
-  interactions: [],
   isDungeon: false,
 }
 
@@ -54,7 +52,6 @@ const ruins: Scene = {
   moves: [moveButton],
   temperatureModifier: 0,
   explore: exploreButton,
-  interactions: [],
   isDungeon: false,
 }
 

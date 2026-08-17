@@ -37,8 +37,6 @@ export interface BaseScene {
   characters?: CharacterInteraction[]
   // 探索
   explore?: ButtonOption
-  // 场景 固定交互按钮
-  interactions?: SceneInteraction[]
 
   // 场景被动事件（满足条件且概率命中时自动触发，与描述无关）
   passiveEvents?: SceneEvent[]
@@ -96,6 +94,7 @@ export interface SubScene extends BaseScene {
   }
   // 营地特有
   isCampsite?: boolean
+  campsiteCondition?: Conditions
   // 营地允许的建筑
   buildingList?: string[]
   // 营地允许的初始化建筑
@@ -150,6 +149,7 @@ export interface SceneDescription {
   // 看过此描述后设置的标志位（用于后续判定是否已看过）
   seenFlag?: string
   seenCountFlag?: string
+  // 触发任意事件后设置的标志位
   eventFlag?: string
   // 此描述可被看到的次数上限（-1表示无限次，配合seenFlag使用）
   viewLimit?: number
@@ -214,8 +214,8 @@ export interface SceneEventEntry {
   availableCondition?: Conditions
   // 点击后是否移除此入口（下次展示此描述时不再出现）
   removeAfterClick?: boolean
-  // 点击后设置的标志位
-  clickFlag?: string
+  // 点击后设置的标志位 不填默认key
+  usedFlag?: string
   // 点击后的文本变体（如点击前"奇怪的祭坛"，点击后变为"已被调查的祭坛"）
   textAfterClick?: string
 }
@@ -271,22 +271,10 @@ export interface SceneImageVariation {
 // 场景交互
 // ============================================================
 
-/**
- * 场景固定交互按钮
- * 显示在界面下方右侧的按钮，提供场景固有的功能入口
- */
-export interface SceneInteraction extends ButtonOption {
-  // 交互类型（决定 behaviorParams 的结构）
-  interactionType: InteractionType
-
-  // ========== 交互行为参数 ==========
-  behaviorParams?: InteractionBehaviorParams
-}
-
 // 移动交互按钮配置
 export interface MoveInteraction extends ButtonOption {
   // 移动类型
-  moveType?: 'move' | 'exitSubScene' | 'enterSubScene' | 'enterScene'
+  moveType?: 'move' | 'exitSubScene' | 'enterSubScene' | 'enterScene' | 'toCampsite'
   // 子场景ID
   subSceneId?: string
   // 母场景ID
@@ -327,6 +315,10 @@ export interface EnemyConfig {
     probability: number
     luck?: number
   }[]
+  // 胜利事件
+  winEventId?: string
+  // 失败事件
+  failEventId?: string
 }
 // 物品配置
 export interface ItemGroup {
@@ -351,7 +343,7 @@ export interface ItemConfig {
 // 人物交互按钮配置
 export interface CharacterInteraction extends ButtonOption {
   // 敌人配置-是否可被攻击
-  enemyConfig?: EnemyConfig[]
+  enemyConfig?: EnemyConfig
   // 交易配置-是否可交易
   tradeConfig?: TraderConfig
   // 对话配置-是否可对话
@@ -359,150 +351,10 @@ export interface CharacterInteraction extends ButtonOption {
 }
 // 对话配置
 export interface DialogConfig {
-  // 对话主题
-  dialogName: string
-  // 对话描述（长安）
-  dialogDescription?: string
   // 关联事件ID
-  dialogEventId?: string
+  dialogEventId: string
   // 对话显示条件
   displayCondition?: Conditions
-}
-
-/**
- * 交互类型
- */
-export enum InteractionType {
-  // 探索：刷新当前场景的描述展示
-  EXPLORE = 'explore',
-  // 进入事件
-  EVENT = 'event',
-  // 打开功能面板：建造/制作/烹饪/修理/种植/钓鱼等
-  FUNCTION = 'function',
-  // 进入子场景
-  ENTER_SUB_SCENE = 'enterSubScene',
-  // 离开子场景返回母场景
-  EXIT_SUB_SCENE = 'exitSubScene',
-  // 移动（地牢场景中向指定方向移动）
-  MOVE = 'move',
-  // 休息/睡觉
-  REST = 'rest',
-  // 与NPC对话（本质是进入事件，语义区分）
-  TALK = 'talk',
-  // 交易（进入交易界面）
-  TRADE = 'trade',
-  // 移动到场景（跨地图移动）
-  MOVE_TO_SCENE = 'moveToScene',
-}
-
-/**
- * 交互行为参数（根据交互类型联合）
- */
-export type InteractionBehaviorParams =
-  | ExploreBehaviorParams
-  | EventBehaviorParams
-  | FunctionBehaviorParams
-  | EnterSubSceneBehaviorParams
-  | ExitSubSceneBehaviorParams
-  | MoveBehaviorParams
-  | MoveToSceneBehaviorParams
-  | RestBehaviorParams
-  | TalkBehaviorParams
-  | TradeBehaviorParams
-
-/** 探索行为（无额外参数） */
-export interface ExploreBehaviorParams {
-  interactionType: InteractionType.EXPLORE
-}
-
-/** 事件行为 */
-export interface EventBehaviorParams {
-  interactionType: InteractionType.EVENT
-  /** 事件ID */
-  eventId: string
-  // explore 事件参数-有必要吗？
-  // exploreWhenBack?: boolean
-}
-
-/** 功能面板行为 */
-export interface FunctionBehaviorParams {
-  interactionType: InteractionType.FUNCTION
-  /** 功能类型 */
-  functionType: FunctionType
-}
-
-/** 进入子场景行为 */
-export interface EnterSubSceneBehaviorParams {
-  interactionType: InteractionType.ENTER_SUB_SCENE
-  /** 目标子场景ID */
-  subSceneId: string
-}
-
-/** 离开子场景行为 */
-export interface ExitSubSceneBehaviorParams {
-  interactionType: InteractionType.EXIT_SUB_SCENE
-}
-
-/** 方向移动行为（地牢） */
-export interface MoveBehaviorParams {
-  interactionType: InteractionType.MOVE
-  /** 移动方向 */
-  direction: Direction
-}
-// 移动到场景行为
-export interface MoveToSceneBehaviorParams {
-  interactionType: InteractionType.MOVE_TO_SCENE
-  /** 目标场景ID */
-  targetSceneId: string
-  /** 目标子场景ID（可选） */
-  targetSubSceneId?: string
-  /** 目标地图ID（跨地图移动时使用，为空则在当前地图内移动） */
-  targetMapId?: string
-  /** 目标地图节点ID（用于地图上定位） */
-  targetNodeId: string
-  /** 移动所需时间（游戏内分钟数） */
-  travelTimeMinutes: number
-  /** 移动消耗体力 */
-  staminaCost: number
-  /** 路径描述（如"沿着海岸线步行"） */
-  pathDescription: string
-  /** 移动途中遭遇事件池（随机触发） */
-  encounterEventPool?: EncounterEventPoolEntry[]
-  /** 移动条件（如需要特定物品、技能等级等） */
-  requirements?: MoveRequirement[]
-  /** 天气对移动时间的影响系数 */
-  weatherImpactCoefficient?: number
-}
-
-/** 休息行为 */
-export interface RestBehaviorParams {
-  interactionType: InteractionType.REST
-}
-
-/** 对话行为（本质是进入事件） */
-export interface TalkBehaviorParams {
-  interactionType: InteractionType.TALK
-  /** NPC ID 或事件ID */
-  eventId: string
-}
-
-/** 交易行为 */
-export interface TradeBehaviorParams {
-  interactionType: InteractionType.TRADE
-  /** 交易对象ID */
-  traderId: string
-}
-
-/**
- * 功能面板类型
- */
-export enum FunctionType {
-  BUILD = 'build',
-  CRAFT = 'craft',
-  COOK = 'cook',
-  REPAIR = 'repair',
-  PLANT = 'plant',
-  FISH = 'fish',
 }
 
 /**

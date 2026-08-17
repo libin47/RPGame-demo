@@ -7,6 +7,12 @@ import type { DamageTypeId } from '@/types/damage'
 import { getRegistry } from './registry'
 import { applyStatus, removeStatus } from './status'
 import { addItem, removeItem, equipItemById, unequipByItemId } from './inventory'
+import { executeMoveCampsite } from './campsite'
+import {
+  calcStaminaConsumptionCoefficient,
+  calcStaminaRecoveryCoefficient,
+  calcSanRecoveryCoefficient,
+} from './formula'
 
 // ============================================================
 // 属性变动监听（供 runtime 层订阅：基础属性/经验变动时展示提醒）
@@ -165,6 +171,10 @@ export class EffectResolver {
       case EffectType.COMPOSITE:
         return this.executeCompositeEffect(player, effect)
 
+      // 营地建立/搬家
+      case EffectType.CAMPSITE_MOVE:
+        return this.executeCampsiteMoveEffect(player, effect)
+
       // 状态效果
       case EffectType.STATUS:
         return this.executeStatusEffect(player, effect)
@@ -199,6 +209,21 @@ export class EffectResolver {
       }
     }
     return logs.length > 0 ? logs.join('；') : null
+  }
+
+  /**
+   * 执行营地建立/搬家效果
+   */
+  private executeCampsiteMoveEffect(
+    player: PlayerState,
+    effect: Extract<Effect, { type: EffectType.CAMPSITE_MOVE }>,
+  ): string | null {
+    const result = executeMoveCampsite(player, effect.targetSceneId)
+    if (!result.success) return `搬家失败：${result.message}`
+    const parts = [result.message]
+    if (result.migratedCount) parts.push(`迁移 ${result.migratedCount} 座建筑`)
+    if (result.demolishedCount) parts.push(`拆除 ${result.demolishedCount} 座建筑`)
+    return parts.join('，')
   }
 
   /**
@@ -397,6 +422,9 @@ export class EffectResolver {
             newValue: player.attributes.strength,
           })
         }
+        // 力量变动影响最大负重与体力消耗系数
+        this.recalculateMaxCarryWeight(player)
+        this.recalculateStaminaConsumptionCoefficient(player)
         break
       }
       case AttributeType.AGILITY: {
@@ -421,6 +449,8 @@ export class EffectResolver {
             newValue: player.attributes.intelligence,
           })
         }
+        // 智力变动影响SAN恢复系数
+        this.recalculateSanRecoveryCoefficient(player)
         break
       }
       case AttributeType.CONSTITUTION: {
@@ -433,8 +463,9 @@ export class EffectResolver {
             newValue: player.attributes.constitution,
           })
         }
-        // 体质变动会影响生命值上限
+        // 体质变动影响生命值上限与体力恢复系数
         this.recalculateMaxHp(player)
+        this.recalculateStaminaRecoveryCoefficient(player)
         break
       }
       case AttributeType.LUCK:
@@ -574,10 +605,11 @@ export class EffectResolver {
 
   /**
    * 重新计算生命值上限（体质变动时调用）
+   * 公式：体质 × 2
    */
   private recalculateMaxHp(player: PlayerState): void {
     const oldMaxHp = player.survival.maxHp
-    const newMaxHp = player.attributes.constitution * 10
+    const newMaxHp = player.attributes.constitution * 2
     player.survival.maxHp = newMaxHp
 
     // 按比例调整当前生命值
@@ -608,10 +640,40 @@ export class EffectResolver {
 
   /**
    * 重新计算最大负重
+   * 公式：力量 × 2 + 负重修正
    */
   private recalculateMaxCarryWeight(player: PlayerState): void {
     player.survival.maxCarryWeight =
-      player.attributes.strength * 5 + player.attributes.coefficients.carryWeightModifier
+      player.attributes.strength * 2 + player.attributes.coefficients.carryWeightModifier
+  }
+
+  /**
+   * 重新计算体力消耗系数（力量变动时调用）
+   * 公式：100 / (力量 + 100)
+   */
+  private recalculateStaminaConsumptionCoefficient(player: PlayerState): void {
+    player.attributes.coefficients.staminaConsumptionCoefficient =
+      calcStaminaConsumptionCoefficient(player.attributes.strength)
+  }
+
+  /**
+   * 重新计算体力恢复系数（体质变动时调用）
+   * 公式：体质 / 50
+   */
+  private recalculateStaminaRecoveryCoefficient(player: PlayerState): void {
+    player.attributes.coefficients.staminaRecoveryCoefficient = calcStaminaRecoveryCoefficient(
+      player.attributes.constitution,
+    )
+  }
+
+  /**
+   * 重新计算SAN值恢复系数（智力变动时调用）
+   * 公式：智力 / 50
+   */
+  private recalculateSanRecoveryCoefficient(player: PlayerState): void {
+    player.attributes.coefficients.sanRecoveryCoefficient = calcSanRecoveryCoefficient(
+      player.attributes.intelligence,
+    )
   }
 
   /**
@@ -634,9 +696,19 @@ export class EffectResolver {
       player.attributes[attribute] += 1
       player.attributes[expKey] -= requiredExp
 
-      // 体质升级需要重新计算生命值上限
-      if (attribute === 'constitution') {
-        this.recalculateMaxHp(player)
+      // 升级后重算受该属性影响的派生数值/系数
+      switch (attribute) {
+        case 'strength':
+          this.recalculateMaxCarryWeight(player)
+          this.recalculateStaminaConsumptionCoefficient(player)
+          break
+        case 'constitution':
+          this.recalculateMaxHp(player)
+          this.recalculateStaminaRecoveryCoefficient(player)
+          break
+        case 'intelligence':
+          this.recalculateSanRecoveryCoefficient(player)
+          break
       }
 
       // 递归检查是否连续升级

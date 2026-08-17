@@ -1,6 +1,5 @@
 // config/buildings.ts
 
-import { FunctionType, InteractionType } from '@/types/scene'
 import type { Build, BuildRegistry } from '../types/build'
 import { RecipeCostType } from '../types/recipe'
 import { AttributeOperation, AttributeType, EffectType } from '@/types/effect'

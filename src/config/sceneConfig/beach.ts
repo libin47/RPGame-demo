@@ -4,7 +4,7 @@
 import { ComparisonOperator, ConditionTargetType } from '@/types'
 import type { Scene } from '../../types/scene'
 import { exploreButton, enterSubSceneMove, moveButton } from './shared'
-
+import { wanderingMerchant } from '../traders'
 const 退潮时间 = {
   condition: {
     target: { type: ConditionTargetType.TIME },
@@ -46,8 +46,7 @@ const beach: Scene = {
       text: '半截机翼斜插在那里，你需要建立一个营地。',
 
       isOneTime: false,
-      displayCondition: { hideFlag: ['beach_抵达机翼营地'] },
-      eventFlag: 'beach_抵达机翼营地',
+      displayCondition: { hideFlag: ['flag_抵达机翼营地'] },
     },
 
     {
@@ -205,10 +204,33 @@ const beach: Scene = {
     }),
     moveButton,
   ],
+  characters: [
+    {
+      id: 'beach_船长',
+      name: '对话',
+      description: '独眼的女船长坐在崖头，沉默地抽着烟。',
+      descriptionTitle: '船长',
+      tradeConfig: wanderingMerchant,
+      dialogConfig: [
+        {
+          dialogEventId: 'event_beach_船长',
+        },
+      ],
+      enemyConfig: {
+        enemy: [
+          {
+            enemyId: '大螃蟹',
+            quantity: 2,
+          },
+        ],
+        failEventId: 'event_beach_船长',
+      },
+    },
+  ],
   explore: exploreButton,
-  interactions: [],
   isDungeon: false,
   subSceneIds: ['beach_飞机残骸', 'beach_机翼营地', 'beach_椰树林', 'beach_礁石区'],
+  backgroundImage: 'beach1.png',
 }
 
 export default beach

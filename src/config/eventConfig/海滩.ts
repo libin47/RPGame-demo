@@ -131,3 +131,21 @@ export const event_beach_大海的馈赠: GameEvent = {
     },
   ],
 }
+
+export const event_beach_船长: GameEvent = {
+  id: 'event_beach_船长',
+  name: '船长',
+  frames: [
+    {
+      id: 'event_beach_船长_1',
+      text: '你靠近了一位独眼的女船长，她沉默地抽着烟。',
+      options: [
+        {
+          id: '对话',
+          name: '对话',
+          results: endEvent('你和船长对话了。'),
+        },
+      ],
+    },
+  ],
+}

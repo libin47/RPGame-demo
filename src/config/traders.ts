@@ -2,7 +2,7 @@
 import { LogicOperator, ConditionTargetType, ComparisonOperator } from '@/types'
 import type { TraderConfig, TradeRegistry } from '../types/trade'
 
-const wanderingMerchant: TraderConfig = {
+export const wanderingMerchant: TraderConfig = {
   id: 'wandering_merchant',
   name: '流浪商人',
   description: '一个穿着破旧斗篷的神秘商人，似乎能在岛上的任何地方出现',
@@ -11,13 +11,13 @@ const wanderingMerchant: TraderConfig = {
   buyPriceMultiplier: 0.4,
   goods: [
     {
-      itemId: 'bandage',
+      itemId: '石头',
       stock: 5,
       restockIntervalMinutes: 1440,
       restockAmount: 5,
     },
     {
-      itemId: 'strength_potion',
+      itemId: '金属碎片',
       stock: 1,
       restockIntervalMinutes: 4320,
       restockAmount: 1,
