@@ -60,7 +60,12 @@
 
     <!-- 战斗日志区（伤害数值为可点击文本，点击弹窗查看计算过程） -->
     <div class="battle-log" ref="logRef">
-      <p v-for="(log, idx) in logs" :key="idx" class="log-line" :class="logClass(log)">
+      <p
+        v-for="(log, idx) in logs"
+        :key="idx"
+        class="log-line"
+        :class="logClass(log) + statusNarrClass(log)"
+      >
         <template v-for="(seg, si) in logSegments(log)" :key="si">
           <span
             v-if="seg.dmg !== null"
@@ -221,6 +226,8 @@ import {
   LOG_CALC_SEP,
   DMG_TOKEN_START,
   DMG_TOKEN_END,
+  STATUS_NARR_MARKER,
+  markerToStatusType,
 } from '@/engine'
 import type { BattleEnemy, DamageCalcDetail } from '@/engine'
 import type { PlayerState, PlayerInventoryItem } from '@/types/player'
@@ -301,18 +308,36 @@ const skills = computed(() =>
   }),
 )
 
+/** 状态着色标记字符集合（用于识别状态叙事日志行） */
+const STATUS_MARKERS = Object.values(STATUS_NARR_MARKER)
+
 /** 日志角色样式类（我方绿 / 敌方红，颜色随昼夜主题变量自适应） */
 function logClass(log: string): string {
+  if (isNarrLog(log)) return ''
   if (log.startsWith(LOG_ROLE_PLAYER)) return 'log-player'
   if (log.startsWith(LOG_ROLE_ENEMY)) return 'log-enemy'
   return ''
 }
 
-/** 剥离日志角色前缀，仅保留正文 */
+/** 状态叙事日志：以状态着色标记字符开头 */
+function isNarrLog(log: string): boolean {
+  return STATUS_MARKERS.includes(log[0] ?? '')
+}
+
+/** 状态叙事样式类（buff/debuff/neutral/special） */
+function statusNarrClass(log: string): string {
+  if (!isNarrLog(log)) return ''
+  const type = markerToStatusType(log[0] ?? '')
+  return ` log-status ${type}`
+}
+
+/** 剥离日志角色前缀与状态着色标记，仅保留正文 */
 function logText(log: string): string {
-  if (log.startsWith(LOG_ROLE_PLAYER)) return log.slice(LOG_ROLE_PLAYER.length)
-  if (log.startsWith(LOG_ROLE_ENEMY)) return log.slice(LOG_ROLE_ENEMY.length)
-  return log
+  let t = log
+  if (t.startsWith(LOG_ROLE_PLAYER)) t = t.slice(LOG_ROLE_PLAYER.length)
+  else if (t.startsWith(LOG_ROLE_ENEMY)) t = t.slice(LOG_ROLE_ENEMY.length)
+  if (isNarrLog(t)) t = t.slice(1)
+  return t
 }
 
 /** 解析日志行：正文 + 计算详情（可能为空） */
@@ -452,7 +477,8 @@ function statusName(statusId: string): string {
 }
 
 function statusDesc(statusId: string): string {
-  return getRegistry().getStatus(statusId)?.description ?? ''
+  const cfg = getRegistry().getStatus(statusId)
+  return cfg?.description?.tooltip ?? cfg?.name ?? ''
 }
 
 /** 点击物品：使用并关闭面板（物品实例ID随 action 事件透传） */
@@ -753,6 +779,20 @@ function onAction(actionType: string): void {
 
 .log-enemy {
   color: var(--danger);
+}
+
+/* 状态叙事日志着色（buff绿 / debuff红 / neutral灰 / special紫，随主题变量自适应） */
+.log-status.buff {
+  color: var(--rc-suf);
+}
+.log-status.debuff {
+  color: var(--rc-crit);
+}
+.log-status.neutral {
+  color: var(--ink-weak);
+}
+.log-status.special {
+  color: var(--madness);
 }
 
 .log-line:first-child {

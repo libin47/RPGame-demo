@@ -44,6 +44,7 @@
         :campsite-move-info="campsiteMoveInfo"
         :scene-text-prefix="game.state.sceneTextPrefix"
         :scene-text-after="game.state.sceneTextAfter"
+        :scene-narration-lines="game.state.sceneNarrationLines"
         :theme="sceneTheme"
         :overlay="sceneOverlay"
         :player-state="game.state.player"
@@ -81,6 +82,7 @@
         @use-item="onUseItem"
         @equip-item="onEquipItem"
         @unequip-item="onUnequipItem"
+        @discard-item="onDiscardItem"
       />
 
       <!-- 事件模式 -->
@@ -585,6 +587,11 @@ function onEquipItem(instanceId: string): void {
 /** 卸下装备 */
 function onUnequipItem(itemId: string): void {
   game.value.unequipItem(itemId)
+}
+
+/** 丢弃物品 */
+function onDiscardItem(itemId: string, quantity: number): void {
+  game.value.discardItem(itemId, quantity)
 }
 
 /** 打开系统菜单（保存/读档） */

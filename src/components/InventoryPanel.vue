@@ -142,7 +142,7 @@
               >
             </div>
           </div>
-          <div class="modal-actions">
+          <div v-if="!discardSelectorOpen" class="modal-actions">
             <button
               v-if="isUsable(detailItem.itemId)"
               class="action-btn btn-use"
@@ -164,6 +164,32 @@
             >
               卸下
             </button>
+            <button
+              v-if="detailItem && canDiscard(detailItem)"
+              class="action-btn btn-discard"
+              @click="openDiscardSelector"
+            >
+              丢弃
+            </button>
+          </div>
+
+          <!-- 丢弃数量选择 -->
+          <div v-else class="discard-selector">
+            <div class="discard-title">丢弃数量</div>
+            <div class="discard-control">
+              <input v-model.number="discardQty" type="range" min="1" :max="maxDiscardableQty" />
+              <span class="discard-qty">×{{ discardQty }}</span>
+            </div>
+            <div class="discard-notes">
+              将丢弃 {{ discardQty }} 个{{ getItemName(detailItem!.itemId) }}（共
+              {{ detailItem!.quantity }} 个）
+            </div>
+            <div class="discard-actions">
+              <button class="action-btn" @click="closeDiscardSelector">取消</button>
+              <button class="action-btn btn-discard-confirm" @click="confirmDiscard">
+                确定丢弃
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -188,6 +214,7 @@ const emit = defineEmits<{
   (e: 'useItem', instanceId: string): void
   (e: 'equipItem', instanceId: string): void
   (e: 'unequipItem', itemId: string): void
+  (e: 'discardItem', itemId: string, quantity: number): void
 }>()
 
 const registry = getRegistry()
@@ -418,6 +445,21 @@ function useActionLabel(itemId: string): string {
   return '使用'
 }
 
+/**
+ * 该物品实例是否可丢弃：
+ * - 杂项（MISC）属于"不可交易丢弃的重要物品"，不可丢弃
+ * - 已装备的物品实例不可丢弃
+ * - 该物品ID当前有实例处于装备状态时同样不可丢弃（避免丢弃时误卸除穿上中的装备）
+ */
+function canDiscard(item: PlayerInventoryItem): boolean {
+  const config = getItemConfig(item.itemId)
+  if (!config) return false
+  if (config.category === ItemCategory.MISC) return false
+  if (item.equippedSlot) return false
+  const equipment = props.playerState.equipment as unknown as Record<string, string | null>
+  return !Object.values(equipment).some((id) => id === item.itemId)
+}
+
 // ═══════════════════════════════════════════
 // 底部装备区
 // ═══════════════════════════════════════════
@@ -487,6 +529,7 @@ const detailItem = ref<PlayerInventoryItem | null>(null)
 
 function openDetail(item: PlayerInventoryItem): void {
   detailItem.value = item
+  discardSelectorOpen.value = false
 }
 
 function closeDetail(): void {
@@ -512,6 +555,36 @@ function onUnequipFromDetail(): void {
     emit('unequipItem', detailItem.value.itemId)
     closeDetail()
   }
+}
+
+// ═══════════════════════════════════════════
+// 丢弃数量选择
+// ═══════════════════════════════════════════
+
+const discardSelectorOpen = ref(false)
+const discardQty = ref(1)
+
+/** 可丢弃的最大数量（当前选中堆叠的数量，从1开始） */
+const maxDiscardableQty = computed<number>(() => {
+  return detailItem.value ? Math.max(1, detailItem.value.quantity) : 1
+})
+
+function openDiscardSelector(): void {
+  if (!detailItem.value || !canDiscard(detailItem.value)) return
+  discardQty.value = 1
+  discardSelectorOpen.value = true
+}
+
+function closeDiscardSelector(): void {
+  discardSelectorOpen.value = false
+}
+
+function confirmDiscard(): void {
+  if (!detailItem.value || !canDiscard(detailItem.value)) return
+  const qty = Math.max(1, Math.min(discardQty.value, maxDiscardableQty.value))
+  emit('discardItem', detailItem.value.itemId, qty)
+  closeDiscardSelector()
+  closeDetail()
 }
 </script>
 
@@ -1009,5 +1082,61 @@ function onUnequipFromDetail(): void {
 .btn-unequip:hover {
   background: var(--special-bg);
   border-color: var(--special);
+}
+
+.btn-discard {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.btn-discard:hover {
+  background: var(--accent-bg);
+  border-color: var(--danger);
+}
+
+/* 丢弃数量选择器 */
+.discard-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.discard-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.discard-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.discard-control input[type='range'] {
+  flex: 1;
+  accent-color: var(--danger);
+}
+.discard-qty {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--danger);
+  min-width: 32px;
+  text-align: right;
+}
+.discard-notes {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.discard-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.btn-discard-confirm {
+  color: #fff;
+  border-color: var(--danger);
+  background: var(--danger);
+}
+.btn-discard-confirm:hover {
+  background: #e53935;
+  border-color: var(--danger);
 }
 </style>

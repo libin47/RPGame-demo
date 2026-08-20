@@ -316,6 +316,10 @@ export interface ActiveStatus {
   appliedTime: number
   /** 状态参数覆盖 */
   params?: Record<string, number>
+  /** 非战斗 effects 已累计分钟数（达到 interval 触发一次） */
+  effectAccum?: number
+  /** 战斗 battleEffects 已累计回合数（达到 interval 触发一次） */
+  battleEffectAccum?: number
 }
 
 // ============================================================

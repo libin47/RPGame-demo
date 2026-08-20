@@ -19,6 +19,8 @@ import {
   getRegistry,
   getEffectResolver,
   advanceTime,
+  reconcileSceneEnvironment,
+  reconcileAttributeStatuses,
   evaluateConditions,
   addItem,
   onItemAdded,
@@ -217,6 +219,9 @@ interface GameRuntimeState {
   /** 场景文本后缀（从事件返回场景时，显示 exitText/enterText 在场景描述后） */
   sceneTextAfter: string
 
+  /** 状态叙事文本（寒冷/炎热等状态触发/结束的文本，含着色标记，渲染在场景主文本最前面） */
+  sceneNarrationLines: string[]
+
   /** 当前场景描述中的事件入口是否已被点击（点击后该入口渲染为纯文本；场景描述被刷新/切换后恢复可点击） */
   eventEntryClicked: boolean
 
@@ -285,6 +290,7 @@ function createGameState(initialPlayer: PlayerState) {
     frameTextSuffix: '',
     sceneTextPrefix: '',
     sceneTextAfter: '',
+    sceneNarrationLines: [],
     eventEntryClicked: false,
     currentEnding: null,
     endingReason: '',
@@ -1455,6 +1461,9 @@ export function useGame(initialPlayer: PlayerState) {
     }
     // 检测目标场景被动事件
     tryTriggerPassiveEvents('enter')
+    // 切换场景后按新环境协调属性驱动状态（寒冷/炎热等即时生效）
+    const envLogs = reconcileSceneEnvironment(state.player, target.temperatureModifier ?? 0)
+    if (envLogs.length > 0) state.sceneNarrationLines.push(...envLogs)
   }
   /**
    * 进入场景（handleSceneMove 与 handleInteraction 共用）
@@ -1991,17 +2000,28 @@ export function useGame(initialPlayer: PlayerState) {
   })
 
   // 注册属性变动监听：基础属性/经验变动时追加场景后缀提示；事件中同时缓冲给下一帧前缀
+  // 同时借机协调属性驱动状态（寒冷/炎热/饥饿等）即时生效 —— 幂等，带重入保护（协调内部对 modifier 的改动会再次触发本监听）
+  let reconcileBusy = false
   disposeAttributeChangeListener?.()
   disposeAttributeChangeListener = onAttributeChanged((change) => {
-    const lines = formatAttributeChangeNotices(change)
-    if (lines.length === 0) return
-    // 场景后缀始终追加（事件回场景 / 场景中变动都能看到）
-    for (const line of lines) {
-      setSceneTextAfter(line)
-    }
-    // 事件中发生的变动，保留给下一帧前缀合并显示
-    if (state.mode === 'event') {
-      pendingNotices.push(...lines)
+    if (reconcileBusy) return
+    reconcileBusy = true
+    try {
+      const statusLogs = reconcileAttributeStatuses(state.player)
+      if (statusLogs.length > 0) state.sceneNarrationLines.push(...statusLogs)
+
+      const lines = formatAttributeChangeNotices(change)
+      if (lines.length === 0) return
+      // 场景后缀始终追加（事件回场景 / 场景中变动都能看到）
+      for (const line of lines) {
+        setSceneTextAfter(line)
+      }
+      // 事件中发生的变动，保留给下一帧前缀合并显示
+      if (state.mode === 'event') {
+        pendingNotices.push(...lines)
+      }
+    } finally {
+      reconcileBusy = false
     }
   })
 
@@ -2060,6 +2080,9 @@ export function useGame(initialPlayer: PlayerState) {
   function advanceGameTime(minutes: number): void {
     if (minutes <= 0) return
 
+    // 场景文本即将更新，清空上一批状态叙事文本，仅保留本次推进产生的新文本
+    state.sceneNarrationLines = []
+
     // 获取当前场景的温度影响值
     const target = state.currentSubScene || state.currentScene
     const sceneTempModifier = target.temperatureModifier
@@ -2067,8 +2090,13 @@ export function useGame(initialPlayer: PlayerState) {
     // 调用引擎推进时间
     const result = advanceTime(state.player, sceneTempModifier, minutes)
 
-    // 收集被动效果日志
+    // 收集被动效果/状态叙事日志（含状态类型着色标记），追加到场景主文本最前
     if (result.logs.length > 0) {
+      state.sceneNarrationLines.push(...result.logs)
+      // 防止无限累积，仅保留最近一段
+      if (state.sceneNarrationLines.length > 20) {
+        state.sceneNarrationLines = state.sceneNarrationLines.slice(-20)
+      }
     }
 
     // 天气变化时，重新选取场景描述（因为部分描述可能依赖天气条件）
@@ -2370,6 +2398,18 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 丢弃物品（卸载负重，协调超载等属性驱动状态）
+   */
+  function handleDiscardItem(itemId: string, quantity: number): void {
+    if (quantity <= 0) return
+    const removed = removeItem(state.player, itemId, quantity)
+    if (removed <= 0) return
+    // 负重变化后协调超载等属性驱动状态
+    const statusLogs = reconcileAttributeStatuses(state.player)
+    if (statusLogs.length > 0) state.sceneNarrationLines.push(...statusLogs)
+  }
+
+  /**
    * 执行制作配方（由 RecipePanel 调用）
    */
   function executeCraftRecipeMode(recipeId: string, quantity: number): CraftResult {
@@ -2652,6 +2692,7 @@ export function useGame(initialPlayer: PlayerState) {
     handleUseItem,
     handleEquipItem,
     handleUnequipItem,
+    handleDiscardItem,
     attackCharacter,
     startCharacterDialog,
     openCharacterTrade,

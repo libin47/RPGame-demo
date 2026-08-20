@@ -97,6 +97,11 @@ class GameRegistryManager {
     return this.registry.statuses.statuses[id]
   }
 
+  /** 获取所有异常状态配置 */
+  getAllStatuses(): Record<string, StatusConfig> {
+    return this.registry.statuses.statuses
+  }
+
   // ============================================================
   // 敌人
   // ============================================================

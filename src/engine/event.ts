@@ -87,6 +87,7 @@ function resolveConditionTarget(
       if (attrType === 'stamina') return player.survival.stamina
       if (attrType === 'san') return player.survival.san
       if (attrType === 'carryWeight') return player.survival.carryWeight
+      if (attrType === 'warmth') return player.survival.warmthLevel
 
       // 基础属性
       if (attrType === 'strength')

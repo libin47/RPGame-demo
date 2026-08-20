@@ -34,6 +34,7 @@ import {
 } from './dice'
 import { getEffectResolver } from './effect'
 import { applyStatus, updateStatusTurns, removeBattleEndStatuses } from './status'
+import { StatusAffectedAttribute } from '@/types/status'
 import { addItem, unequipSlot, recalculateCarryWeight } from './inventory'
 
 // ============================================================
@@ -736,7 +737,7 @@ function applyEnemyStatuses(
 
     const existing = enemy.statuses.find((s) => s.statusId === se.statusId)
     if (existing) {
-      existing.stacks = Math.min(existing.stacks + 1, statusConfig.defaultDuration.maxValue ?? 5)
+      existing.stacks = Math.min(existing.stacks + 1, 5)
       existing.remainingTurns = enemyStatusDurationTurns(se.durationMinutes)
       battle.logs.push(
         `${enemy.config.name} 的${statusConfig.name}层数+1（当前 ${existing.stacks} 层）`,
@@ -785,36 +786,35 @@ function tickEnemyStatuses(battle: BattleState, enemy: BattleEnemy, logs: string
 
     status.turnsActive += 1
 
-    // 触发周期到期的效果
-    for (const effectConfig of statusConfig.effects) {
-      if (
-        status.turnsActive < effectConfig.interval ||
-        status.turnsActive % effectConfig.interval !== 0
-      ) {
-        continue
-      }
-      if (!chance(effectConfig.triggerChance)) continue
-
-      const stackMultiplier = effectConfig.scalesWithStacks ? status.stacks : 1
-      let totalValue = 0
-      for (const change of effectConfig.attributeChanges) {
-        const value = change.value * stackMultiplier
-        if (change.attribute === 'hp') {
-          enemy.hp = Math.max(0, enemy.hp + value)
-          totalValue += value
-        } else if (change.attribute === 'strength') {
-          enemy.strength = Math.max(0, enemy.strength + value)
-        } else if (change.attribute === 'agility') {
-          enemy.agility = Math.max(0, enemy.agility + value)
+    // 触发周期到期的战斗效果（单效果配置，战斗内按回合结算）
+    const effectConfig = statusConfig.battleEffects
+    if (
+      effectConfig &&
+      status.turnsActive >= effectConfig.interval &&
+      status.turnsActive % effectConfig.interval === 0
+    ) {
+      if ((effectConfig.triggerChance ?? 1) <= 0 || !chance(effectConfig.triggerChance ?? 1)) {
+        // 未触发
+      } else {
+        const stackMultiplier = effectConfig.scalesWithStacks ? status.stacks : 1
+        let totalValue = 0
+        for (const change of effectConfig.attributeChanges) {
+          if (change.attribute !== StatusAffectedAttribute.HP) continue
+          const delta =
+            change.operation === 'percentMax'
+              ? -(change.value / 100) * enemy.maxHp
+              : change.value * (change.operation === 'add' ? stackMultiplier : 1)
+          enemy.hp = Math.max(0, enemy.hp + delta)
+          totalValue += delta
         }
-      }
 
-      if (totalValue < 0) {
-        logs.push(
-          `${LOG_ROLE_ENEMY}${enemy.config.name} 因${statusConfig.name}损失了 ${Math.abs(Math.round(totalValue))} 点生命值`,
-        )
-      } else if (effectConfig.triggerText) {
-        logs.push(`${LOG_ROLE_ENEMY}${enemy.config.name} 的${statusConfig.name}效果发作了`)
+        if (totalValue < 0) {
+          logs.push(
+            `${LOG_ROLE_ENEMY}${enemy.config.name} 因${statusConfig.name}损失了 ${Math.abs(Math.round(totalValue))} 点生命值`,
+          )
+        } else if (effectConfig.triggerText) {
+          logs.push(`${LOG_ROLE_ENEMY}${enemy.config.name} 的${statusConfig.name}效果发作了`)
+        }
       }
     }
 

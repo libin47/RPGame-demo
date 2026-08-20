@@ -16,14 +16,14 @@ const 大螃蟹: Enemy = {
   description: '一只体型巨大的螃蟹，甲壳上长满了不规则的尖刺，螯钳异常发达',
   imageId: 'enemy_mutated_crab',
   enemyType: EnemyType.MUTATED,
-  hp: 40,
-  strength: 60,
-  agility: 30,
+  hp: 10,
+  strength: 20,
+  agility: 10,
   // 减免比例（0~1，1=完全免疫）；键为伤害类型ID
   defenses: {
-    slash: 0.4,
-    blunt: 0.2,
-    ranged: 0.1,
+    slash: 0,
+    blunt: 0,
+    ranged: 0,
     poison: 0,
     fire: 0,
   },
@@ -132,7 +132,7 @@ const 变异猴王: Enemy = {
   description: '一只体型巨大的猴王，体色异常，有不规则的尖刺，爪钳异常发达',
   imageId: 'enemy_mutated_monkey_king',
   enemyType: EnemyType.MUTATED,
-  hp: 200,
+  hp: 50,
   strength: 75,
   agility: 30,
   // 减免比例（0~1，1=完全免疫）；键为伤害类型ID
@@ -242,123 +242,9 @@ const 变异猴王: Enemy = {
   maxCorruption: 80,
 }
 
-const dreamStalker: Enemy = {
-  id: 'dream_stalker',
-  name: '梦魇潜行者',
-  nameVariations: [
-    {
-      name: '梦魇潜行者',
-      condition: {
-        target: { type: ConditionTargetType.SAN_LEVEL },
-        operator: ComparisonOperator.LESS_EQUAL,
-        value: 60,
-      },
-    },
-    {
-      name: '扭曲的暗影',
-      condition: {
-        target: { type: ConditionTargetType.SAN_LEVEL },
-        operator: ComparisonOperator.LESS_EQUAL,
-        value: 20,
-      },
-    },
-  ],
-  description: '一个模糊的人形轮廓，似乎在现实与梦境的夹缝中不断闪烁',
-  imageId: 'enemy_dream_stalker',
-  enemyType: EnemyType.DREAM_CREATURE,
-  hp: 25,
-  strength: 50,
-  agility: 70,
-  // 减免比例（0~1，1=完全免疫）；键为伤害类型ID
-  defenses: {
-    slash: 0.1,
-    blunt: 0,
-    ranged: 0.2,
-    poison: 0.5,
-    fire: 0,
-  },
-  skills: [
-    {
-      id: 'shadow_claw',
-      name: '暗影之爪',
-      description: '用无形的利爪撕裂现实',
-      priority: 1,
-      weight: 60,
-      damageTypeId: 'slash',
-      stats: {
-        baseDamage: '1d8+4',
-        scalingAttribute: 'agility',
-        accuracyModifier: 5,
-        criticalModifier: 10,
-        narrativeTexts: {
-          hit: ['暗影中伸出一只利爪，向你抓来，造成{damage}点伤害'],
-          miss: ['利爪从你身边掠过，抓了个空'],
-          critHit: ['暗影利爪狠狠撕开你的身体，造成{damage}点暴击伤害！'],
-          critMiss: ['你堪堪避开了暗影中致命的利爪！'],
-        },
-      },
-    },
-    {
-      id: 'madness_whisper',
-      name: '疯狂低语',
-      description: '发出令人疯狂的低语',
-      priority: 2,
-      weight: 40,
-      damageTypeId: 'slash',
-      useCondition: {
-        hpAboveRatio: 0.3,
-      },
-      maxUses: 2,
-      stats: {
-        baseDamage: '1d1',
-        scalingAttribute: 'strength',
-        accuracyModifier: 100,
-        criticalModifier: 0,
-        onHitEffects: [
-          {
-            effect: {
-              type: EffectType.ATTRIBUTE,
-              attribute: AttributeType.SAN,
-              operation: AttributeOperation.SUBTRACT,
-              value: 10,
-            },
-            probability: 1.0,
-            description: '损失10点SAN值',
-          },
-        ],
-        narrativeTexts: {
-          hit: ['梦魇潜行者发出令人头皮发麻的低语，你的理智在动摇'],
-          miss: ['低语声在你脑中回响，但你没有受到影响'],
-          critHit: ['疯狂的呓语灌入你的脑海，你的理智受到重创！'],
-          critMiss: ['低语触及你的意识边缘，被你强行驱散！'],
-        },
-      },
-      cooldown: 4,
-    },
-  ],
-  behavior: {
-    aggression: 0.8,
-  },
-  escapeDifficultyModifier: 1.5,
-  canNotEscape: false,
-  loot: [],
-  spawnCondition: {
-    logic: LogicOperator.AND,
-    subConditions: [
-      {
-        target: { type: ConditionTargetType.SAN_LEVEL },
-        operator: ComparisonOperator.LESS_EQUAL,
-        value: 60,
-      },
-    ],
-  },
-  spawnWeight: 20,
-}
-
 export const enemyRegistry: EnemyRegistry = {
   enemies: {
     大螃蟹: 大螃蟹,
     变异猴王: 变异猴王,
-    dream_stalker: dreamStalker,
   },
 }

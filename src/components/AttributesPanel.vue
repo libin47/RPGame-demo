@@ -96,6 +96,41 @@
         </div>
       </section>
 
+      <!-- ═══════ 当前状态 ═══════ -->
+      <section class="attr-section">
+        <h3 class="section-title">当前状态</h3>
+        <template v-if="activeStatuses.length > 0">
+          <div class="status-list">
+            <button
+              v-for="st in activeStatuses"
+              :key="st.statusId"
+              type="button"
+              class="status-chip"
+              :class="`st-${st.statusType}`"
+              @click="toggleStatusDetail(st.statusId)"
+            >
+              {{ st.name }}<template v-if="st.stackCount > 1"> ×{{ st.stackCount }}</template>
+            </button>
+          </div>
+          <div v-if="selectedStatusDetail" class="status-detail">
+            <div class="status-detail-name" :class="`st-${selectedStatusDetail.statusType}`">
+              {{ selectedStatusDetail.name }}
+              <template v-if="selectedStatusDetail.stackCount > 1"
+                >（{{ selectedStatusDetail.stackCount }} 层）</template
+              >
+            </div>
+            <div v-if="selectedStatusDetail.tooltip" class="status-detail-tooltip">
+              {{ selectedStatusDetail.tooltip }}
+            </div>
+            <div v-if="!selectedStatusDetail.isPermanent" class="status-detail-time">
+              剩余时间：{{ formatRemaining(selectedStatusDetail.remainingMinutes) }}
+            </div>
+            <div v-else class="status-detail-time">持续状态</div>
+          </div>
+        </template>
+        <div v-else class="sub-empty">当前没有状态</div>
+      </section>
+
       <!-- ═══════ 防御属性 ═══════ -->
       <section class="attr-section">
         <h3 class="section-title">防御</h3>
@@ -178,9 +213,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { ref } from 'vue'
 import type { PlayerState } from '@/types/player'
 import type { DamageTypeId } from '@/types/damage'
-import { getRegistry, calcPlayerTotalDefense } from '@/engine'
+import { getRegistry, calcPlayerTotalDefense, getActiveStatusDetails } from '@/engine'
 
 const props = defineProps<{
   playerState: PlayerState
@@ -267,6 +303,37 @@ const warmthClass = computed<string>(() => {
   if (lv === 'hot' || lv === 'scorching') return 'warmth-hot'
   return ''
 })
+
+// ── 当前状态 ──
+
+/** 当前激活状态（含名称/类型/叠层/剩余时间），用于状态列表展示 */
+const activeStatuses = computed(() => getActiveStatusDetails(props.playerState))
+
+/** 当前点击查看详情的状态 */
+const selectedStatusId = ref<string | null>(null)
+
+const selectedStatusDetail = computed(() =>
+  selectedStatusId.value
+    ? (activeStatuses.value.find((s) => s.statusId === selectedStatusId.value) ?? null)
+    : null,
+)
+
+function toggleStatusDetail(statusId: string): void {
+  selectedStatusId.value = selectedStatusId.value === statusId ? null : statusId
+}
+
+/** 剩余时间（分钟）格式化为可读文本 */
+function formatRemaining(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes < 0) return '未知'
+  const m = Math.round(minutes)
+  if (m < 60) return `${m} 分钟`
+  const h = Math.floor(m / 60)
+  const rem = m % 60
+  if (h < 24) return rem > 0 ? `${h} 小时 ${rem} 分钟` : `${h} 小时`
+  const d = Math.floor(h / 24)
+  const remH = h % 24
+  return remH > 0 ? `${d} 天 ${remH} 小时` : `${d} 天`
+}
 </script>
 
 <style scoped>
@@ -477,5 +544,85 @@ const warmthClass = computed<string>(() => {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+/* ═══════════════════════════════════════════
+   当前状态列表
+   ═══════════════════════════════════════════ */
+.status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.status-chip {
+  appearance: none;
+  border: 1px solid var(--border-mid);
+  background: var(--card-bg);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.status-chip:hover {
+  background: var(--card-hover);
+}
+.st-buff {
+  color: var(--rc-suf);
+  border-color: color-mix(in srgb, var(--rc-suf) 45%, transparent);
+}
+.st-debuff {
+  color: var(--rc-crit);
+  border-color: color-mix(in srgb, var(--rc-crit) 45%, transparent);
+}
+.st-neutral {
+  color: var(--ink-weak);
+}
+.st-special {
+  color: var(--madness);
+  border-color: color-mix(in srgb, var(--madness) 45%, transparent);
+}
+.sub-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 6px 0;
+}
+.status-detail {
+  background: var(--card-bg);
+  border: 1px solid var(--border-weak);
+  border-radius: 8px;
+  padding: 12px;
+}
+.status-detail-name {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.status-detail-tooltip {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+.status-detail-time {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.status-detail-close {
+  border: 1px solid var(--border-mid);
+  background: var(--btn-bg);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.status-detail-close:hover {
+  background: var(--card-hover);
+  color: var(--text-primary);
 }
 </style>

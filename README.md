@@ -49,11 +49,9 @@
 3、损失
 
 - 战斗中受到敌人攻击，损失生命值，具体公式参见[战斗机制](#战斗机制)。
-- 饱食度、口渴度为0、温暖度不在适宜范围内时，玩家会随时间损失生命值，以分钟为单位计算。不同的相互叠加。
-  - 饥饿状态，生命值每小时损失量 = 5% \* 最大生命值。
-  - 温暖度不在适宜范围内时：
-    - 处于寒冷、炎热环境，生命值每小时损失量 = 5% \* 最大生命值。
-    - 处于极寒、酷热环境，生命值每小时损失量 = 15% \* 最大生命值。
+- 饱食度为0、温暖度不在适宜范围内时，玩家会以周期损失生命值，不同来源相互叠加（以状态实现，见[异常状态](#异常状态)）。
+  - 饥饿（饱食度为0）：HP 每小时损失 5% × 最大生命值。
+  - 寒冷/炎热：经对应状态每个周期（10 分钟）HP -1，可经体质检定豁免。
 - 受异常状态影响，玩家会随时间损失生命值，具体公式参见[异常状态](#异常状态)。
 - 受事件影响，参见[事件](#事件)。
 
@@ -148,8 +146,7 @@ SAN值越高，主角眼中的世界就越真实（越接近正常人类的世�
 - 与部分敌人战斗，理智值随回合损失。具体损失值参见敌人。
 - 异常状态影响。
 - 温暖度、饱食度影响。
-  - 温暖度不在适宜范围内时，玩家会随时间损失SAN，每小时损失量=1，按小时计。
-  - 饱食度为0时，玩家会随时间损失SAN，每小时损失量=1，按小时计。
+  - 饥饿（饱食度为0）时，玩家会随时间损失 SAN，每小时损失量 = 1（经饥饿状态实现）。
 
 4、设定
 按照SAN值的高低，分为5个档位，具体影响按具体机制中描述进行。
@@ -393,69 +390,67 @@ SAN值越高，主角眼中的世界就越真实（越接近正常人类的世�
 
 ### (异常)状态
 
-状态指玩家当前处于的额外状态，状态可以由事件、食物、道具、交互及属性的变化获得，持续时间在获得状态时确定，由属性变化获得的状态，在属性恢复后自动取消。（即每次交互、回合刷新一次）
+状态指玩家当前处于的额外状态，由事件、食物、道具、交互及属性的变化获得。
+状态的实例化是运行时数据（ActiveStatus），状态格式与规则由配置模板 `StatusConfig` 统一定义。
 
-#### 属性变动引发的常驻状态
+#### 状态配置（StatusConfig）
 
-1、饥饿
-饱食度归零时，玩家处于饥饿状态。
+- name / statusType：buff（绿）、debuff（红）、neutral（灰）、special（紫）
+- defaultDuration：默认持续分钟数，-1 表示永久；战斗中一回合 = 1 分钟
+- stackingRule：叠加规则，包括 NONE（不可叠加）、REFRESH（刷新时间）、STACK_INDEPENDENT（独立叠加）、STACK_REFRESH（叠层并刷新时间）、STACK_NO_REFRESH（仅叠层）
+- removeOnRest / removeOnBattleEnd：休息或战斗结束时是否移除
+- 效果四类：
+  - modifier：ModifierConfig，施加即生效、随状态移除而撤销的持续属性修正
+  - effects：非战斗周期效果（分钟为周期）
+  - battleEffects：战斗周期效果（回合为周期）
+  - onApplyEffects / onRemoveEffects：施加/移除时立即执行一次的 EffectResult[]
 
-- 生命值每小时损失量 = 5% \* 最大生命值，按分钟计。
-- SAN值每小时损失量 = 1，按分钟计。
-- 体力恢复系数 - 0.5
+#### ModifierConfig（属性修正）
 
-2、寒冷、炎热、严寒、酷热
-玩家当前温暖度处于寒冷、炎热、严寒、酷热时，玩家处于对应状态。
-其中寒冷、炎热：
+对玩家属性的加减修正，随状态施加/撤销而写入/回滚：
 
-- 生命值每小时损失量 = 5% \* 最大生命值，按分钟计。
-- SAN值每小时损失量 = 1，按分钟计。
-- 体力恢复系数 - 0.2
+- 力量 / 敏捷 / 智力 / 体质 / 幸运 临时修正
+- 负重修正（kg）
+- 防御修正（按伤害类型为键，正 = 提高、负 = 降低）
+- 系数修正（加法型增量）：生命恢复速率、饱食度损失、体力消耗、体力恢复、体力恢复修正、SAN修正指数、SAN恢复
+- 适宜温度低值 / 高值修正
 
-其中严寒、酷热：
+#### 周期效果（StatusEffectConfig）
 
-- 生命值每小时损失量 = 10% \* 最大生命值，按分钟计。
-- SAN值每小时损失量 = 1，按分钟计。
-- 体力恢复系数 - 0.5
+- interval：非战斗中为分钟、战斗中为回合
+- attributeChanges：仅支持生存四项（HP / 饱食度 / 体力 / SAN），operation 支持 add / set / multiply / percentMax（按最大值的百分比扣除）
+- triggerText 支持 {value} 通配符，填充实际变动值
+- 触发判定：triggerChance（概率）与 triggerRollAtt（按属性 d100 检定豁免，难度普通/困难/极难 = 属性/1、/2、/4）最多一个，同时出现时优先 triggerChance
+- scalesWithStacks：周期效果是否随叠层数放大
+- conditions：该效果的触发条件
 
-3、负重
-根据玩家负重率获得不同状态：
-轻盈（<20%）:
+#### 属性驱动状态（AttStatusConfig）
 
-- 体力恢复系数 + 0.3
-  超重（>80%）:
-- 体力恢复系数 - 0.1
-  超载（>10%）:
-- 体力恢复系数 - 0.3
-- 体力消耗系数 + 0.5
+带 conditions 的状态由属性条件驱动：玩家属性变动、每次操作、进入新场景时，引擎都会协调全部属性驱动状态——满足条件则施加、条件不再满足则移除。用于饥饿、寒冷、炎热等由属性/环境引发的常驻状态。
 
-#### 其他临时状态
+#### 描述文本（description）
 
-临时状态在施加给角色时确定持续时间/回合，在持续时间/回合结束后自动消失。
-使用特定道具、食物可消除对应的临时状态，数值和效果在施加时确定。
-临时状态所可能影响的属性包括：
+各类文本均为列表，使用时随机抽取一条：
 
-- 生命值恢复速率系数
-- 生命值每小时损失/恢复（按分钟计算）
-- 生命值每回合损失/恢复
-- 饱食度上限系数
-- 饱食度自然损失系数
-- 体力消耗系数
-- 体力恢复系数
-- 体力恢复修正
-- SAN修正指数
-- SAN每小时变动
-- SAN每回合变动
-- 适宜温度（低温适宜、高温适宜分别）修正值
-- 负重修正
-- 力量修正
-- 敏捷修正
-- 智力修正
+- tooltip：属性面板中点击状态时显示的详情
+- start / end：获得 / 结束状态时显示的文本
+- triggerText：周期效果触发时显示，支持 {value}
+- summary：非战斗中一次操作跨越多个触发周期时，取代多条 triggerText
+- normalText：场景/战斗界面刷新但未到触发周期时显示的文本
 
-#### 其他常驻状态
+以上文本按 statusType 着色，显示在场景主文本最前（战斗则在战斗主文本最前）。
 
-常驻状态没有持续时间，只要条件满足就一直生效。
-所能影响的属性与临时状态相同，数值和效果在施加时确认。
+#### 当前已配置状态
+
+| 状态     | 类型   | 来源条件      | 周期效果（effects / battleEffects）           | modifier          |
+| :------- | :----- | :------------ | :-------------------------------------------- | :---------------- |
+| 寒冷     | debuff | 温暖度 = 寒冷 | 每 10 分钟 HP -1（体质普通检定豁免）          | —                 |
+| 炎热     | debuff | 温暖度 = 炎热 | 每 10 分钟 HP -1（体质普通检定豁免）          | —                 |
+| 饥饿     | debuff | 饱食度 <= 0   | 每 60 分钟 HP = 5% × 最大HP、SAN -1           | —                 |
+| 流血     | debuff | 事件/战斗施加 | 战斗每回合 HP = 3% × 最大HP                   | —                 |
+| 中毒     | debuff | 事件/战斗施加 | 每 20 分钟 HP -5；战斗每回合 HP = 5% × 最大HP | 体力恢复系数 -0.3 |
+| 力量增强 | buff   | 事件/道具施加 | —                                             | 力量 +5           |
+| 恐惧     | debuff | 事件施加      | —                                             | 力量 -5、敏捷 -5  |
 
 ## 世界机制
 
@@ -833,39 +828,55 @@ SCP基金会在十年前首次发现岛屿的异常，并开始收容与研究�
 16、CG √
 17、角色（玩家可选角色职业） √
 
-## 战斗修正
+## 战斗修正（已按以下规则实现）
 
-现在完善优化一下战斗系统的逻辑，你可以先看一下现在武器数据类型的定义types/item.ts。武器的数据结构仅调整WeaponStats：
-1、取消伤害浮动、命中修正、暴击率修正、暴击倍率。
-2、将baseDamage改为string类型，存储骰子表达式，例如"1d6"、"2d4+3"等，string中的运算仅限于加减和d。
+以下战斗判定与伤害规则均已实装于 engine/combat.ts、engine/formula.ts 及战斗面板中。
 
-调整战斗技能的结构和使用方式，请先看types/skill.ts，注意普攻也是一种技能。
-1、取消技能等级。
-2、战斗技能数值BattleSkillStats进行简化，只需包括：伤害倍率、额外固定伤害、加成属性（力量、敏捷、智力、体质）、命中修正、暴击修正、释放次数。所有值均为可选，默认伤害倍率1、额外固定伤害0、加成属性为力量、命中修正0、暴击修正0、释放次数1。（暴击和命中修正可为负数。）
-3、将施加的效果、暴击时的额外效果也放在BattleSkillStats中。
-4、完善描述文本，将使用、未命中的文本合并到narrativeTexts中，包括hit、miss、critHit、critMiss四类文本，数据类型都是string[]，使用时随机抽取。
-5、isDefaultAttack好像也没用，删除了吧。
-6、targetType改为可选，没填则默认为敌人。
-7、cooldown改为可选，没填则默认为0。
+### 武器伤害骰子
 
-修改敌人技能数值，参见types/enemy.ts中的EnemySkillStats。
-主要包括：
-1、文本描述，采用和战斗技能类似的结构描述，同时注意敌人技能比人物多了蓄力类的技能。
-2、技能数值EnemySkillStats修改：baseDamage改为string类型，存储骰子表达式；其他仅保留命中修正、暴击修正、增加加成属性、释放次数。同样将命中施加的效果也放在EnemySkillStats中。注意也均为可选。
-3、将一些字段改为可选：maxUses，默认-1，表示无限次使用。priority，默认0。weight，默认1。cooldown，默认0.targetType，默认敌人（即玩家，考虑到只有玩家，所以EnemySkillTargetType可以简化为玩家、敌人自身、全体敌人）。chargeTime，默认0。
+- 武器 / 技能 / 敌人技能的基础伤害（baseDamage）为 string 骰子表达式（如 "1d6"、"2d4+3"），仅支持加减与 d 运算。
+- 未装备武器时使用徒手默认骰子。
 
-修改战斗的逻辑，见components/BattlePanel.vue、engine/combat.ts、useGame.ts。其他逻辑例如技能的可见条件、逃跑、使用物品、敌人AI等都保持不变。我们主要修改伤害计算和显示的部分。
-修改技能伤害和闪避的判定：
-使用技能时投掷d100。
-1、最优先：如果小于等于（5+技能的暴击修正），表示暴击，抽取暴击命中中文本显示。暴击伤害计算为，武器伤害骰子表达式取最大值*技能伤害倍率+额外固定伤害+（加成属性-50）/5。暴击伤害无视敌人50%防御。敌人收到伤害=伤害*（1-敌人该属性防御/2）+伤害*敌人该属性防御/2*该属性伤害的无视防御系数。
-2、然后：如果大于（100-敌人敏捷/2+技能的命中修正），表示未命中，抽取未命中文本显示。
-3、最后：如果小于等于（100-敌人敏捷/2+技能的命中修正），表示普通命中，抽取命中中文本显示。伤害计算为：武器伤害骰子表达式投掷结果*技能伤害倍率+额外固定伤害+（加成属性-50）/5。敌人收到实际伤害=伤害*（1-敌人该属性防御）+伤害*敌人该属性防御*该属性伤害的无视防御系数。
-4、其中（加成属性-50）/5向下取整，允许负数。
-5、其中属性伤害的无视防御系数参见type/damage.ts中的DamageType中的defensePenetration。
-6、如果技能中的释放次数大于1，则依次进行以上判定。
-7、判定的过程和结果显示在抽取的命中/暴击/未命中中文本之前。
-8、计算的最终造成伤害向下取整，允许为负数即回复血量。
-9、使用物品且使用武器进行投掷时，也进行d100的投掷，但闪避计算不考虑命中修正即100-敌人敏捷/2，暴击不考虑暴击修正，固定小于等于5。伤害计算不考虑属性加成，伤害=武器基础伤害表达式投掷结果\*投掷伤害倍率。如果暴击时不进行投掷而是取最大值。
+### 战斗技能数据结构（BattleSkillStats，见 types/skill.ts）
+
+- 数值字段均可选：damageMultiplier 伤害倍率（默认 1）、bonusDamage 额外固定伤害（默认 0）、scalingAttribute 加成属性（力量/敏捷/智力/体质，默认力量）、accuracyModifier 命中修正（默认 0，可为负）、criticalModifier 暴击修正（默认 0，可为负）、hitCount 释放次数（默认 1）。
+- 命中/暴击施加的效果 onHitEffects / onCritEffects 放入 BattleSkillStats。
+- 描述文本 narrativeTexts：hit / miss / critHit / critMiss 四类，均为 string[]，使用时随机抽取，支持 {damage}、{weapon}、{target}、{name} 占位符。
+- targetType 可选，缺省为单个敌人；cooldown 可选，缺省 0。
+
+### 敌人技能数据结构（EnemySkillStats，见 types/enemy.ts）
+
+- baseDamage 为骰子表达式；保留命中修正、暴击修正；新增加成属性（敌人仅力量/敏捷，缺省力量）、命中施加效果、释放次数。
+- 可选字段默认值：maxUses=-1（无限次）、priority=0、weight=1、cooldown=0、targetType=玩家、chargeTime=0（0 表示立即生效）。
+- 敌人技能支持蓄力（chargeTime>0），蓄力提示文本 chargeText。
+
+### d100 判定与伤害计算
+
+攻击时投掷 d100（熟练度满级时拥有奖励骰：取两次投掷的最小值）：
+
+- 暴击阈值 = 5 + 技能暴击修正；未命中阈值 = 100 - 敌人敏捷/2 + 技能命中修正。（阈值截取到 [1,100]；暴击修正使阈值 <1 视为无法暴击。）
+- 若投掷 ≤ 暴击阈值：同时 ≤ 未命中阈值 → 暴击命中（critHit），否则 → 暴击落空（critMiss）。
+- 否则若投掷 > 未命中阈值 → 未命中（miss）；否则 → 普通命中（hit）。
+
+伤害计算：
+
+- 加成属性修正 = floor((加成属性当前值[含临时修正] - 50) / 5)，允许负数。
+- 普通命中：原始伤害 = 骰子投掷结果 × 伤害倍率 + 额外固定伤害 + 加成属性修正。
+- 暴击命中：骰子取表达式最大值，且伤害无视敌人 50% 防御（攻击时传入减半后的防御比例）。
+- 最终伤害 = floor( 原始伤害 × (1 - 有效防御比例) + 原始伤害 × 有效防御比例 × 伤害类型无视防御系数 )，允许为负数（即回复血量）。
+- 无视防御系数见 types/damage.ts 的 DamageType.defensePenetration（1=完全无视防御，如真实伤害）。
+
+释放次数 > 1 时依次进行上述判定；判定过程与结果显示在抽取的命中/暴击/未命中描述文本之前，伤害数值以 ⟦数值⟧ 标记并在行尾编码计算详情（点击可弹出伤害计算过程）。
+
+### 防御与防具耐久
+
+- 玩家总防御 = 基础/状态防御（attributes.defenses）+ 已装备且未破损防具 defenseStats 之和。
+- 被减免的吸收量 = 原始伤害 × 防御比例 × (1 - 无视防御系数)；按各防具占比（吸收量 × 该件比例/总比例 × 耐久系数）扣除耐久，耐久归零自动卸除并失去防护。
+
+### 物品投掷
+
+- 使用携带的投掷武器时同样 d100 判定：未命中阈值 = 100 - 敌人敏捷/2（不含命中修正）；暴击阈值为固定 5（不含暴击修正）。
+- 暴击时骰子取表达式最大值、且不计算属性加成；伤害 = 武器基础伤害骰子投掷结果 × 投掷伤害倍率。
 
 ## TODO
 
@@ -893,8 +904,8 @@ SCP基金会在十年前首次发现岛屿的异常，并开始收容与研究�
 
 - 显示效果
   - 属性变动 场景/事件 √
-  - 经验变动
-  - 状态效果
+  - 经验变动 √
+- 状态效果 √
 
 - 属性成长
   - 判定经验成长 √
@@ -907,171 +918,4 @@ SCP基金会在十年前首次发现岛屿的异常，并开始收容与研究�
 力量： 负重上限 体力消耗 √
 敏捷： 战斗顺序 闪避概率 移动时间 √
 智力： SAN回复 √ SAN豁免
-体质： HP上限 体力回复 √ 状态豁免
-
-# qos
-
-## IP地址配置
-
-<!-- ip地址配置 -->
-
-set interfaces ethernet eth1 address 100.0.0.102/24
-set interfaces ethernet eth2 address 100.0.0.103/24
-set interfaces loopback lo address 1.1.1.1/32
-
-<!-- 主机ip -->
-
-ip addr add 10.0.0.104/24 dev ens4
-
-<!-- 下一跳 -->
-
-ip route add 10.0.1.0/24 via 10.0.0.1 dev ens4
-
-## ebgp配置
-
-set protocols bgp system-as 65000
-set protocols bgp parameters router-id 1.1.1.1
-set protocols bgp neighbor 10.0.0.1 remote-as 65001
-set protocols bgp neighbor 10.0.0.1 address-family ipv4-unicast
-
-run show bgp summary
-[leaf]
-
-<!-- 声明发布网段 -->
-
-set protocols bgp address-family ipv4-unicast network 10.0.0.0/24
-
-run show ip route bgp
-
-## Qos
-
-set qos policy shaper BBB bandwidth '100mbit'
-
-set qos policy shaper BBB class 10 bandwidth '50mbit'
-set qos policy shaper BBB class 10 ceiling '100mbit'
-set qos policy shaper BBB class 10 priority '1'
-set qos policy shaper BBB class 10 match ROCE ip dscp AF31
-set qos policy shaper BBB class 10 queue-type fq-codel
-
-set qos policy shaper BBB class 20 bandwidth 40mbit
-set qos policy shaper BBB class 20 ceiling 100mbit
-set qos policy shaper BBB class 20 priority 3
-set qos policy shaper BBB class 20 match STORAGE ip desp AF21
-set qos policy shaper BBB class 20 queue-type fq-codel
-
-set qos policy shaper BBB default bandwidth 10mbit
-set qos policy shaper BBB default ceiling 100mbit
-set qos policy shaper BBB default priority 7
-set qos policy shaper BBB default queue-type fq-codel
-
-set qos interface eth2 egress BBB
-
-## 打压测试
-
-iperf3 -s -p 5201
-iperf3 -c 10.0.0.104 -p 5201 -u -b 100M -S 72 -t 300
-
-# 改名
-
-set system host-name spine2
-commit
-exit
-
-# 配置接口
-
-<!-- 描述、回环地址、使能ipv6、使能RA服务 -->
-
-set interfaces ethernet eth1 description 'To leaf1'
-set interfaces ethernet eth2 description 'To leaf2'
-set interfaces ethernet eth3 description 'To leaf3'
-set interfaces loopback lo address 100.0.0.102/32
-set interfaces ethernet eth1 ipv6
-set interfaces ethernet eth2 ipv6
-set interfaces ethernet eth3 ipv6
-set service router-advert interface eth1
-set service router-advert interface eth2
-set service router-advert interface eth3
-commit
-
-set interfaces ethernet eth1 description 'To spine1'
-set interfaces ethernet eth2 description 'To spine2'
-set interfaces ethernet eth3 description 'To host3'
-set interfaces loopback lo address 10.0.0.3/32
-set interfaces ethernet eth1 ipv6
-set interfaces ethernet eth2 ipv6
-set service router-advert interface eth1
-set service router-advert interface eth2
-commit
-
-# BGP配置
-
-<!-- 设置本地AS号、router-id、允许aspath相同形成ECMP -->
-
-set protocols bgp system-as 65000
-set protocols bgp parameters router-id 100.0.0.102
-set protocols bgp parameters bestpath as-path multipath-relax
-set protocols bgp peer-group leaf remote-as external
-set protocols bgp peer-group leaf capability extended-nexthop
-set protocols bgp peer-group leaf address-family ipv4-unicast
-set protocols bgp address-family ipv4-unicast redistribute connected
-set protocols bgp peer-group leaf address-family l2vpn-evpn
-set protocols bgp neighbor eth1 interface v6only peer-group leaf
-set protocols bgp neighbor eth2 interface v6only peer-group leaf
-set protocols bgp neighbor eth3 interface v6only peer-group leaf
-
-set protocols bgp system-as 65003
-set protocols bgp parameters router-id 10.0.0.3
-set protocols bgp peer-group spine remote-as external
-set protocols bgp peer-group spine capability dynamic
-set protocols bgp peer-group spine capability extended-nexthop
-set protocols bgp peer-group spine address-family ipv4-unicast
-set protocols bgp peer-group spine address-family l2vpn-evpn
-set protocols bgp address-family ipv4-unicast redistribute connected
-set protocols bgp neighbor eth1 interface v6only peer-group spine
-set protocols bgp neighbor eth2 interface v6only peer-group spine
-
-# Overlay EVPN-VXLAN配置
-
-重要：设置RT值
-set protocols bgp address-family l2vpn-evpn advertise-all-vni
-set interfaces vxlan vxlan100 parameters nolearning
-set interfaces vxlan vxlan100 port 4789
-set interfaces vxlan vxlan100 source-address 10.0.0.1
-set interfaces vxlan vxlan100 vni 100
-set interfaces bridge br100 description customer-blue
-set interfaces bridge br100 member interface eth3
-set interfaces bridge br100 member interface vxlan100
-
-# BFD
-
-set protocols bfd profile aaa interval receive 500
-set protocols bfd profile aaa interval transmit 500
-set protocols bfd profile aaa interval multiplier 3
-set protocols bgp peer-group leaf bfd profile aaa
-
-# 大模型
-
-# 测试
-
-命名1.1.1
-第一部分
-1、修改leaf1的RD为100:1， leaf2为200:1， L2evpnvni1100的RT为300：1
-2、bfd监测时间500ms，3个周期
-3、设置BGP协议联动BFD协议
-4、修改接口的MTU值为1300
-
-第二部分
-1、限制R1路由器，入口流量限制为25mbit，完整命令
-2、创建1个策略，流量总带宽100mbit，
-第一个类别class10，调度优先级3，固定带宽70mbit，峰值带宽100mbit，
-第二个类别class30，调度优先级7，固定带宽30mbit，峰值带宽100mbit，
-3、配置流量分类匹配规则，识别目的端口为5202的数据包进入队列10，识别DSCP值为AF21的数据包进行队列30
-4、设置队列10的长度为48、延时为100ms
-5、在host1和host2上测试带宽并使用tee命令保留结果（不截图）
-
-第三部分
-1、window下手写Dockerfile的WORKDIR、COPY两个部分的内容，直接和环境一样即可。
-2、设置宿主机和容器端口映射，宿主机端口8010
-3、设置模型加载权限为读写
-4、将检测的批量请求总次数、批量请求耗时分布、所有批量请求内包含的\*\*提示词总数，参数写入word
-5、将监控参数引入main函数变量中（不必截图）
+体质： HP上限 体力回复 √ 状态豁免 √

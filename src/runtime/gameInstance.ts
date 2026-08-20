@@ -38,6 +38,7 @@ export interface GameInstance {
     readonly frameTextSuffix: string
     readonly sceneTextPrefix: string
     readonly sceneTextAfter: string
+    readonly sceneNarrationLines: readonly string[]
     readonly eventEntryClicked: boolean
     readonly currentEnding: EndingConfig | null
     readonly endingReason: string
@@ -134,6 +135,8 @@ export interface GameInstance {
   equipItem: (instanceId: string) => void
   /** 卸下装备（按物品ID） */
   unequipItem: (itemId: string) => void
+  /** 丢弃物品（按物品ID与数量，卸载负重） */
+  discardItem: (itemId: string, quantity: number) => void
   /** 攻击人物（enemyConfig → 战斗，胜利/失败进入对应事件） */
   attackCharacter: (character: import('@/types/scene').CharacterInteraction) => void
   /** 与人物对话（进入第一个满足条件的对话事件） */
@@ -229,6 +232,7 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     useItem: game.handleUseItem,
     equipItem: game.handleEquipItem,
     unequipItem: game.handleUnequipItem,
+    discardItem: game.handleDiscardItem,
     attackCharacter: game.attackCharacter,
     startCharacterDialog: game.startCharacterDialog,
     openCharacterTrade: game.openCharacterTrade,
@@ -301,6 +305,7 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     useItem: game.handleUseItem,
     equipItem: game.handleEquipItem,
     unequipItem: game.handleUnequipItem,
+    discardItem: game.handleDiscardItem,
     attackCharacter: game.attackCharacter,
     startCharacterDialog: game.startCharacterDialog,
     openCharacterTrade: game.openCharacterTrade,

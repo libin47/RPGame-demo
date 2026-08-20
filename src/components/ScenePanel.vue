@@ -19,6 +19,10 @@
       <div class="vignette-overlay"></div>
       <div ref="narrativeRef" class="scene-narrative">
         <div class="content">
+          <!-- 状态叙事文本（置于场景主文本最前，多行以 \n 拼接进同一段落，样式与场景文本后缀一致） -->
+          <p v-if="parsedNarration.length > 0" class="scene-suffix narration-block">
+            <RichText :text="narrationRichText" />
+          </p>
           <!-- 场景文本前缀 -->
           <p v-if="props.sceneTextPrefix" class="scene-prefix">{{ props.sceneTextPrefix }}</p>
           <p class="scene-line">
@@ -249,6 +253,7 @@ import {
   getResolvedDescriptionText,
   calcMoveTime,
   calcStaminaCost,
+  markerToStatusType,
 } from '@/engine'
 import type { PlayerState } from '@/types/player'
 import { paramRegistry } from '@/config/params'
@@ -286,6 +291,8 @@ const props = defineProps<{
   campsiteMoveInfo?: CampsiteMoveInfo | null
   sceneTextPrefix: string
   sceneTextAfter: string
+  /** 状态叙事文本（含着色标记，渲染在场景主文本最前） */
+  sceneNarrationLines?: readonly string[]
   /** 时段主题：day（白天·浅色纸）/ dusk（黄昏黎明·暗纸）/ night（夜晚·深色纸） */
   theme?: 'day' | 'dusk' | 'night'
   /** 环境叠加：none / campsite（营地暖光）/ dungeon（地牢危险） */
@@ -509,6 +516,27 @@ const emit = defineEmits<{
 // 文本解析isEventClicked
 // ============================================================
 
+/** 状态类型 → RichText 颜色标记 */
+const NARR_COLOR: Record<string, string> = {
+  buff: 'green',
+  debuff: 'red',
+  neutral: 'neutral',
+  special: 'special',
+}
+
+/** 解析状态叙事文本（剥离开头着色标记，转为 RichText 着色串） */
+const parsedNarration = computed(() => {
+  return (props.sceneNarrationLines ?? []).map((line) => {
+    const marker = line[0] ?? ''
+    const text = line.length > 1 ? line.slice(1) : line
+    const color = NARR_COLOR[`${markerToStatusType(marker)}`] ?? 'neutral'
+    return `{{${color}}}${text}{{/${color}}}`
+  })
+})
+
+/** 状态叙事文本合并为单段（以 \n 分隔），通过 RichText 统一着色 */
+const narrationRichText = computed(() => parsedNarration.value.join('\n'))
+
 const parsedSegments = computed<TextSegment[]>(() => {
   const currentDescriptionConfig = props.descriptionConfig
   if (!currentDescriptionConfig) return []
@@ -720,6 +748,12 @@ function functionIcon(type: CampsiteFunction['interactionType']): string {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   white-space: pre-wrap;
   color: var(--text-primary);
+}
+
+/* 状态叙事文本复用 .scene-suffix 样式，颜色经 RichText 由状态类型决定，
+   buff→rich-green / debuff→rich-red / neutral→rich-neutral / special→rich-special */
+.scene-suffix.narration-block {
+  white-space: pre-wrap; /* 保留 \n 换行 */
 }
 
 .scene-prefix {

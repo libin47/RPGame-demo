@@ -4,7 +4,7 @@ export { initRegistry, getRegistry } from './registry'
 export { createNewPlayerState } from './player'
 export { getEffectResolver, onAttributeChanged, applySanDelta } from './effect'
 export type { AttributeChangeRecord, AttributeChangeKey, GrowthAttributeKey } from './effect'
-export { advanceTime, calculateTemperature } from './world'
+export { advanceTime, calculateTemperature, reconcileSceneEnvironment } from './world'
 export { findMapRoute, isMapNodeUnlocked } from './map'
 export type { MapRouteLeg } from './map'
 
@@ -74,12 +74,14 @@ export {
   removeStatus,
   hasStatus,
   getStatusStackCount,
+  reconcileAttributeStatuses,
   updateStatusTimers,
   updateStatusTurns,
-  triggerStatusEffects,
-  calculateStatusModifiers,
+  getActiveStatusDetails,
   removeBattleEndStatuses,
   removeRestStatuses,
+  STATUS_NARR_MARKER,
+  markerToStatusType,
 } from './status'
 
 // 战斗系统

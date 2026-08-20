@@ -6,6 +6,7 @@ import type { Scene, SubScene } from '@/types/scene'
 import type { Param, TimeVaryingRule } from '@/types/param'
 import { Season, SeasonPhase } from '@/types/seasonWeather'
 import { getRegistry } from './registry'
+import { reconcileAttributeStatuses, updateStatusTimers } from './status'
 
 // ============================================================
 // 游戏时间常量
@@ -34,17 +35,6 @@ const STAMINA_RECOVERY_HOURLY = 10
 const BASE_COMFORT_LOW = 10
 /** 适宜温度范围高值（无修正） */
 const BASE_COMFORT_HIGH = 25
-
-/** 寒冷/炎热时生命值损失比例（每小时） */
-const TEMP_DAMAGE_HOURLY = 0.05 // 5% maxHp
-/** 严寒/酷热时生命值损失比例（每小时） */
-const EXTREME_TEMP_DAMAGE_HOURLY = 0.1 // 10% maxHp
-/** 温度异常时SAN损失（每小时） */
-const TEMP_SAN_LOSS_HOURLY = 1
-/** 饥饿时生命值损失比例（每小时） */
-const STARVATION_HP_HOURLY = 0.05 // 5% maxHp
-/** 饥饿时SAN损失速率（每小时） */
-const STARVATION_SAN_HOURLY = 1
 
 // ============================================================
 // 辅助函数：根据索引获取枚举值
@@ -314,6 +304,9 @@ export function advanceTime(
 
   if (elapsedMinutes <= 0) {
     result.currentTemperature = calculateTemperature(player, sceneTempModifier)
+    // 即使无时间流逝也需协调状态（例如进入寒冷/炎热场景）
+    updateWarmthLevel(player, result.currentTemperature)
+    result.logs.push(...reconcileAttributeStatuses(player))
     return result
   }
 
@@ -361,9 +354,15 @@ export function advanceTime(
   // 5. 更新温暖度等级
   updateWarmthLevel(player, result.currentTemperature)
 
-  // 6. 执行被动效果
-  const passiveLogs = applyPassiveEffects(player, elapsedMinutes)
-  result.logs = passiveLogs
+  // 5.1 属性驱动状态协调（寒冷/炎热等）：依据环境温暖度自动施加/移除状态
+  //     取代原先硬编码在被动效果中的温度伤害逻辑
+  result.logs.push(...reconcileAttributeStatuses(player))
+
+  // 5.2 状态计时推进（非战斗周期效果触发 + 到期移除）
+  result.logs.push(...updateStatusTimers(player, elapsedMinutes))
+
+  // 6. 执行被动效果（饥饿等，温度伤害已交由状态系统处理）
+  result.logs.push(...applyPassiveEffects(player, elapsedMinutes))
 
   // 7. 执行时间变化标志位修正
   applyTimeVaryingParams(player, elapsedMinutes)
@@ -537,11 +536,27 @@ export function updateWarmthLevel(player: PlayerState, temperature: number): voi
     player.survival.warmthLevel = 'comfortable'
   } else if (temperature < comfortLow) {
     const diff = comfortLow - temperature
-    player.survival.warmthLevel = diff > 10 ? 'freezing' : 'cold'
+    player.survival.warmthLevel = diff > BASE_COMFORT_LOW ? 'freezing' : 'cold'
   } else {
     const diff = temperature - comfortHigh
-    player.survival.warmthLevel = diff > 10 ? 'scorching' : 'hot'
+    player.survival.warmthLevel = diff > BASE_COMFORT_LOW ? 'scorching' : 'hot'
   }
+}
+
+/**
+ * 按场景环境温度协调属性驱动状态（寒冷/炎热等）。
+ * 用于切换场景后，让新场景的环境立刻生效，
+ * 而不必等到下一次时间推进。重复协调是幂等的：仅当条件满足与否
+ * 发生变化时才施加/移除状态。
+ *
+ * @returns 状态施加/移除产生的叙事日志
+ */
+export function reconcileSceneEnvironment(
+  player: PlayerState,
+  sceneTempModifier: number,
+): string[] {
+  updateWarmthLevel(player, calculateTemperature(player, sceneTempModifier))
+  return reconcileAttributeStatuses(player)
 }
 
 // ============================================================
@@ -555,8 +570,7 @@ export function updateWarmthLevel(player: PlayerState, temperature: number): voi
  * 1. 生命值自然恢复
  * 2. 饱食度自然损失
  * 3. 体力自然恢复
- * 4. 温度相关生命值/SAN损失
- * 5. 饥饿相关生命值/SAN损失
+ * （温度/饥饿相关伤害已交由状态系统处理，见 reconcileAttributeStatuses）
  *
  * 所有效果先累计到 pending 值，当 pending ≥ 1 时刷新到实际属性。
  * 直接修改 player.survival 中的属性和 pending 累计值。
@@ -602,35 +616,6 @@ function applyPassiveEffects(player: PlayerState, elapsedMinutes: number): strin
     hours
   if (staminaRecovery > 0) {
     player.survival.pendingStaminaChange += staminaRecovery
-  }
-
-  // ================================================================
-  // 4. 温度相关效果
-  // ================================================================
-  const warmthLevel = player.survival.warmthLevel
-
-  // 寒冷/炎热：HP损失 = 5% maxHp/小时
-  if (warmthLevel === 'cold' || warmthLevel === 'hot') {
-    const hpLoss = EXTREME_TEMP_DAMAGE_HOURLY * 0.5 * player.survival.maxHp * hours
-    // 使用 0.5 (half of extreme) 即 5% 每小时
-    player.survival.pendingHpChange -= hpLoss
-    player.survival.pendingSanChange -= TEMP_SAN_LOSS_HOURLY * hours
-  }
-
-  // 严寒/酷热：HP损失 = 10% maxHp/小时
-  if (warmthLevel === 'freezing' || warmthLevel === 'scorching') {
-    const hpLoss = EXTREME_TEMP_DAMAGE_HOURLY * player.survival.maxHp * hours
-    player.survival.pendingHpChange -= hpLoss
-    player.survival.pendingSanChange -= TEMP_SAN_LOSS_HOURLY * hours
-  }
-
-  // ================================================================
-  // 5. 饥饿效果（饱食度为0时）
-  // ================================================================
-  if (Math.floor(player.survival.satiety) <= 0) {
-    const starvationHpLoss = STARVATION_HP_HOURLY * player.survival.maxHp * hours
-    player.survival.pendingHpChange -= starvationHpLoss
-    player.survival.pendingSanChange -= STARVATION_SAN_HOURLY * hours
   }
 
   // ================================================================
