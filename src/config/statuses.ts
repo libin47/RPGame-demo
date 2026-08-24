@@ -290,11 +290,11 @@ const status_超载: AttStatusConfig = {
   removeOnRest: false,
 }
 
-const 恐惧: StatusConfig = {
-  id: 'fear',
+const status_恐惧: StatusConfig = {
+  id: 'status_恐惧',
   name: '恐惧',
   description: {
-    tooltip: '恐惧，减少力量和敏捷',
+    tooltip: '恐惧，减少力量和敏捷，战斗中的判定遭受惩罚骰',
     normalText: ['你感觉害怕。'],
   },
   statusType: StatusType.DEBUFF,
@@ -303,6 +303,26 @@ const 恐惧: StatusConfig = {
   modifier: {
     strengthModifier: -5,
     agilityModifier: -5,
+    combatDieModifier: -1,
+  },
+  removeOnBattleEnd: false,
+  removeOnRest: false,
+}
+
+const status_专注: StatusConfig = {
+  id: 'status_专注',
+  name: '专注',
+  description: {
+    tooltip: '全神贯注，战斗中的 d100 判定获得奖励骰',
+    start: ['你深吸一口气，将全部注意力凝于眼前的战斗。'],
+    end: ['你紧绷的神经逐渐放松下来。'],
+    normalText: ['你保持专注，伺机而动。'],
+  },
+  statusType: StatusType.BUFF,
+  defaultDuration: 300,
+  stackingRule: StatusStackingRule.REFRESH,
+  modifier: {
+    combatDieModifier: 1,
   },
   removeOnBattleEnd: false,
   removeOnRest: false,
@@ -315,7 +335,8 @@ export const statusRegistry: StatusRegistry = {
     status_饥饿,
     status_超载,
 
-    恐惧,
+    status_恐惧,
+    status_专注,
     bleeding,
     strength_boost: strengthBoost,
     poisoned,

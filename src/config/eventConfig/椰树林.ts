@@ -414,7 +414,7 @@ export const event_beach_椰树林_猴王的领地: GameEvent = {
             {
               buffs: [
                 {
-                  statusId: '恐惧',
+                  statusId: 'status_恐惧',
                   durationMinutes: 0,
                 },
               ],

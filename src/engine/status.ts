@@ -565,6 +565,7 @@ export function mutateModifier(player: PlayerState, m: ModifierConfig, sign: 1 |
     at.coefficients.temperatureLowModifier += m.temperatureLowModifier * s
   if (m.temperatureHighModifier !== undefined)
     at.coefficients.temperatureHighModifier += m.temperatureHighModifier * s
+  if (m.combatDieModifier !== undefined) at.combatDieModifier += m.combatDieModifier * s
 }
 
 // ============================================================

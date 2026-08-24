@@ -181,6 +181,8 @@ export interface PlayerAttributes {
   constitutionModifier: number
   // 幸运临时修正（来自装备、状态、效果等，可为负数）
   luckModifier: number
+  // 战斗 d100 骰子数修正（>0 奖励骰、<0 惩罚骰，来自状态 modifier，求和）
+  combatDieModifier: number
 
   // 防御属性（基础值 + 装备加成 + 状态修正）
   defenses: PlayerDefenses

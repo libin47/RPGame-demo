@@ -1,4 +1,4 @@
-// cook.ts - 烹饪配方数据结构
+// ongoing.ts - 需要时间进行的配方数据结构
 
 import type {
   BaseRecipe,
@@ -10,45 +10,48 @@ import type {
 import type { RecipeType } from './recipe'
 
 // ============================================================
-// 烹饪配方
+// 需要时间进行的配方
 // ============================================================
 
 /**
- * 烹饪配方配置
- * 在火堆/厨房等加热设备上进行的食物烹饪。
- * 例如：烤肉、炖汤、烘焙面包等。
+ * 需要时间进行的配方配置
+ * 例如酿造、收集雨水、晒干等。
  */
-export interface CookRecipe extends BaseRecipe {
-  recipeType: RecipeType.COOK
+export interface OngoingRecipe extends BaseRecipe {
+  recipeType: RecipeType.ONGOING
 
-  /** 烹饪类型细分 */
-  cookMode: CookMode
+  /** 类型细分 */
+  ongoingMode: OngoingMode
   /** 所需设备等级 */
   requiredDeviceLevel: number
 
-  /** 烹饪时间（游戏内分钟数，覆写 requirements.timeMinutes 用于烹饪系统特有计算） */
-  cookTimeMinutes: number
+  /** 执行时间（游戏内分钟数，覆写 requirements.timeMinutes 用于需要时间进行的配方系统特有计算） */
+  ongoingTimeMinutes?: number
 
-  /** 烹饪产物品质 */
-  qualityLevels?: CookQualityLevel[]
+  /** 执行产物品质 */
+  qualityLevels?: OngoingQualityLevel[]
 }
 
 /**
  * 烹饪类型
  */
-export enum CookMode {
-  /** 即食 */
-  COOK = 'cook',
+export enum OngoingMode {
+  /** 晒干 */
+  DRYING = 'drying',
+  /** 酿造 */
+  BREW = 'brew',
+  /** 雨水 */
+  RAIN = 'rain',
 }
 
 /**
  * 烹饪品质等级
  * 根据建筑等级和随机因素，烹饪可能产出不同品质的食物
  */
-export interface CookQualityLevel {
+export interface OngoingQualityLevel {
   /** 品质等级（0=失败，1=普通，2=良好，3=完美） */
   level: number
-  /** 品质名称，描述品质特征，例如完满的烹饪、普通烹饪等 */
+  /** 品质名称，描述品质特征，例如完满的执行、普通执行等 */
   name: string
   /** 对应产出的物品（不同品质可能是不同物品） */
   productItems?: RecipeProduct[]
@@ -59,12 +62,12 @@ export interface CookQualityLevel {
 }
 
 // ============================================================
-// 烹饪配方注册表
+// 执行配方注册表
 // ============================================================
 
 /**
- * 烹饪配方注册表
+ * 执行配方注册表
  */
-export interface CookRecipeRegistry {
-  recipes: Record<string, CookRecipe>
+export interface OngoingRecipeRegistry {
+  recipes: Record<string, OngoingRecipe>
 }

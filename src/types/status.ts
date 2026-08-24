@@ -126,6 +126,8 @@ export interface ModifierConfig {
   temperatureLowModifier?: number
   /** 适宜温度高值修正 */
   temperatureHighModifier?: number
+  /** 战斗 d100 骰子数修正（有符号整数：>0=奖励骰数、<0=惩罚骰数，可叠加；0 或缺省=不影响） */
+  combatDieModifier?: number
 }
 
 // ============================================================

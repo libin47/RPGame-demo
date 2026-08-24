@@ -307,12 +307,20 @@ interface AttackSetup {
 
 /**
  * 投掷 d100 判定值
- * 熟练度满级时提供奖励骰：取两次投掷的最小值
+ * 判定成功条件为 roll ≤ 阈值（roll 越小越好），故：
+ *   dieCount > 0：奖励骰，掷 (1+dieCount) 次取最小值（更易成功）
+ *   dieCount < 0：惩罚骰，掷 (1-dieCount) 次取最大值（更易失败）
+ *   dieCount === 0：普通单次投掷
  */
-function rollBattleCheck(haveBonusDie: boolean): number {
-  const first = randomInt(1, 100)
-  if (!haveBonusDie) return first
-  return Math.min(first, randomInt(1, 100))
+function rollBattleCheck(dieCount: number): number {
+  if (dieCount === 0) return randomInt(1, 100)
+  const times = 1 + Math.abs(dieCount)
+  const extremes = dieCount > 0 ? Math.min : Math.max
+  let value = randomInt(1, 100)
+  for (let i = 1; i < times; i++) {
+    value = extremes(value, randomInt(1, 100))
+  }
+  return value
 }
 
 /** 根据判定值与阈值确定结果 */
@@ -390,15 +398,15 @@ function withCalcMeta(text: string, calc: DamageCalcDetail): string {
  *
  * @param setup - 攻击参数
  * @param target - 攻击目标（防御比例已按伤害类型取好）
- * @param haveBonusDie - 是否拥有奖励骰（熟练度满级）
+ * @param dieCount - 该次判定的有符号骰子数（>0 奖励骰、<0 惩罚骰、0 普通）
  * @param logs - 战斗日志（直接追加）
- * @param sharedRoll - 全体攻击共享判定时传入同一 d100 值（此时忽略奖励骰）
+ * @param sharedRoll - 全体攻击共享判定时传入同一 d100 值（此时忽略骰子数）
  * @returns 判定结果与伤害（未命中/暴击落空时伤害为 0，可为负数即回复血量）
  */
 function resolveAttack(
   setup: AttackSetup,
   target: DamageTarget,
-  haveBonusDie: boolean,
+  dieCount: number,
   logs: string[],
   sharedRoll?: number,
 ): { result: HitResult; damage: number; rawDamage: number; absorbed: number } {
@@ -410,7 +418,7 @@ function resolveAttack(
   const critClamped = critThreshold < 1 ? 0 : Math.min(100, Math.max(1, critThreshold))
   const hitClamped = Math.min(100, Math.max(1, hitThreshold))
 
-  const roll = sharedRoll ?? rollBattleCheck(haveBonusDie)
+  const roll = sharedRoll ?? rollBattleCheck(dieCount)
   const result = resolveHitResult(roll, critClamped, hitClamped)
 
   const resultLabel =
@@ -1140,10 +1148,11 @@ function executePlayerBattleSkill(player: PlayerState, battle: BattleState, skil
 
   player.survival.stamina -= staminaCost
 
-  // 武器信息与熟练度（满级提供 d100 奖励骰）
+  // 武器信息与熟练度（满级提供 1 奖励骰）+ 玩家状态提供的奖励/惩罚骰（有符号求和）
   const weaponInfo = getPlayerWeaponInfo(player)
   const proficiency = player.skills.weaponProficiencies[weaponInfo.weaponTypeId]?.level ?? 0
-  const haveBonusDie = proficiency >= MAX_WEAPON_PROFICIENCY
+  const playerDieCount =
+    (proficiency >= MAX_WEAPON_PROFICIENCY ? 1 : 0) + player.attributes.combatDieModifier
 
   const damageTypeId = skillConfig.damageTypeId ?? weaponInfo.damageTypeId
 
@@ -1193,7 +1202,7 @@ function executePlayerBattleSkill(player: PlayerState, battle: BattleState, skil
     for (let i = 0; i < hitCount; i++) {
       const living = getLivingEnemies(battle)
       if (living.length === 0) return
-      const roll = rollBattleCheck(haveBonusDie)
+      const roll = rollBattleCheck(playerDieCount)
       for (const target of living) {
         resolveAndApplyPlayerHit(
           player,
@@ -1201,7 +1210,7 @@ function executePlayerBattleSkill(player: PlayerState, battle: BattleState, skil
           setup,
           target,
           damageTypeId,
-          haveBonusDie,
+          playerDieCount,
           roll,
           stats,
         )
@@ -1223,7 +1232,7 @@ function executePlayerBattleSkill(player: PlayerState, battle: BattleState, skil
       setup,
       target,
       damageTypeId,
-      haveBonusDie,
+      playerDieCount,
       undefined,
       stats,
     )
@@ -1237,7 +1246,7 @@ function resolveAndApplyPlayerHit(
   setup: AttackSetup,
   target: BattleEnemy,
   damageTypeId: string,
-  haveBonusDie: boolean,
+  dieCount: number,
   sharedRoll: number | undefined,
   stats: { onHitEffects?: EffectResult[]; onCritEffects?: EffectResult[] },
 ): void {
@@ -1246,7 +1255,7 @@ function resolveAndApplyPlayerHit(
     agility: target.agility,
     defenseRatio: getEnemyDefenseRatio(target, damageTypeId),
   }
-  const { result, damage } = resolveAttack(setup, dt, haveBonusDie, battle.logs, sharedRoll)
+  const { result, damage } = resolveAttack(setup, dt, dieCount, battle.logs, sharedRoll)
   applyEnemyHit(battle, target, result, damage)
   applyPlayerHitEffects(player, battle, result, stats)
 }
@@ -1334,7 +1343,7 @@ function throwWeapon(player: PlayerState, battle: BattleState, weapon: WeaponIte
     agility: target.agility,
     defenseRatio: getEnemyDefenseRatio(target, stats.damageTypeId),
   }
-  const { result, damage } = resolveAttack(setup, dt, false, battle.logs)
+  const { result, damage } = resolveAttack(setup, dt, 0, battle.logs)
   applyEnemyHit(battle, target, result, damage)
   return true
 }
@@ -1606,6 +1615,13 @@ function executeEnemySkillHit(
     actionLabel: skill.name,
   }
 
+  // 敌人状态提供的奖励/惩罚骰（有符号求和）；敌人无属性聚合，故由状态配置直接求和
+  let enemyDieCount = 0
+  for (const st of enemy.statuses) {
+    const stConfig = getRegistry().getStatus(st.statusId)
+    enemyDieCount += stConfig?.modifier?.combatDieModifier ?? 0
+  }
+
   for (let i = 0; i < hitCount; i++) {
     if (player.survival.hp <= 0) return
 
@@ -1614,7 +1630,7 @@ function executeEnemySkillHit(
       agility: player.attributes.agility + player.attributes.agilityModifier,
       defenseRatio: playerDefenseRatio,
     }
-    const { result, damage, absorbed } = resolveAttack(setup, dt, false, battle.logs)
+    const { result, damage, absorbed } = resolveAttack(setup, dt, enemyDieCount, battle.logs)
 
     if (result === 'miss' || result === 'critMiss') continue
 

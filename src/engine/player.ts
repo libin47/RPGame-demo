@@ -202,6 +202,7 @@ export function createNewPlayerState(
     intelligenceModifier: 0,
     constitutionModifier: 0,
     luckModifier: 0,
+    combatDieModifier: 0,
     defenses: calculateDefenses(),
     coefficients,
   }

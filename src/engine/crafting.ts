@@ -401,9 +401,9 @@ export function executeCook(
   const qualityLevel = calculateCookQuality(recipe, deviceLevel)
 
   // 根据品质确定产物
-  const productItemId = qualityLevel.productItemId ?? recipe.products[0]?.itemId
-  if (productItemId) {
-    addItem(player, productItemId, 1)
+  const productItems = qualityLevel.productItems ?? recipe.products
+  for (const item of productItems) {
+    addItem(player, item.itemId, item.baseQuantity)
   }
 
   const qualityName =
@@ -412,7 +412,10 @@ export function executeCook(
   return {
     success: true,
     message: `烹饪了 ${qualityLevel.name}${qualityName}`,
-    products: productItemId ? [{ itemId: productItemId, quantity: 1 }] : [],
+    products: productItems.map((p) => ({
+      itemId: p.itemId,
+      quantity: p.baseQuantity,
+    })),
     consumedMaterials: recipe.materials.map((m) => ({ itemId: m.itemId, quantity: m.quantity })),
     timeUsed: recipe.cookTimeMinutes,
   }
