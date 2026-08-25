@@ -24,9 +24,6 @@ export interface CraftRecipe extends BaseRecipe {
   /** 制作类型细分 */
   craftCategory: CraftCategory
 
-  /** 所需设备等级（0=徒手，1=简易工作台，2=铁砧/高级工作台，3=精密设备等） */
-  requiredDeviceLevel: number
-
   /** 最小制作数量（批量制作） */
   minCraftQuantity: number
   /** 最大制作数量（批量制作，-1=无上限，取决于材料） */
