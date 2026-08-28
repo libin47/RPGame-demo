@@ -136,6 +136,8 @@ const props = defineProps<{
   mode: 'craft' | 'cook'
   /** 当前建筑的等级 */
   deviceLevel: number
+  /** 当前建筑ID（用于 requiredDeviceId 设备限制过滤，null 表示无实际建筑） */
+  deviceId: string | null
   /** 当前玩家状态（用于计算材料/属性检查） */
   playerState: PlayerState
   /** 当前子场景ID（用于合并统计仓库材料，null 表示不在营地） */
@@ -281,6 +283,9 @@ function buildCraftList(): RecipeDisplayItem[] {
       recipe.requirements.requiredDeviceLevel > props.deviceLevel
     )
       continue
+    // 设备ID过滤：配方指定了设备，则仅当当前建筑ID在列表中时可见；未指定则无限制
+    const deviceIds = recipe.requirements.requiredDeviceId
+    if (deviceIds && deviceIds.length > 0 && !deviceIds.includes(props.deviceId ?? '')) continue
     // 检查解锁
     if (!props.playerState.unlockedRecipes.craftRecipes.includes(id)) continue
 
@@ -345,6 +350,9 @@ function buildCookList(): RecipeDisplayItem[] {
       recipe.requirements.requiredDeviceLevel > props.deviceLevel
     )
       continue
+    // 设备ID过滤：配方指定了设备，则仅当当前建筑ID在列表中时可见；未指定则无限制
+    const deviceIds = recipe.requirements.requiredDeviceId
+    if (deviceIds && deviceIds.length > 0 && !deviceIds.includes(props.deviceId ?? '')) continue
     if (!props.playerState.unlockedRecipes.cookRecipes.includes(id)) continue
 
     const materials = recipe.materials.map((m) => {

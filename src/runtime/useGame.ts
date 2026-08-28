@@ -1,6 +1,6 @@
 // src/runtime/useGame.ts
 
-import { reactive, readonly } from 'vue'
+import { reactive, readonly, shallowRef, watch } from 'vue'
 import type { PlayerState } from '@/types/player'
 import type {
   Scene,
@@ -60,6 +60,7 @@ import {
 } from '@/engine'
 import { addToStorage, removeFromStorage, getStorageItems } from '@/engine'
 import { getSubSceneStorageItemCount, removeFromSubSceneStorage } from '@/engine'
+import { startOngoingJob, cancelOngoingJob, collectOngoingJob } from '@/engine'
 import { removeItem, getItemCount } from '@/engine'
 import { buyFromTrader as tradeBuyFromTrader, sellToTrader as tradeSellToTrader } from '@/engine'
 import { nextCGFrame, jumpToCGFrame } from '@/engine'
@@ -1224,6 +1225,11 @@ export function useGame(initialPlayer: PlayerState) {
    * 资源采集/战斗
    */
   function handleCollect(collect: ResourceInteraction): void {
+    // 进行中（需要时间）制作型采集点：打开进行中制作面板而非立即采集
+    if (collect.resourceType === 'ongoing') {
+      openCollectOngoing(collect)
+      return
+    }
     // 前置校验：资源不足立即提示并中止（不触发被动事件）
     const error = checkButtonCosts(collect)
     if (error) {
@@ -1910,6 +1916,7 @@ export function useGame(initialPlayer: PlayerState) {
       'rest',
       'store',
       'repair',
+      'ongoing',
       'event',
     ]
     return [...funcMap.values()].sort(
@@ -2494,6 +2501,103 @@ export function useGame(initialPlayer: PlayerState) {
   }
 
   /**
+   * 非营地采集点的进行中制作上下文。
+   * 非 null 时表示当前进行中制作面板作用于某个采集点（容器键 collect:<id>），
+   * 否则作用于营地建筑（容器键 campsite:<subSceneId>:<buildId>）。
+   */
+  const ongoingCollect = shallowRef<ResourceInteraction | null>(null)
+
+  /** 打开非营地采集点的进行中制作面板 */
+  function openCollectOngoing(collect: ResourceInteraction): void {
+    ongoingCollect.value = collect
+  }
+
+  /** 关闭非营地采集点的进行中制作面板 */
+  function closeCollectOngoing(): void {
+    ongoingCollect.value = null
+  }
+
+  /** 非营地采集点进行中制作的设备ID（用于配方 requiredDeviceId 过滤） */
+  function currentOngoingDeviceId(): string | null {
+    const coll = ongoingCollect.value
+    if (coll) return coll.id
+    return state.currentBuildingId
+  }
+
+  /** 离开场景/进入其他界面时，确保采集点进行中制作上下文复位 */
+  watch(
+    () => state.mode,
+    (m) => {
+      if (m !== 'normal' && ongoingCollect.value) ongoingCollect.value = null
+    },
+  )
+
+  /**
+   * 构建当前进行中制作的容器键。
+   * 采集点上下文优先，否则回退到当前建筑。
+   */
+  function currentOngoingContainerKey(): string | null {
+    const coll = ongoingCollect.value
+    if (coll) return `collect:${coll.id}`
+    const subSceneId = state.currentSubScene?.id
+    const buildId = state.currentBuildingId
+    if (!subSceneId || !buildId) return null
+    return `campsite:${subSceneId}:${buildId}`
+  }
+
+  /** 当前进行中制作的空位上限 */
+  function currentOngoingMaxSlots(): number {
+    const coll = ongoingCollect.value
+    if (coll) return coll.ongoingConfig?.ongoingMaxSlots ?? 0
+    const buildId = state.currentBuildingId
+    const subSceneId = state.currentSubScene?.id
+    if (!buildId || !subSceneId) return 0
+    const subBuild = getCurrentSubBuild(buildId, subSceneId)
+    return subBuild?.ongoingMaxSlots ?? 0
+  }
+
+  /** 当前进行中制作的设备等级（取 ongoing 交互的 buildLevel / 采集点 ongoingConfig.ongoingDeviceLevel） */
+  function currentOngoingDeviceLevel(): number {
+    const coll = ongoingCollect.value
+    if (coll) return coll.ongoingConfig?.ongoingDeviceLevel ?? 0
+    const buildId = state.currentBuildingId
+    const subSceneId = state.currentSubScene?.id
+    if (!buildId || !subSceneId) return 0
+    const subBuild = getCurrentSubBuild(buildId, subSceneId)
+    const ongoingAct = subBuild?.interactions?.find((a) => a.interactionType === 'ongoing')
+    return ongoingAct?.buildLevel ?? 0
+  }
+
+  /**
+   * 开始一个进行中配方（由 OngoingPanel 调用）
+   */
+  function handleStartOngoing(recipeId: string): string | null {
+    const key = currentOngoingContainerKey()
+    if (!key) return '当前不在可进行制作的建筑中'
+    const maxSlots = currentOngoingMaxSlots()
+    if (maxSlots <= 0) return '该建筑不支持进行中的制作'
+    return startOngoingJob(state.player, key, recipeId, maxSlots)
+  }
+
+  /**
+   * 停止指定空位的进行中任务并退回原料（由 OngoingPanel 调用）
+   */
+  function handleCancelOngoing(slotIndex: number): void {
+    const key = currentOngoingContainerKey()
+    if (!key) return
+    cancelOngoingJob(state.player, key, slotIndex)
+  }
+
+  /**
+   * 收取指定空位的已完成任务（由 OngoingPanel 调用）
+   */
+  function handleCollectOngoing(slotIndex: number): void {
+    const key = currentOngoingContainerKey()
+    if (!key) return
+    collectOngoingJob(state.player, key, slotIndex, currentOngoingDeviceLevel())
+  }
+
+  /**
    * 维修当前建筑（由 BuildingDetail 调用）
    */
   function handleRepairBuilding(buildId: string): void {
@@ -2676,6 +2780,15 @@ export function useGame(initialPlayer: PlayerState) {
     handleStoreItem,
     handleRetrieveItem,
     handleRepairBuilding,
+    currentOngoingContainerKey,
+    currentOngoingMaxSlots,
+    currentOngoingDeviceLevel,
+    currentOngoingDeviceId,
+    openCollectOngoing,
+    closeCollectOngoing,
+    startOngoing: handleStartOngoing,
+    cancelOngoing: handleCancelOngoing,
+    collectOngoing: handleCollectOngoing,
     advanceCG,
     endCG,
     selectCGOption,

@@ -36,7 +36,7 @@
 
       <!-- 场景模式 -->
       <ScenePanel
-        v-if="game.state.mode === 'normal'"
+        v-if="game.state.mode === 'normal' && !collectOngoing"
         :description-config="game.state.currentDescriptionConfig"
         :scene="currentSceneForPanel"
         :campsite-functions="game.getCampsiteFunctions()"
@@ -62,6 +62,21 @@
         @character-trade="onCharacterTrade"
         @campsite="onOpenCampsite"
         @campsite-function="onCampsiteFunction"
+      />
+
+      <!-- 场景模式 - 非营地采集点进行中（需要时间）制作 -->
+      <OngoingPanel
+        v-else-if="game.state.mode === 'normal' && collectOngoing"
+        :container-key="game.currentOngoingContainerKey() ?? ''"
+        :max-slots="game.currentOngoingMaxSlots()"
+        :device-level="game.currentOngoingDeviceLevel()"
+        :device-id="game.currentOngoingDeviceId() ?? ''"
+        :player-state="game.state.player"
+        title="进行中的制作"
+        @close="onCloseCollectOngoing"
+        @start="onOngoingStart"
+        @cancel="onOngoingCancel"
+        @collect="onOngoingCollect"
       />
 
       <!-- 地图模式（moveType === 'move' 时打开大地图） -->
@@ -147,10 +162,25 @@
         v-else-if="game.state.mode === 'building' && recipeMode"
         :mode="recipeMode"
         :device-level="recipeDeviceLevel"
+        :device-id="game.state.currentBuildingId"
         :player-state="game.state.player"
         :sub-scene-id="game.state.currentSubScene?.id ?? null"
         @close="onExitRecipe"
         @execute="onRecipeExecute"
+      />
+
+      <!-- 建筑交互模式 - 进行中（需要时间）制作子模式 -->
+      <OngoingPanel
+        v-else-if="game.state.mode === 'building' && ongoingMode"
+        :container-key="game.currentOngoingContainerKey() ?? ''"
+        :max-slots="game.currentOngoingMaxSlots()"
+        :device-level="game.currentOngoingDeviceLevel()"
+        :device-id="game.state.currentBuildingId"
+        :player-state="game.state.player"
+        @close="onExitBuilding"
+        @start="onOngoingStart"
+        @cancel="onOngoingCancel"
+        @collect="onOngoingCollect"
       />
 
       <!-- 建筑交互模式 - 休息子模式 -->
@@ -295,6 +325,7 @@ import CampsitePanel from '@/components/CampsitePanel.vue'
 import BuildingDetail from '@/components/BuildingDetail.vue'
 import RecipePanel from '@/components/RecipePanel.vue'
 import RestPanel from '@/components/RestPanel.vue'
+import OngoingPanel from '@/components/OngoingPanel.vue'
 import StorePanel from '@/components/StorePanel.vue'
 import RepairPanel from '@/components/RepairPanel.vue'
 import TradePanel from '@/components/TradePanel.vue'
@@ -318,6 +349,22 @@ const registry = getRegistry()
 
 const recipeMode = ref<'craft' | 'cook' | null>(null)
 const recipeDeviceLevel = ref(0)
+/** 进行中（需要时间）制作子模式是否打开 */
+const ongoingMode = ref(false)
+/** 非营地采集点进行中制作面板是否打开 */
+const collectOngoing = ref(false)
+
+function onOngoingStart(recipeId: string): void {
+  game.value.startOngoing(recipeId)
+}
+
+function onOngoingCancel(slotIndex: number): void {
+  game.value.cancelOngoing(slotIndex)
+}
+
+function onOngoingCollect(slotIndex: number): void {
+  game.value.collectOngoing(slotIndex)
+}
 
 function onEnterRecipe(payload: { mode: 'craft' | 'cook'; deviceLevel: number }): void {
   recipeMode.value = payload.mode
@@ -626,7 +673,16 @@ function onBuild(): void {
 
 /** 资源采集/战斗 */
 function onCollect(collect: import('@/types/scene').ResourceInteraction): void {
+  if (collect.resourceType === 'ongoing') {
+    collectOngoing.value = true
+  }
   game.value.handleCollect(collect)
+}
+
+/** 关闭非营地采集点进行中制作面板 */
+function onCloseCollectOngoing(): void {
+  collectOngoing.value = false
+  game.value.closeCollectOngoing()
 }
 
 /** 移动 */
@@ -713,6 +769,7 @@ function onEnterBuilding(buildId: string): void {
   // 重置建筑内的子模式状态
   restMode.value = false
   recipeMode.value = null
+  ongoingMode.value = false
   storeMode.value = false
   game.value.enterBuilding(buildId)
 }
@@ -737,6 +794,7 @@ function onCampsiteFunction(fn: CampsiteFunction): void {
   // 其余类型：进入提供该功能的建筑，并打开对应子界面
   restMode.value = false
   recipeMode.value = null
+  ongoingMode.value = false
   storeMode.value = false
   repairMode.value = false
   game.value.enterBuilding(fn.buildId)
@@ -748,6 +806,9 @@ function onCampsiteFunction(fn: CampsiteFunction): void {
     case 'cook':
       recipeMode.value = 'cook'
       recipeDeviceLevel.value = fn.buildLevel
+      break
+    case 'ongoing':
+      ongoingMode.value = true
       break
     case 'rest':
       restMode.value = true
@@ -766,6 +827,7 @@ function onCampsiteFunction(fn: CampsiteFunction): void {
 function onExitBuilding(): void {
   restMode.value = false
   recipeMode.value = null
+  ongoingMode.value = false
   storeMode.value = false
   game.value.exitBuilding()
 }
@@ -787,6 +849,9 @@ function onBuildingLog(message: string): void {}
 watch(
   () => game.value.state.mode,
   (newMode) => {
+    if (newMode !== 'normal') {
+      collectOngoing.value = false
+    }
     if (newMode === 'ending') {
       router.push({ name: 'ending' })
     } else if (newMode === 'cg') {

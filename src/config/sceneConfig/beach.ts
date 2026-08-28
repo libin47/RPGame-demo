@@ -5,7 +5,7 @@ import { ComparisonOperator, ConditionTargetType } from '@/types'
 import type { Scene } from '../../types/scene'
 import { exploreButton, enterSubSceneMove, moveButton } from './shared'
 import { wanderingMerchant } from '../traders'
-const 退潮时间 = {
+export const 退潮时间 = {
   condition: {
     target: { type: ConditionTargetType.TIME },
     operator: ComparisonOperator.BETWEEN,
@@ -151,6 +151,18 @@ const beach: Scene = {
             quantity: 2,
           },
         ],
+      },
+    },
+    {
+      // 非营地采集点·进行中（需要时间）制作示例：点击打开进行中制作面板（晒干/风干等）
+      id: 'beach_晒制台',
+      name: '晒制',
+      description: '用摊开的席子晾晒刚捕获的蟹，风干后更耐存放。',
+      descriptionTitle: '晒制台',
+      resourceType: 'ongoing',
+      ongoingConfig: {
+        ongoingMaxSlots: 3,
+        ongoingDeviceLevel: 1,
       },
     },
   ],

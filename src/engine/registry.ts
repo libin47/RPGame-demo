@@ -12,6 +12,7 @@ import type { StatusConfig } from '@/types/status'
 import type { Build } from '@/types/build'
 import type { CraftRecipe } from '@/types/craft'
 import type { CookRecipe } from '@/types/cook'
+import type { OngoingRecipe } from '@/types/ongoing'
 import type { TraderConfig } from '@/types/trade'
 import type { Param } from '@/types/param'
 import type { CGScene } from '@/types/cg'
@@ -132,6 +133,16 @@ class GameRegistryManager {
   /** 获取所有烹饪配方 */
   getAllCookRecipes(): Record<string, CookRecipe> {
     return this.registry.cookRecipes.recipes
+  }
+
+  /** 获取进行中（需要时间）配方 */
+  getOngoingRecipe(id: string): OngoingRecipe | undefined {
+    return this.registry.ongoingRecipes.recipes[id]
+  }
+
+  /** 获取所有进行中配方 */
+  getAllOngoingRecipes(): Record<string, OngoingRecipe> {
+    return this.registry.ongoingRecipes.recipes
   }
 
   /** 获取建造配方 */

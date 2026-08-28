@@ -7,6 +7,7 @@ import type { Param, TimeVaryingRule } from '@/types/param'
 import { Season, SeasonPhase } from '@/types/seasonWeather'
 import { getRegistry } from './registry'
 import { reconcileAttributeStatuses, updateStatusTimers } from './status'
+import { tickOngoingJobs } from './ongoing'
 
 // ============================================================
 // 游戏时间常量
@@ -363,6 +364,9 @@ export function advanceTime(
 
   // 6. 执行被动效果（饥饿等，温度伤害已交由状态系统处理）
   result.logs.push(...applyPassiveEffects(player, elapsedMinutes))
+
+  // 6.1 进行中（需要时间）配方结算
+  result.logs.push(...tickOngoingJobs(player, elapsedMinutes))
 
   // 7. 执行时间变化标志位修正
   applyTimeVaryingParams(player, elapsedMinutes)

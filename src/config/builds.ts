@@ -53,7 +53,14 @@ const 营火: Build = {
           restDescription: '蜷缩在火堆旁并不舒服，但这燃烧的火焰能给予你微弱的安全感—里。',
           description: '你蜷缩在火堆旁休息了{time}个小时，醒来浑身都是沙子。',
         },
+        {
+          id: 'ongoing',
+          name: '晾晒',
+          interactionType: 'ongoing',
+          buildLevel: 1,
+        },
       ],
+      ongoingMaxSlots: 2,
       visualConfig: {
         intactImageId: 'building_campfire',
         damagedImageId: 'building_campfire_damaged',

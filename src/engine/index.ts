@@ -156,6 +156,17 @@ export {
   clearStorage,
 } from './storage'
 
+// 进行中（需要时间）配方系统
+export {
+  startOngoingJob,
+  cancelOngoingJob,
+  collectOngoingJob,
+  tickOngoingJobs,
+  findOngoingSlotIndex,
+  ongoingSpeedFactor,
+} from './ongoing'
+export type { OngoingJob } from '@/types/ongoing'
+
 // 场景系统CG系统
 export { canTriggerCG, startCG, nextCGFrame, getVisibleCGOptions, jumpToCGFrame } from './cg'
 export type { CGPlayState } from './cg'

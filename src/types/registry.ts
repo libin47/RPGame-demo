@@ -10,6 +10,7 @@ import type { SkillRegistry } from './skill'
 import type { EnemyRegistry } from './enemy'
 import type { CraftRecipeRegistry } from './craft'
 import type { CookRecipeRegistry } from './cook'
+import type { OngoingRecipeRegistry } from './ongoing'
 import type { StatusRegistry } from './status'
 import type { TradeRegistry } from './trade'
 import type { ParamRegistry } from './param'
@@ -64,6 +65,9 @@ export interface GameRegistry {
 
   /** 烹饪配方注册表 */
   cookRecipes: CookRecipeRegistry
+
+  /** 进行中（需要时间）配方注册表 */
+  ongoingRecipes: OngoingRecipeRegistry
 
   /** 异常状态注册表 */
   statuses: StatusRegistry

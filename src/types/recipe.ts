@@ -50,7 +50,7 @@ export interface RecipeRequirements {
   attributeRequirements?: AttributeRequirement[]
 
   /** 所需设备ID（如工作台、火堆、铁砧等） */
-  requiredDeviceId?: string
+  requiredDeviceId?: string[]
   /** 所需设备等级 */
   requiredDeviceLevel?: number
 

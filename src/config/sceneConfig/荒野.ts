@@ -4,6 +4,7 @@
 import { ComparisonOperator, ConditionTargetType } from '@/types'
 import type { Scene } from '../../types/scene'
 import { exploreButton, enterSubSceneMove, moveButton } from './shared'
+import { 退潮时间 } from './beach'
 import { wanderingMerchant } from '../traders'
 
 const wild: Scene = {

@@ -55,7 +55,7 @@ export interface ItemSource {
  * @param source - 可选的外部材料来源（如仓库），检查时合并统计
  * @returns 若满足返回 null，否则返回缺失原因
  */
-function checkMaterials(
+export function checkMaterials(
   player: PlayerState,
   materials: RequiredMaterial[],
   source?: ItemSource,
@@ -173,7 +173,7 @@ function applyCosts(player: PlayerState, costs: RecipeCost[]): void {
 /**
  * 扣除材料（优先扣背包，不足时从外部来源如仓库补充）
  */
-function consumeMaterials(
+export function consumeMaterials(
   player: PlayerState,
   materials: RequiredMaterial[],
   source?: ItemSource,
@@ -191,7 +191,7 @@ function consumeMaterials(
 /**
  * 产出物品到背包
  */
-function produceItems(
+export function produceItems(
   player: PlayerState,
   products: RecipeProduct[],
   quantityMultiplier: number = 1,

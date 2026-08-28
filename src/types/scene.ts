@@ -287,15 +287,25 @@ export interface ResourceInteraction extends ButtonOption {
   // 资源点ID，关联数量及恢复情况
   paramId?: string
   // 资源点类型
-  resourceType?: 'enemy' | 'item'
+  resourceType?: 'enemy' | 'item' | 'ongoing'
   // 资源点敌人配置
   enemyConfig?: EnemyConfig
   // 资源点物品配置
   itemConfig?: ItemConfig
+  // 进行中（需要时间）制作配置（resourceType === 'ongoing' 时使用）
+  ongoingConfig?: OngoingResourceConfig
   // 资源收获描述
   text?: string
   // 概率未命中描述
   missText?: string
+}
+
+/** 进行中（需要时间）制作类型的采集点配置 */
+export interface OngoingResourceConfig {
+  // 进行中制作空位上限
+  ongoingMaxSlots: number
+  // 进行中制作的设备等级（用于产物品质解析，默认 0）
+  ongoingDeviceLevel?: number
 }
 // 敌人配置
 export interface EnemyGroup {

@@ -71,6 +71,8 @@ export interface SubBuild {
   visualConfig?: BuildVisualConfig
   /** 建筑最大存储格数（仅store类型建筑有效，默认20） */
   maxStorageSlots?: number
+  /** 进行中（需要时间）制作任务的空位上限（仅ongoing类型建筑有效） */
+  ongoingMaxSlots?: number
 }
 
 export interface buildUpgrade {
@@ -91,7 +93,16 @@ export interface buildUpgrade {
  */
 export interface buildOption extends ButtonOption {
   /** 交互类型 */
-  interactionType: 'craft' | 'cook' | 'rest' | 'store' | 'collect' | 'repair' | 'special' | 'event'
+  interactionType:
+    | 'craft'
+    | 'cook'
+    | 'rest'
+    | 'store'
+    | 'collect'
+    | 'repair'
+    | 'special'
+    | 'event'
+    | 'ongoing'
   /** 交互参数 */
   buildLevel?: number
   /** 事件：事件ID */
@@ -108,7 +119,7 @@ export interface buildOption extends ButtonOption {
  */
 export interface CampsiteFunction {
   /** 交互类型 */
-  interactionType: 'craft' | 'cook' | 'rest' | 'store' | 'repair' | 'event'
+  interactionType: 'craft' | 'cook' | 'rest' | 'store' | 'repair' | 'ongoing' | 'event'
   /** 功能名称 */
   name: string
   /** 功能等级（取提供该功能建筑的最高 buildLevel） */

@@ -2,6 +2,7 @@
 import type { Season, SeasonPhase } from './seasonWeather'
 import type { Param } from './param'
 import type { DamageTypeId } from './damage'
+import type { OngoingJob } from './ongoing'
 
 // ============================================================
 // 玩家运行时状态
@@ -398,6 +399,8 @@ export interface PlayerProgress {
 
   /** 营地建筑仓库存储（subSceneId -> { buildId: storageItems[] }），每个储物箱独立的物品列表 */
   campStorage: Record<string, Record<string, PlayerInventoryItem[]>>
+  /** 进行中的制作任务（容器键 -> 各空位任务），容器键如 campsite:子场景:buildId / collect:场景:节点 */
+  ongoingJobs: Record<string, OngoingJob[]>
 }
 
 // ============================================================

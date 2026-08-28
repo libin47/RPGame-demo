@@ -1,5 +1,6 @@
 // ongoing.ts - 需要时间进行的配方数据结构
 
+import type { Conditions } from './effect'
 import type {
   BaseRecipe,
   RequiredMaterial,
@@ -24,8 +25,14 @@ export interface OngoingRecipe extends BaseRecipe {
   ongoingMode: OngoingMode
 
   /** 满足条件时时间才会流逝 */
-  condition?: number
-
+  conditions?: {
+    /** 条件值 */
+    conditions: Conditions
+    /** 满足条件时的叠加倍率，例如1.5表示1.5倍的时间流逝，多个之间相加 */
+    value: number
+  }[]
+  /** 是否显示进度条 */
+  displayProgress?: boolean
   /** 执行产物品质 */
   qualityLevels?: OngoingQualityLevel[]
 }
@@ -68,4 +75,23 @@ export interface OngoingQualityLevel {
  */
 export interface OngoingRecipeRegistry {
   recipes: Record<string, OngoingRecipe>
+}
+
+// ============================================================
+// 运行时进行中任务
+// ============================================================
+
+/**
+ * 一个进行中的制作任务（运行时数据）
+ * 存储在 player.progress.ongoingJobs[容器键] 中，容器键区分建筑与采集点。
+ */
+export interface OngoingJob {
+  /** 所在容器的空位下标（0 起） */
+  slotIndex: number
+  /** 进行的配方ID */
+  recipeId: string
+  /** 已流逝的有效时间（分钟），达到 requirements.timeMinutes 即完成 */
+  elapsedMinutes: number
+  /** 制作状态 */
+  status: 'crafting' | 'completed'
 }

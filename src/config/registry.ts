@@ -8,6 +8,7 @@ import { itemRegistry } from './items'
 import { enemyRegistry } from './enemies'
 import { craftRecipeRegistry } from './craftRecipes'
 import { cookRecipeRegistry } from './cookRecipes'
+import { ongoingRecipeRegistry } from './ongoingRecipes'
 import { tradeRegistry } from './traders'
 import { paramRegistry } from './params'
 import { sceneRegistry } from './scenes'
@@ -31,6 +32,7 @@ export const gameRegistry: GameRegistry = {
   enemies: enemyRegistry,
   craftRecipes: craftRecipeRegistry,
   cookRecipes: cookRecipeRegistry,
+  ongoingRecipes: ongoingRecipeRegistry,
   statuses: statusRegistry,
   traders: tradeRegistry,
   params: paramRegistry,

@@ -99,6 +99,24 @@ export interface GameInstance {
   retrieveItem: (instanceId: string, quantity: number) => number
   /** 维修当前建筑 */
   repairBuilding: (buildId: string) => void
+  /** 当前建筑进行中制作的容器键 */
+  currentOngoingContainerKey: () => string | null
+  /** 当前建筑进行中制作的空位上限 */
+  currentOngoingMaxSlots: () => number
+  /** 当前建筑进行中制作的设备等级 */
+  currentOngoingDeviceLevel: () => number
+  /** 当前进行中制作的设备ID（采集点为其 id，建筑为其 buildId，用于配方 requiredDeviceId 过滤） */
+  currentOngoingDeviceId: () => string | null
+  /** 打开非营地采集点的进行中制作面板 */
+  openCollectOngoing: (collect: ResourceInteraction) => void
+  /** 关闭非营地采集点的进行中制作面板 */
+  closeCollectOngoing: () => void
+  /** 开始一个进行中配方（成功返回 null，否则返回原因） */
+  startOngoing: (recipeId: string) => string | null
+  /** 停止指定空位的进行中任务并退回原料 */
+  cancelOngoing: (slotIndex: number) => void
+  /** 收取指定空位的已完成任务 */
+  collectOngoing: (slotIndex: number) => void
   /** 推进CG到下一帧 */
   advanceCG: () => boolean
   /** 结束CG，返回正常场景模式 */
@@ -216,6 +234,15 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     storeItem: game.handleStoreItem,
     retrieveItem: game.handleRetrieveItem,
     repairBuilding: game.handleRepairBuilding,
+    currentOngoingContainerKey: game.currentOngoingContainerKey,
+    currentOngoingMaxSlots: game.currentOngoingMaxSlots,
+    currentOngoingDeviceLevel: game.currentOngoingDeviceLevel,
+    currentOngoingDeviceId: game.currentOngoingDeviceId,
+    openCollectOngoing: game.openCollectOngoing,
+    closeCollectOngoing: game.closeCollectOngoing,
+    startOngoing: game.startOngoing,
+    cancelOngoing: game.cancelOngoing,
+    collectOngoing: game.collectOngoing,
     advanceCG: game.advanceCG,
     endCG: game.endCG,
     selectCGOption: game.selectCGOption,
@@ -289,6 +316,15 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     storeItem: game.handleStoreItem,
     retrieveItem: game.handleRetrieveItem,
     repairBuilding: game.handleRepairBuilding,
+    currentOngoingContainerKey: game.currentOngoingContainerKey,
+    currentOngoingMaxSlots: game.currentOngoingMaxSlots,
+    currentOngoingDeviceLevel: game.currentOngoingDeviceLevel,
+    currentOngoingDeviceId: game.currentOngoingDeviceId,
+    openCollectOngoing: game.openCollectOngoing,
+    closeCollectOngoing: game.closeCollectOngoing,
+    startOngoing: game.startOngoing,
+    cancelOngoing: game.cancelOngoing,
+    collectOngoing: game.collectOngoing,
     advanceCG: game.advanceCG,
     endCG: game.endCG,
     selectCGOption: game.selectCGOption,

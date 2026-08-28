@@ -73,6 +73,9 @@ export function loadGame(slot: number): PlayerState | null {
     if (!player.progress.campStorage) {
       player.progress.campStorage = {}
     }
+    if (!player.progress.ongoingJobs) {
+      player.progress.ongoingJobs = {}
+    }
     return player
   } catch (e) {
     console.error('读档失败:', e)
