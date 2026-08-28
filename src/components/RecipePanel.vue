@@ -247,6 +247,7 @@ const filterTabs = computed<Array<{ key: string; label: string }>>(() => {
   // 默认选中第一个标签
   const firstTab = tabs[0]
   if (currentFilter.value === '' && firstTab) {
+    // eslint-disable-next-line vue/no-side-effects-in-computed-properties
     currentFilter.value = firstTab.key
   }
   return tabs
@@ -275,7 +276,11 @@ function buildCraftList(): RecipeDisplayItem[] {
   const list: RecipeDisplayItem[] = []
   for (const [id, recipe] of Object.entries(registry.getAllCraftRecipes())) {
     // 设备等级过滤（不满足则隐藏）
-    if (recipe.requiredDeviceLevel > props.deviceLevel) continue
+    if (
+      recipe.requirements.requiredDeviceLevel !== undefined &&
+      recipe.requirements.requiredDeviceLevel > props.deviceLevel
+    )
+      continue
     // 检查解锁
     if (!props.playerState.unlockedRecipes.craftRecipes.includes(id)) continue
 
@@ -335,7 +340,11 @@ function buildCraftList(): RecipeDisplayItem[] {
 function buildCookList(): RecipeDisplayItem[] {
   const list: RecipeDisplayItem[] = []
   for (const [id, recipe] of Object.entries(registry.getAllCookRecipes())) {
-    if (recipe.requiredDeviceLevel > props.deviceLevel) continue
+    if (
+      recipe.requirements.requiredDeviceLevel !== undefined &&
+      recipe.requirements.requiredDeviceLevel > props.deviceLevel
+    )
+      continue
     if (!props.playerState.unlockedRecipes.cookRecipes.includes(id)) continue
 
     const materials = recipe.materials.map((m) => {
@@ -371,7 +380,7 @@ function buildCookList(): RecipeDisplayItem[] {
     // 非体力消耗（显示在材料下方）
     const otherCosts = costs.filter((c) => c.type !== 'stamina')
 
-    const timeStr = formatTime(recipe.cookTimeMinutes)
+    const timeStr = formatTime(recipe.requirements.timeMinutes)
     const canExecute = materials.every((m) => m.hasEnough) && costs.every((c) => c.hasEnough)
 
     const qualityLevel = calculateCookQuality(recipe, props.deviceLevel)

@@ -23,11 +23,6 @@ export interface CookRecipe extends BaseRecipe {
 
   /** 烹饪类型细分 */
   cookMode: CookMode
-  /** 所需设备等级 */
-  requiredDeviceLevel: number
-
-  /** 烹饪时间（游戏内分钟数，覆写 requirements.timeMinutes 用于烹饪系统特有计算） */
-  cookTimeMinutes: number
 
   /** 烹饪产物品质 */
   qualityLevels?: CookQualityLevel[]

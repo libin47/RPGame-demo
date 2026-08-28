@@ -417,7 +417,7 @@ export function executeCook(
       quantity: p.baseQuantity,
     })),
     consumedMaterials: recipe.materials.map((m) => ({ itemId: m.itemId, quantity: m.quantity })),
-    timeUsed: recipe.cookTimeMinutes,
+    timeUsed: recipe.requirements.timeMinutes,
   }
 }
 

@@ -22,11 +22,9 @@ export interface OngoingRecipe extends BaseRecipe {
 
   /** 类型细分 */
   ongoingMode: OngoingMode
-  /** 所需设备等级 */
-  requiredDeviceLevel: number
 
-  /** 执行时间（游戏内分钟数，覆写 requirements.timeMinutes 用于需要时间进行的配方系统特有计算） */
-  ongoingTimeMinutes?: number
+  /** 满足条件时时间才会流逝 */
+  condition?: number
 
   /** 执行产物品质 */
   qualityLevels?: OngoingQualityLevel[]
