@@ -268,3 +268,9 @@ SCP 基金会在十年前首次发现岛屿的异常，并开始收容与研究�
 - **场景 / 事件**：`config/sceneConfig/`、`config/eventConfig/` → `config/scenes.ts`、`config/events.ts`
 - **敌人 / 技能 / 状态 / 商人 / 配方 / 地图 / 结局 / CG**：对应 `config/` 文件及类型与注册表。
 - 全部注册表最终汇入 `config/registry.ts`，经 `getRegistry()` 读取。
+
+# TODO
+
+按照规划剧情完善游戏内容，暂无游戏系统变动。
+
+1、结局时结局原因提示文本

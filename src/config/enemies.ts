@@ -36,7 +36,7 @@ const 大螃蟹: Enemy = {
       weight: 70,
       damageTypeId: 'slash',
       stats: {
-        baseDamage: '2d8+6',
+        baseDamage: '2d80+6',
         scalingAttribute: 'strength',
         accuracyModifier: 0,
         criticalModifier: 10,

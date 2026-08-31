@@ -304,6 +304,9 @@ export interface ResourceInteraction extends ButtonOption {
 export interface OngoingResourceConfig {
   // 进行中制作空位上限
   ongoingMaxSlots: number
+  // 设备ID：用于区分不同采集点可用的配方（匹配 ongoing 配方的 requiredDeviceId）
+  // 缺省时回退到采集点自身的 id
+  ongoingDeviceId?: string
   // 进行中制作的设备等级（用于产物品质解析，默认 0）
   ongoingDeviceLevel?: number
 }

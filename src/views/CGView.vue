@@ -1,7 +1,7 @@
 <!-- CGView.vue - CG过场视图
      显示CG帧序列：文字 + 背景图 -->
 <template>
-  <div class="cg-view" :style="cgBackgroundStyle">
+  <div class="cg-view" :style="cgBackgroundStyle" @click="onViewClick">
     <!-- CG文本内容 -->
     <div class="cg-text-container" :class="{ 'with-options': visibleOptions.length > 0 }">
       <transition-group name="cg-fade">
@@ -9,6 +9,7 @@
           v-for="(text, idx) in currentTexts"
           :key="`text-${idx}`"
           class="cg-text-line"
+          :class="effectClass(text.style)"
           :style="textStyle(text.style)"
         >
           {{ text.content }}
@@ -32,8 +33,8 @@
       </button>
     </div>
 
-    <!-- 点击提示/跳过按钮（存在选项时不显示，避免误触跳过选择） -->
-    <div v-if="visibleOptions.length === 0" class="cg-controls" @click="onNextFrame">
+    <!-- 点击提示/跳过按钮（存在选项时不显示，避免误触跳过选择；点击由根节点统一处理） -->
+    <div v-if="visibleOptions.length === 0" class="cg-controls">
       <span class="click-hint">{{ isLastFrame ? '点击结束' : '点击继续' }}</span>
     </div>
   </div>
@@ -72,25 +73,38 @@ const isLastFrame = computed(() => {
   return cgState.value.currentFrameIndex >= cgState.value.scene.frames.length - 1
 })
 
-/** CG背景样式 */
+/** CG背景样式：有背景图时用整幅铺满（cover），否则使用夜晚主题的深色纸底 */
 const cgBackgroundStyle = computed(() => {
   if (!cgState.value) return {}
   const bgImage = cgState.value.currentFrame.backgroundImage
   if (bgImage) {
     return {
       backgroundImage: `url(/images/cg/${bgImage.imageId}.png)`,
-      backgroundSize: bgImage.size?.width
-        ? `${bgImage.size.width} ${bgImage.size.height}`
-        : 'cover',
-      backgroundPosition: bgImage.position
-        ? `${bgImage.position.x}px ${bgImage.position.y}px`
-        : 'center',
+      backgroundSize:
+        bgImage.size?.width && bgImage.size.width !== '100%'
+          ? `${bgImage.size.width} ${bgImage.size.height ?? ''}`.trim()
+          : 'cover',
+      backgroundPosition:
+        bgImage.position.x === 0 && bgImage.position.y === 0
+          ? 'center'
+          : `${bgImage.position.x} ${bgImage.position.y}`,
     }
   }
-  return { backgroundColor: '#000000' }
+  return {}
 })
 
-/** 文本样式转换为CSS对象 */
+/** 特殊文本效果类（glitch/shake/fade/distortion） */
+function effectClass(style: CGText['style']): string {
+  const e = style?.specialEffect
+  if (!e || e === 'none') return ''
+  if (e === 'glitch') return 'effect-glitch'
+  if (e === 'shake') return 'effect-shake'
+  if (e === 'distortion') return 'effect-distortion'
+  if (e === 'fade') return 'effect-fade'
+  return ''
+}
+
+/** 文本样式转换为CSS对象（仅覆盖未指定的默认值） */
 function textStyle(style: CGText['style']): Record<string, string | number> {
   if (!style) return {}
   const css: Record<string, string | number> = {}
@@ -143,6 +157,12 @@ function onNextFrame(): void {
   }
 }
 
+/** 点击画面任意位置推进；有选项时不响应（防止误触跳过选择） */
+function onViewClick(): void {
+  if (visibleOptions.value.length > 0) return
+  onNextFrame()
+}
+
 /** 选择CG选项 */
 function onSelectOption(opt: CGOption): void {
   if (!game) return
@@ -167,35 +187,135 @@ function endCG(): void {
 </script>
 
 <style scoped>
+/* ── 容器：夜晚主题深色纸底（对应 GameView 最深夜档） ── */
 .cg-view {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(180deg, #14100a 0%, #0c0906 100%);
+  background-color: #0c0906;
+  background-size: cover;
+  background-position: center;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* 暗角暗化，增强夜色氛围 */
+.cg-view::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at center top,
+      rgba(0, 0, 0, 0) 35%,
+      rgba(0, 0, 0, 0.35) 70%,
+      rgba(0, 0, 0, 0.6) 100%
+    ),
+    radial-gradient(
+      ellipse at center bottom,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(0, 0, 0, 0.2) 45%,
+      rgba(0, 0, 0, 0) 70%
+    );
+}
+
+/* ── 文本：垂直水平居中 ── */
+.cg-text-container {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  width: 100vw;
-  height: 100vh;
-  background: #000;
-  background-size: cover;
-  background-position: center;
-  cursor: pointer;
-  user-select: none;
-}
-
-.cg-text-container {
+  justify-content: center;
+  text-align: center;
   width: 100%;
-  max-width: 800px;
+  max-width: 820px;
   padding: 40px;
-  margin-bottom: 60px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  background: radial-gradient(ellipse at center, rgba(8, 6, 4, 0.72) 0%, rgba(8, 6, 4, 0) 78%);
 }
 
 .cg-text-container.with-options {
-  margin-bottom: 140px;
+  transform: translateY(-4%);
 }
 
+/* 默认文本样式：与 GameView 叙事文字一致（配置未指定时使用） */
 .cg-text-line {
-  margin-bottom: 12px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  margin: 6px 0;
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
+  font-size: 1rem;
+  line-height: 1.9;
+  color: #d8cfbb;
+  text-align: center;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* ── 特殊文本效果 ── */
+.effect-glitch {
+  animation: cgGlitch 0.5s steps(2, end) infinite;
+}
+.effect-shake {
+  animation: cgShake 0.6s linear infinite;
+}
+.effect-fade {
+  animation: cgFadeIn 1.2s ease forwards;
+}
+.effect-distortion {
+  animation: cgDistortion 2s ease-in-out infinite;
+}
+
+@keyframes cgGlitch {
+  0%,
+  100% {
+    transform: translate(0);
+    filter: none;
+  }
+  25% {
+    transform: translate(-1.5px, 0.5px);
+    filter: hue-rotate(40deg);
+  }
+  75% {
+    transform: translate(1.5px, -0.5px);
+    filter: invert(0.1);
+  }
+}
+@keyframes cgShake {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  25% {
+    transform: translate(-2px, 1px);
+  }
+  50% {
+    transform: translate(2px, -1px);
+  }
+  75% {
+    transform: translate(-1px, -1px);
+  }
+}
+@keyframes cgFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes cgDistortion {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
 }
 
 .cg-fade-enter-active,
@@ -208,11 +328,13 @@ function endCG(): void {
   opacity: 0;
 }
 
+/* ── 选项 ── */
 .cg-options {
   position: fixed;
   bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -229,6 +351,7 @@ function endCG(): void {
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
+  font-family: 'FangSong', 'STFangsong', 'KaiTi', 'STKaiti', 'SimSun', 'Songti SC', serif;
   font-size: 15px;
   letter-spacing: 0.05em;
   cursor: pointer;

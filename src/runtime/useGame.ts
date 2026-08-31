@@ -387,7 +387,7 @@ function formatAttributeChangeNotices(change: AttributeChangeRecord): string[] {
  * 使用游戏状态
  * 在 Vue 组件中通过此函数获取和操作游戏状态
  */
-export function useGame(initialPlayer: PlayerState) {
+export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: string }) {
   // 旧存档兜底：缺少 campsiteSceneId 时重置为"未建立营地"
   if (initialPlayer.progress.campsiteSceneId === undefined) {
     initialPlayer.progress.campsiteSceneId = null
@@ -395,8 +395,15 @@ export function useGame(initialPlayer: PlayerState) {
   const state = createGameState(initialPlayer)
   const registry = getRegistry()
 
-  // 初始场景被动事件检查（命中则直接进入事件）
-  tryTriggerPassiveEvents()
+  // 开局先播放CG（如开场过场）：进入CG模式，跳过初始场景被动事件，待CG结束后的选项引导进入场景
+  const openingCG = options?.startWithCG ? startCG(options.startWithCG) : null
+  if (openingCG) {
+    state.currentCG = openingCG
+    state.mode = 'cg'
+  } else {
+    // 初始场景被动事件检查（命中则直接进入事件）
+    tryTriggerPassiveEvents()
+  }
 
   /**
    * 执行一组效果，并将日志输出到底部消息栏
@@ -2520,7 +2527,7 @@ export function useGame(initialPlayer: PlayerState) {
   /** 非营地采集点进行中制作的设备ID（用于配方 requiredDeviceId 过滤） */
   function currentOngoingDeviceId(): string | null {
     const coll = ongoingCollect.value
-    if (coll) return coll.id
+    if (coll) return coll.ongoingConfig?.ongoingDeviceId ?? coll.id
     return state.currentBuildingId
   }
 

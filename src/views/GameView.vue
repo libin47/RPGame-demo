@@ -845,7 +845,7 @@ function onRepairBuilding(buildId: string): void {
 /** 建筑交互日志 */
 function onBuildingLog(message: string): void {}
 
-/** 监听结局/CG模式，自动跳转 */
+/** 监听结局/CG模式，自动跳转（immediate：开局若已是 cg 模式也立即跳转） */
 watch(
   () => game.value.state.mode,
   (newMode) => {
@@ -858,6 +858,7 @@ watch(
       router.push({ name: 'cg' })
     }
   },
+  { immediate: true },
 )
 </script>
 

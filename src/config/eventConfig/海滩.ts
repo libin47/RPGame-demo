@@ -15,7 +15,7 @@ export const event_beach_大螃蟹: GameEvent = {
   frames: [
     {
       id: 'crab_spotted',
-      text: '你靠近了一只落单的大螃蟹，它高举着巨大的螯钳，似乎是在示意你离远点儿。',
+      text: '你小心翼翼地靠近了那只站立不动地的大螃蟹，它青色的甲壳上透着一丝丝青色的纹路若隐若现。\n\n似乎注意到你的存在，它高举起巨大的螯钳。',
       options: [
         {
           id: 'fight_crab',
@@ -47,7 +47,10 @@ export const event_beach_大螃蟹: GameEvent = {
         {
           id: 'butcher_crab',
           name: '分解蟹肉',
-          results: endEvent('你从大螃蟹身上获取了一些有用的材料', [addItem('蟹肉', 1, '蟹肉*1')]),
+          results: endEvent(
+            '你从大螃蟹身上获取了一些有用的材料\n\n你记下了他们的位置，以后你可以直接过来狩猎了。\n\n【收集】中解锁了【狩猎大螃蟹】的互动。',
+            [addItem('蟹肉', 1, '蟹肉*1')],
+          ),
         },
       ],
     },
@@ -69,7 +72,11 @@ export const event_beach_大螃蟹: GameEvent = {
         {
           id: 'accept_defeat',
           name: '...',
-          results: endEvent(),
+          results: {
+            type: 'playCG',
+            /** CG配置ID */
+            cgId: 'end_normal_dead',
+          },
         },
       ],
     },

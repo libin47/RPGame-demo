@@ -17,7 +17,14 @@ const beach_机翼营地: SubScene = {
     {
       id: 'beach_机翼营地_1',
       priority: 2,
-      text: '地上铺着一层防水布，算是勉强有一个栖身之所了。\n\n但是海风太大，或许这里并不适合旧居。',
+      text: '半截机翼插在地上，形成一个天然的庇护所，遮风、挡雨。\n地上铺着一层防水布，如果你累了，可以在这里{beach_rest_1}，但是不要指望有多舒服。\n\n这里有大把的位置，你可以建造你想要的一切，篝火、床甚至一个小木屋，前提是你有足够的材料和时间。\n\n不过这里海风太大，或许并不适合久居，但这里离海够近，能够更清晰地看到过往的船只——假如有的话。',
+      eventEntries: [
+        {
+          key: 'beach_rest_1',
+          displayText: '休息',
+          eventId: 'event_机翼营地_休息',
+        },
+      ],
       displayCondition: { flag: ['flag_抵达机翼营地'] },
       isOneTime: false,
     },
@@ -32,6 +39,7 @@ const beach_机翼营地: SubScene = {
           eventId: 'event_机翼营地_搭建营地',
         },
       ],
+      displayCondition: { hideFlag: ['flag_抵达机翼营地'] },
       isOneTime: false,
     },
   ],

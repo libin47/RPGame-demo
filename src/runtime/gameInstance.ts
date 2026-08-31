@@ -204,8 +204,8 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
   addItem(playerState, 'watch', 1)
   addItem(playerState, 'san_meter', 1)
 
-  // 初始化游戏运行时
-  const game = useGame(playerState)
+  // 初始化游戏运行时（新游戏开局先播放开场CG）
+  const game = useGame(playerState, { startWithCG: 'opening' })
   currentInstance.value = {
     state: game.state,
     enterEvent: game.enterEvent,

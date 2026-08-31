@@ -44,8 +44,6 @@ export enum CGType {
 export interface CGFrame {
   // 帧ID
   id: string
-  // 帧序号（用于排序）
-  order: number
 
   // 文本内容
   texts: CGText[]
@@ -55,9 +53,6 @@ export interface CGFrame {
 
   // 前景图片/角色立绘
   foregroundSprites?: CGSprite[]
-
-  // 屏幕效果（震动、闪屏等）
-  screenEffects?: CGScreenEffect[]
 
   // 选项列表
   options?: CGOption[]
@@ -75,10 +70,10 @@ export interface CGText {
   displayCondition?: Conditions
 
   // 显示延迟（毫秒）
-  displayDelay?: number
+  // displayDelay?: number
 
   // 文本变动（根据SAN值等条件显示不同文本）
-  variations?: CGTextVariation[]
+  // variations?: CGTextVariation[]
 
   // 文本样式
   style?: CGTextStyle
@@ -97,7 +92,7 @@ export interface CGTextStyle {
   // 文本对齐
   textAlign?: 'left' | 'center' | 'right'
   // 文本装饰
-  textDecoration?: 'none' | 'underline' | 'line-through'
+  // textDecoration?: 'none' | 'underline' | 'line-through'
   // 文本阴影
   textShadow?: string
   // 特殊效果
@@ -105,7 +100,7 @@ export interface CGTextStyle {
   // 字体家族
   fontFamily?: string
 
-  position?: CGTextPosition
+  // position?: CGTextPosition
 }
 
 // CG文本位置
@@ -151,34 +146,6 @@ export interface CGSprite {
   displayCondition?: Conditions
   // 图层顺序
   zIndex?: number
-}
-
-// 屏幕效果
-export interface CGScreenEffect {
-  // 效果类型
-  type: CGScreenEffectType
-  // 强度 (0-1)
-  intensity: number
-  // 持续时间（毫秒）
-  duration: number
-  // 延迟（毫秒）
-  delay?: number
-  // 效果条件
-  displayCondition?: Conditions
-}
-
-// 屏幕效果类型
-export enum CGScreenEffectType {
-  SHAKE = 'shake',
-  FLASH = 'flash',
-  FADE_TO_BLACK = 'fadeToBlack',
-  FADE_FROM_BLACK = 'fadeFromBlack',
-  FADE_TO_WHITE = 'fadeToWhite',
-  BLUR = 'blur',
-  COLOR_GRADING = 'colorGrading',
-  INVERT = 'invert',
-  SEPIA = 'sepia',
-  RED_TINT = 'redTint',
 }
 
 // CG选项
