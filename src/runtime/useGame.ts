@@ -327,9 +327,9 @@ function createGameState(initialPlayer: PlayerState) {
   })
 
   // 标记初始描述为已看过
-  if (selectedDesc) {
-    markDescriptionSeen(selectedDesc, initialPlayer)
-  }
+  // if (selectedDesc) {
+  //   markDescriptionSeen(selectedDesc, initialPlayer)
+  // }
 
   return state
 }
@@ -425,7 +425,7 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
     state.mode = 'cg'
   } else {
     // 初始场景被动事件检查（命中则直接进入事件）
-    tryTriggerPassiveEvents()
+    // tryTriggerPassiveEvents()
   }
 
   /**
@@ -436,6 +436,21 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
     const resolver = getEffectResolver()
     const logs = resolver.executeEffectResults(state.player, effects)
     if (logs.length > 0) {
+    }
+  }
+
+  /**
+   * 执行选项结果的即时效果并设置标志位（selectEventOption 多个 case 共用）
+   */
+  function applyEffectsAndFlags(result: {
+    effects?: EffectResult[] | undefined
+    setFlags?: Record<string, boolean> | undefined
+  }): void {
+    executeEffects(result.effects)
+    if (result.setFlags) {
+      for (const [flagId, value] of Object.entries(result.setFlags)) {
+        state.player.flags[flagId] = value
+      }
     }
   }
 
@@ -975,19 +990,7 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
     // 根据选项结果类型执行不同操作
     switch (result.type) {
       case 'nextFrame': {
-        // 执行效果
-        if (result.effects && result.effects.length > 0) {
-          const logs = resolver.executeEffectResults(state.player, result.effects)
-          if (logs.length > 0) {
-          }
-        }
-
-        // 设置标志位
-        if (result.setFlags) {
-          for (const [flagId, value] of Object.entries(result.setFlags)) {
-            state.player.flags[flagId] = value
-          }
-        }
+        applyEffectsAndFlags(result)
 
         // 记录选项结果文本，拼接到下一帧文本前
         state.frameTextPrefix = result.text || ''
@@ -1027,19 +1030,7 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
       }
 
       case 'endEvent': {
-        // 执行效果
-        if (result.effects && result.effects.length > 0) {
-          const logs = resolver.executeEffectResults(state.player, result.effects)
-          if (logs.length > 0) {
-          }
-        }
-
-        // 设置标志位
-        if (result.setFlags) {
-          for (const [flagId, value] of Object.entries(result.setFlags)) {
-            state.player.flags[flagId] = value
-          }
-        }
+        applyEffectsAndFlags(result)
 
         // 刷新场景？
         const currentDesc = state.currentDescriptionConfig
@@ -1063,19 +1054,7 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
       }
 
       case 'switchScene': {
-        // 执行效果
-        if (result.effects && result.effects.length > 0) {
-          const logs = resolver.executeEffectResults(state.player, result.effects)
-          if (logs.length > 0) {
-          }
-        }
-
-        // 设置标志位
-        if (result.setFlags) {
-          for (const [flagId, value] of Object.entries(result.setFlags)) {
-            state.player.flags[flagId] = value
-          }
-        }
+        applyEffectsAndFlags(result)
 
         // 先重置事件状态，再切换场景（enterScene 内部会检测被动事件）
         state.mode = 'normal'
@@ -1095,19 +1074,8 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
       }
 
       case 'triggerEvent': {
-        // 执行效果（如果有的话）
-        if (result.effects && result.effects.length > 0) {
-          const logs = resolver.executeEffectResults(state.player, result.effects)
-          if (logs.length > 0) {
-          }
-        }
-
-        // 设置标志位
-        if (result.setFlags) {
-          for (const [flagId, value] of Object.entries(result.setFlags)) {
-            state.player.flags[flagId] = value
-          }
-        }
+        // 执行效果（如果有的话）并设置标志位
+        applyEffectsAndFlags(result)
 
         enterEvent(result.eventId)
         break
@@ -1132,19 +1100,7 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
       }
 
       case 'playCG': {
-        // 执行效果
-        if (result.effects && result.effects.length > 0) {
-          const logs = resolver.executeEffectResults(state.player, result.effects)
-          if (logs.length > 0) {
-          }
-        }
-
-        // 设置标志位
-        if (result.setFlags) {
-          for (const [flagId, value] of Object.entries(result.setFlags)) {
-            state.player.flags[flagId] = value
-          }
-        }
+        applyEffectsAndFlags(result)
 
         // 播放CG
         const cgPlay = startCG(result.cgId)
@@ -1157,19 +1113,7 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
       }
 
       case 'openTrade': {
-        // 执行效果
-        if (result.effects && result.effects.length > 0) {
-          const logs = resolver.executeEffectResults(state.player, result.effects)
-          if (logs.length > 0) {
-          }
-        }
-
-        // 设置标志位
-        if (result.setFlags) {
-          for (const [flagId, value] of Object.entries(result.setFlags)) {
-            state.player.flags[flagId] = value
-          }
-        }
+        applyEffectsAndFlags(result)
 
         state.currentTraderId = result.traderId
         state.mode = 'trade'
@@ -1177,19 +1121,7 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
       }
 
       case 'reading': {
-        // 执行效果
-        if (result.effects && result.effects.length > 0) {
-          const logs = resolver.executeEffectResults(state.player, result.effects)
-          if (logs.length > 0) {
-          }
-        }
-
-        // 设置标志位
-        if (result.setFlags) {
-          for (const [flagId, value] of Object.entries(result.setFlags)) {
-            state.player.flags[flagId] = value
-          }
-        }
+        applyEffectsAndFlags(result)
 
         // 打开阅读覆盖层，事件保持打开；关闭后按 returnFrameId 跳转
         openReading(result.readingId, { returnFrameId: result.returnFrameId })
@@ -1197,19 +1129,7 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
       }
 
       case 'readDiary': {
-        // 执行效果
-        if (result.effects && result.effects.length > 0) {
-          const logs = resolver.executeEffectResults(state.player, result.effects)
-          if (logs.length > 0) {
-          }
-        }
-
-        // 设置标志位
-        if (result.setFlags) {
-          for (const [flagId, value] of Object.entries(result.setFlags)) {
-            state.player.flags[flagId] = value
-          }
-        }
+        applyEffectsAndFlags(result)
 
         // 打开日记覆盖层，事件保持打开；关闭后按 returnFrameId 跳转
         openDiary({ returnFrameId: result.returnFrameId })
@@ -2874,21 +2794,7 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
         // 切换场景
         const newScene = registry.getScene(result.sceneInfo.sceneId)
         if (newScene) {
-          state.currentScene = newScene
-          state.currentSubScene = result.sceneInfo.subSceneId
-            ? (registry.getSubScene(result.sceneInfo.subSceneId) ?? null)
-            : null
-
-          const target = state.currentSubScene || state.currentScene
-          const selectedDesc = selectSceneDescription(target, state.player)
-          state.sceneDescription = selectedDesc ? selectedDesc.text : '（场景描述缺失）'
-          state.currentDescriptionConfig = selectedDesc || null
-          if (selectedDesc) {
-            markDescriptionSeen(selectedDesc, state.player)
-          }
-
-          state.player.currentLocation.sceneId = result.sceneInfo.sceneId
-          state.player.currentLocation.subSceneId = result.sceneInfo.subSceneId ?? null
+          enterScene(newScene, result.sceneInfo.subSceneId ?? null)
         }
 
         state.currentCG = null

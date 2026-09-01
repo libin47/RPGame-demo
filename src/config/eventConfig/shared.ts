@@ -56,6 +56,18 @@ export const addItem = (
     probability,
     description,
   )
+  
+/** 添加日记 */
+export const addDaily = (
+  noteId: string,
+  description?: string,
+  probability = 1,
+): EffectResult =>
+  fx(
+    { type: EffectType.DAILY_NOTE, noteId: noteId },
+    probability,
+    description,
+  )
 
 // ============================================================
 // 结果工厂（返回 EventOptionResult）

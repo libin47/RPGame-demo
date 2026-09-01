@@ -5,15 +5,10 @@ const dailyNote_漂泊者的日记: DailyNoteConfig = {
   id: '漂泊者的日记',
   content: [
     {
-      conditions: { flag: ['first_beach_explored'] },
-      content: '我在这座岛上睁开眼，四周一片陌生。海风带着咸腥，远处的轮廓像一座被时光遗忘的岛屿。',
+      content: '我很幸运的活了下来。',
     },
     {
-      conditions: { hideFlag: ['first_beach_explored'], flag: ['met_trader'] },
-      content: '岸边似乎有其他幸存者活动的痕迹。这里的寒意在夜晚会更加明显。',
-    },
-    {
-      content: '我在漂泊中留下了印记，记录下所见所闻。',
+      content: '我在飞机的残骸里找到了一个笔记本和一支笔，也许我可以在这里记录下我的经历。',
     },
   ],
 }
