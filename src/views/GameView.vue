@@ -255,6 +255,14 @@
       <AttributesPanel :player-state="game.state.player" @close="uiState.showAttributes = false" />
     </div>
 
+    <!-- 阅读覆盖层（全屏，浮于所有内容之上含状态栏） -->
+    <ReadingView
+      v-if="game.state.currentReading"
+      :reading="game.state.currentReading.config"
+      :player-state="game.state.player"
+      @close="game.closeReading()"
+    />
+
     <!-- SAN 扭曲滤镜定义（隐藏，供 CSS filter: url() 引用） -->
     <svg class="san-svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
       <!-- 中等扭曲（档位 3） -->
@@ -330,6 +338,7 @@ import StorePanel from '@/components/StorePanel.vue'
 import RepairPanel from '@/components/RepairPanel.vue'
 import TradePanel from '@/components/TradePanel.vue'
 import MapPanel from '@/components/MapPanel.vue'
+import ReadingView from '@/components/ReadingView.vue'
 import { PlayerActionType, getTimeOfDay, getRegistry } from '@/engine'
 import { getVisibleOptions, getVisibleVariations, isOptionAvailable, getSanLevel } from '@/engine'
 import { getGameInstance } from '@/runtime/gameInstance'

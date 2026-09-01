@@ -183,6 +183,36 @@ export type EventOptionResult =
   | OpenTradeResult
   | SwitchSceneResult
   | TriggerEventResult
+  | ReadingResult
+  | ReadDiaryResult
+
+/**
+ * 读取文档
+ */
+export interface ReadingResult {
+  type: 'reading'
+  /** 文档ID */
+  readingId: string
+  /** 目标事件结束后跳转的帧ID（不填则返回当前帧） */
+  returnFrameId?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, boolean>
+}
+
+/**
+ * 打开日记（全书唯一一本，动态生成，固定最后一页，样式为日记）
+ */
+export interface ReadDiaryResult {
+  type: 'readDiary'
+  /** 目标事件结束后跳转的帧ID（不填则返回当前帧） */
+  returnFrameId?: string
+  /** 执行的效果列表 */
+  effects?: EffectResult[]
+  /** 设置标志位 */
+  setFlags?: Record<string, boolean>
+}
 
 /**
  * 跳转到同一事件的另一个帧

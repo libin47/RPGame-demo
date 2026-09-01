@@ -327,6 +327,29 @@ class GameRegistryManager {
   getAllEndings(): import('@/types/ending').EndingConfig[] {
     return Object.values(this.registry.endings.endings)
   }
+
+  // ============================================================
+  // 阅读
+  // ============================================================
+
+  /** 获取阅读配置 */
+  getReading(id: string): import('@/types/reading').ReadingConfig | undefined {
+    return this.registry.readings.readings[id]
+  }
+
+  /** 获取所有阅读配置 */
+  getAllReading(): import('@/types/reading').ReadingConfig[] {
+    return Object.values(this.registry.readings.readings)
+  }
+
+  // ============================================================
+  // 日记模板
+  // ============================================================
+
+  /** 获取日记模板配置 */
+  getDailyNote(id: string): import('@/types/dailynote').DailyNoteConfig | undefined {
+    return this.registry.dailyNotes.dailyNotes[id]
+  }
 }
 
 /**

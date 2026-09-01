@@ -19,6 +19,8 @@ import type { MapRegistry } from './map'
 import type { CharacterRegistry } from './character'
 import type { BuildRegistry } from './build'
 import type { EndingRegistry } from './ending'
+import type { ReadingRegistry } from './reading'
+import type { DailyNoteRegistry } from './dailynote'
 
 /**
  * 游戏全局配置注册表
@@ -92,4 +94,10 @@ export interface GameRegistry {
 
   /** 结局注册表 */
   endings: EndingRegistry
+
+  /** 阅读（文档/日记/终端）注册表 */
+  readings: ReadingRegistry
+
+  /** 日记模板注册表（实际日记内容动态生成到 player.diary） */
+  dailyNotes: DailyNoteRegistry
 }

@@ -3,6 +3,7 @@
 
 import type { GameEvent } from '@/types/event'
 import { OptionCostType } from '@/types/option'
+import { EffectType } from '@/types/effect'
 import { nextFrame, endEvent, triggerBattle, addItem } from './shared'
 
 // ============================================================
@@ -43,6 +44,15 @@ export const event_beach_大螃蟹: GameEvent = {
     {
       id: 'crab_victory',
       text: '大螃蟹不再动弹。',
+      onEnterEffects: [
+        {
+          effect: {
+            type: EffectType.DAILY_NOTE,
+            noteId: '漂泊者的日记',
+          },
+          description: '写入日记：战胜了大螃蟹',
+        },
+      ],
       options: [
         {
           id: 'butcher_crab',

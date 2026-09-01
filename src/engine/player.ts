@@ -246,6 +246,7 @@ export function createNewPlayerState(
     campBuildingLevels: {},
     campStorage: {},
     ongoingJobs: {},
+    diary: [],
   }
 
   // 统计

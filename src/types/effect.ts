@@ -36,6 +36,8 @@ export enum EffectType {
   CAMPSITE_MOVE = 'campsiteMove',
   /** 条件判断 */
   CONDITION = 'condition',
+  /** 写入日记（日记动态生成） */
+  DAILY_NOTE = 'dailyNote',
   /** 复合效果（多个效果组合） */
   COMPOSITE = 'composite',
 }
@@ -247,6 +249,13 @@ export interface CompositeEffect {
   weights?: number[]
 }
 
+/** 写入日记效果 */
+export interface DailyNoteEffect {
+  type: EffectType.DAILY_NOTE
+  /** 日记配置ID（config/dailynote.ts 中注册） */
+  noteId: string
+}
+
 // ============================================================
 // 效果联合类型
 // ============================================================
@@ -266,6 +275,7 @@ export type Effect =
   | GainExpEffect
   | CampsiteMoveEffect
   | CompositeEffect
+  | DailyNoteEffect
 
 // ============================================================
 // 效果结果

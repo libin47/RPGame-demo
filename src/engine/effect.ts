@@ -5,6 +5,7 @@ import type { EffectResult, Effect } from '@/types/effect'
 import { EffectType, AttributeType, AttributeOperation, ItemChangeType } from '@/types/effect'
 import type { DamageTypeId } from '@/types/damage'
 import { getRegistry } from './registry'
+import { evaluateConditions } from './event'
 import { applyStatus, removeStatus } from './status'
 import { addItem, removeItem, equipItemById, unequipByItemId } from './inventory'
 import { executeMoveCampsite } from './campsite'
@@ -175,6 +176,10 @@ export class EffectResolver {
       case EffectType.CAMPSITE_MOVE:
         return this.executeCampsiteMoveEffect(player, effect)
 
+      // 写入日记
+      case EffectType.DAILY_NOTE:
+        return this.executeDailyNoteEffect(player, effect)
+
       // 状态效果
       case EffectType.STATUS:
         return this.executeStatusEffect(player, effect)
@@ -244,6 +249,43 @@ export class EffectResolver {
       const log = removeStatus(player, statusId, true)
       return log
     }
+  }
+
+  /**
+   * 执行写入日记效果
+   * noteId 仅用于从日记模板中挑选写入内容；整本日记只有一本（存于 player.progress.diary），
+   * 依次判断 DailyNoteConfig.content 中每一项的 conditions，满足则写入当天日记页（同一天合并）
+   */
+  private executeDailyNoteEffect(
+    player: PlayerState,
+    effect: Extract<Effect, { type: EffectType.DAILY_NOTE }>,
+  ): string | null {
+    const config = this.registry.getDailyNote(effect.noteId)
+    if (!config) return `日记内容模板「${effect.noteId}」不存在`
+
+    // 收集所有满足条件的写入内容
+    const parts: string[] = []
+    for (const item of config.content) {
+      if (evaluateConditions(item.conditions, player)) {
+        parts.push(item.content)
+      }
+    }
+    if (parts.length === 0) return null
+
+    const text = parts.join('\n\n')
+    const day = player.progress.day
+    const entries = Array.isArray(player.progress.diary) ? player.progress.diary : []
+
+    // 同一天合并：追加到该天一页；否则新增一页
+    const sameDay = entries.find((e) => e.day === day)
+    if (sameDay) {
+      sameDay.text = sameDay.text ? `${sameDay.text}\n\n${text}` : text
+    } else {
+      entries.push({ day, text })
+    }
+    player.progress.diary = entries
+
+    return `已写入日记第${day}日`
   }
 
   // ============================================================

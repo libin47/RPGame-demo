@@ -1,10 +1,11 @@
 // item.ts - 物品数据结构
 
-import type { Condition } from './effect'
+import type { Condition, Conditions } from './effect'
 import type { EffectResult } from './effect'
 import type { AttributeType } from './effect'
 import type { RecipeType } from './recipe'
 import type { DamageTypeId } from './damage'
+import type { ReadingConfig } from './reading'
 // ============================================================
 // 基础标识类型
 // ============================================================
@@ -341,18 +342,18 @@ export interface MaterialItem extends BaseItem {
 export interface DocumentItem extends BaseItem {
   category: ItemCategory.DOCUMENT
 
-  /** 文档内容（纯文本，支持换行） */
-  content: string
-  /** 文档内容变体（根据条件显示不同内容，如SAN值影响阅读到的文字） */
-  contentVariations?: DocumentContentVariation[]
+  /** 文档ID（有值则打开此固定阅读；否则按 isDiary 判断） */
+  readingId?: string
+  /** 是否打开唯一的日记本（整个游戏只有一本；与 readingId 二选一，优先级更高） */
+  isDiary?: boolean
   /** 阅读后触发的效果（如获得线索、解锁配方、触发事件等） */
   onReadEffects?: EffectResult[]
-  /** 阅读后是否消耗此文档 */
-  isConsumedOnRead: boolean
-  /** 阅读文档是否需要特定条件（如语言能力） */
-  readCondition?: Condition
-  /** 文档作者/来源（显示用） */
-  author?: string
+  /** 阅读后是否消耗此文档，默认不消耗 */
+  isConsumedOnRead?: boolean
+  /** 阅读文档是否需要特定条件，不满足无法打开阅读界面 */
+  readConditions?: Conditions
+  /** 阅读文档不满足条件时的提示文本，追加在场景文本最下方 */
+  cantReadConditionText?: string
 }
 
 /**

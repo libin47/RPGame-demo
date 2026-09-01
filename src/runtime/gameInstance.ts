@@ -45,6 +45,11 @@ export interface GameInstance {
     readonly currentCG: import('@/engine').CGPlayState | null
     readonly currentTraderId: string | null
     readonly currentBuildingId: string | null
+    readonly currentReading: {
+      readonly readingId: string
+      readonly config: import('@/types/reading').ReadingConfig
+      readonly returnFrameId?: string
+    } | null
   }
   /** 进入事件 */
   enterEvent: (eventId: string, fromEventEntry?: boolean) => void
@@ -129,6 +134,23 @@ export interface GameInstance {
   openInventory: () => void
   /** 关闭背包 */
   closeInventory: () => void
+  /** 打开阅读覆盖层 */
+  openReading: (
+    readingId: string,
+    opts?: {
+      returnFrameId?: string
+      docEffectResults?: import('@/types/effect').EffectResult[]
+      docConsumeItemId?: string
+    },
+  ) => void
+  /** 关闭阅读覆盖层 */
+  closeReading: () => void
+  /** 打开日记覆盖层（全书唯一一本） */
+  openDiary: (opts?: {
+    returnFrameId?: string
+    docEffectResults?: import('@/types/effect').EffectResult[]
+    docConsumeItemId?: string
+  }) => void
   /** 设置场景文本后缀 */
   setSceneTextAfter: (text: string) => void
   /** 替换文本中的占位符 */
@@ -249,6 +271,9 @@ export function startNewGame(classConfig: CharacterClass, playerName?: string): 
     exitBuildMode: game.exitBuildMode,
     openInventory: game.openInventory,
     closeInventory: game.closeInventory,
+    openReading: game.openReading,
+    closeReading: game.closeReading,
+    openDiary: game.openDiary,
     setSceneTextAfter: game.setSceneTextAfter,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,
@@ -331,6 +356,9 @@ export function restoreGame(playerState: PlayerState): GameInstance {
     exitBuildMode: game.exitBuildMode,
     openInventory: game.openInventory,
     closeInventory: game.closeInventory,
+    openReading: game.openReading,
+    closeReading: game.closeReading,
+    openDiary: game.openDiary,
     setSceneTextAfter: game.setSceneTextAfter,
     resolveText: game.resolveText,
     advanceGameTime: game.advanceGameTime,

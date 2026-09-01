@@ -12,6 +12,7 @@ import type {
   PassiveEventSource,
 } from '@/types/scene'
 import type { GameEvent, EventFrame, EventOptionResult } from '@/types/event'
+import type { ReadingConfig } from '@/types/reading'
 import type { EffectResult } from '@/types/effect'
 import { EffectType, GainExpTarget } from '@/types/effect'
 import type { EndingConfig } from '@/types/ending'
@@ -49,6 +50,7 @@ import { checkEnding } from '@/engine'
 import { startCG } from '@/engine'
 import type { CGPlayState } from '@/engine'
 import { ItemCategory } from '@/types/item'
+import type { DocumentItem } from '@/types/item'
 import { equipItem as engineEquipItem, unequipSlot, useConsumable } from '@/engine'
 import {
   executeBuild,
@@ -253,6 +255,26 @@ interface GameRuntimeState {
 
   /** 进入背包前的模式（关闭背包后恢复） */
   previousMode: GameMode
+
+  /** 当前阅读上下文（覆盖层，非模式，打开时覆盖全屏） */
+  currentReading: ReadingContext | null
+}
+
+/**
+ * 阅读上下文
+ * 记录当前打开的阅读内容及关闭（返回）时需要执行的收尾逻辑
+ */
+interface ReadingContext {
+  /** 阅读配置ID（日记为 'diary:' + noteId） */
+  readingId: string
+  /** 实际展示的阅读配置（日记为动态合成） */
+  config: ReadingConfig
+  /** 事件来源：关闭后跳转的目标事件帧ID */
+  returnFrameId?: string
+  /** 文档阅读来源：关闭后执行的效果 */
+  docEffectResults?: EffectResult[]
+  /** 文档阅读来源：关闭后消耗的物品ID */
+  docConsumeItemId?: string
 }
 
 /**
@@ -296,6 +318,7 @@ function createGameState(initialPlayer: PlayerState) {
     currentEnding: null,
     endingReason: '',
     currentCG: null,
+    currentReading: null,
     currentTraderId: null,
     pendingCharacterResult: null,
     currentBuildingId: null,
@@ -1150,6 +1173,46 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
 
         state.currentTraderId = result.traderId
         state.mode = 'trade'
+        break
+      }
+
+      case 'reading': {
+        // 执行效果
+        if (result.effects && result.effects.length > 0) {
+          const logs = resolver.executeEffectResults(state.player, result.effects)
+          if (logs.length > 0) {
+          }
+        }
+
+        // 设置标志位
+        if (result.setFlags) {
+          for (const [flagId, value] of Object.entries(result.setFlags)) {
+            state.player.flags[flagId] = value
+          }
+        }
+
+        // 打开阅读覆盖层，事件保持打开；关闭后按 returnFrameId 跳转
+        openReading(result.readingId, { returnFrameId: result.returnFrameId })
+        break
+      }
+
+      case 'readDiary': {
+        // 执行效果
+        if (result.effects && result.effects.length > 0) {
+          const logs = resolver.executeEffectResults(state.player, result.effects)
+          if (logs.length > 0) {
+          }
+        }
+
+        // 设置标志位
+        if (result.setFlags) {
+          for (const [flagId, value] of Object.entries(result.setFlags)) {
+            state.player.flags[flagId] = value
+          }
+        }
+
+        // 打开日记覆盖层，事件保持打开；关闭后按 returnFrameId 跳转
+        openDiary({ returnFrameId: result.returnFrameId })
         break
       }
     }
@@ -2373,7 +2436,25 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
     if (config.category === ItemCategory.CONSUMABLE) {
       const log = useConsumable(state.player, instanceId)
     } else if (config.category === ItemCategory.DOCUMENT) {
-      // 阅读文档（暂仅显示名称）
+      const doc = config as DocumentItem
+      // 不满足阅读条件时：写入场景文本后缀并退出背包回到场景
+      if (doc.readConditions && !evaluateConditions(doc.readConditions, state.player)) {
+        setSceneTextAfter(doc.cantReadConditionText || '无法阅读此文档')
+        closeInventory()
+        return
+      }
+      // 满足条件：打开阅读/日记覆盖层
+      if (doc.isDiary) {
+        openDiary({
+          docEffectResults: doc.onReadEffects,
+          docConsumeItemId: doc.isConsumedOnRead ? doc.id : undefined,
+        })
+      } else if (doc.readingId) {
+        openReading(doc.readingId, {
+          docEffectResults: doc.onReadEffects,
+          docConsumeItemId: doc.isConsumedOnRead ? doc.id : undefined,
+        })
+      }
     } else {
     }
   }
@@ -2647,6 +2728,99 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
   }
 
   /**
+   * 打开阅读覆盖层
+   * 不改变当前 mode，保证下层状态（事件帧/背包/场景）被保留，供返回时恢复
+   */
+  function openReading(
+    readingId: string,
+    opts: {
+      returnFrameId?: string
+      docEffectResults?: EffectResult[]
+      docConsumeItemId?: string
+    } = {},
+  ): void {
+    const cfg = registry.getReading(readingId)
+    if (!cfg) {
+      setSceneTextAfter('（未找到可阅读的内容）')
+      return
+    }
+    state.currentReading = {
+      readingId,
+      config: cfg,
+      returnFrameId: opts.returnFrameId,
+      docEffectResults: opts.docEffectResults,
+      docConsumeItemId: opts.docConsumeItemId,
+    }
+  }
+
+  /**
+   * 打开日记（全书唯一一本，动态生成，样式固定为日记，默认停留在最后一页）
+   * 不好使在下层状态；关闭后按 returnFrameId 跳转
+   */
+  function openDiary(
+    opts: {
+      returnFrameId?: string
+      docEffectResults?: EffectResult[]
+      docConsumeItemId?: string
+    } = {},
+  ): void {
+    // 由已写入的日记动态合成阅读配置（整个游戏只有一本）
+    const raw = state.player.progress.diary
+    const entries = (Array.isArray(raw) ? raw : []).slice().sort((a, b) => a.day - b.day)
+    const fallbackDay = state.player.progress.day
+
+    const config: ReadingConfig = {
+      id: 'diary',
+      title: '日记',
+      sourceType: 'diary',
+      currentPage: -1,
+      pages:
+        entries.length > 0
+          ? entries.map((e) => ({ title: `第${e.day}日`, content: e.text }))
+          : [{ title: `第${fallbackDay}日`, content: '（今天还没有记录。）' }],
+    }
+
+    state.currentReading = {
+      readingId: config.id,
+      config,
+      returnFrameId: opts.returnFrameId,
+      docEffectResults: opts.docEffectResults,
+      docConsumeItemId: opts.docConsumeItemId,
+    }
+  }
+
+  /**
+   * 关闭阅读覆盖层（点击返回）
+   * 文档阅读：在此结算效果与消耗；事件阅读：按 returnFrameId 跳转到目标帧
+   */
+  function closeReading(): void {
+    const reading = state.currentReading
+    if (!reading) return
+
+    // 文档阅读收尾：执行效果 + 按需消耗物品
+    if (reading.docEffectResults && reading.docEffectResults.length > 0) {
+      executeEffects(reading.docEffectResults)
+    }
+    if (reading.docConsumeItemId) {
+      removeItem(state.player, reading.docConsumeItemId, 1)
+    }
+
+    state.currentReading = null
+
+    // 事件阅读收尾：跳转到目标事件帧
+    if (reading.returnFrameId && state.currentEvent) {
+      const target = state.currentEvent.frames.find((f) => f.id === reading.returnFrameId)
+      if (target) {
+        state.currentFrame = target
+        if (target.seenFlag) {
+          state.player.flags[target.seenFlag] = true
+        }
+        executeEffects(target.onEnterEffects)
+      }
+    }
+  }
+
+  /**
    * 选择CG选项（由 CGView 调用）
    * 根据选项结果执行：跳帧 / 跳CG / 进入场景 / 触发事件 / 触发战斗 / 进入结局
    */
@@ -2802,6 +2976,9 @@ export function useGame(initialPlayer: PlayerState, options?: { startWithCG?: st
     exitBuildMode,
     openInventory,
     closeInventory,
+    openReading,
+    closeReading,
+    openDiary,
     setSceneTextAfter,
     resolveText,
     advanceGameTime,

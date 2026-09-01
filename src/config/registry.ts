@@ -19,6 +19,8 @@ import { characterRegistry } from './characters'
 import { mapRegistry } from './maps'
 import { buildRegistry } from './builds'
 import { endingRegistry } from './endings'
+import { readingRegistry } from './readings'
+import { dailyNoteRegistry } from './dailynote'
 
 export const gameRegistry: GameRegistry = {
   builds: buildRegistry,
@@ -40,4 +42,6 @@ export const gameRegistry: GameRegistry = {
   maps: mapRegistry,
   characters: characterRegistry,
   endings: endingRegistry,
+  readings: readingRegistry,
+  dailyNotes: dailyNoteRegistry,
 }
