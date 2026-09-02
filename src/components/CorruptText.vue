@@ -81,12 +81,13 @@ const chars = computed<Char[]>(() => {
   display: inline-block;
 }
 
-/* 涂黑：墨黑块遮住文字 */
+/* 涂黑：墨黑块遮住文字，颜色跟随当前文字色（日夜主题自适应） */
 .ct-blot {
-  background: #16120a;
+  background: var(--text-primary);
   color: transparent;
   border-radius: 1px;
-  box-shadow: 0 0 0 1px rgba(22, 18, 10, 0.85);
+  box-shadow: 0 0 0 1px var(--text-primary);
+  text-shadow: 0 0 0 1px var(--text-primary);
 }
 
 /* 错位：利用 CSS 变量控制位移 */

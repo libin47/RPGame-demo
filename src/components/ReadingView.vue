@@ -13,9 +13,9 @@
       <!-- 正文（仅此区域滚动） -->
       <div class="reading-body">
         <p class="reading-content">{{ currentPageContent }}</p>
-        <div v-if="visiblePages.length > 1" class="reading-page-num">
+        <!-- <div v-if="visiblePages.length > 1" class="reading-page-num">
           {{ currentIndex + 1 }} / {{ visiblePages.length }}
-        </div>
+        </div> -->
       </div>
 
       <!-- 按钮区：第一行 前一页(左)/下一页(右)，第二行 返回 -->
@@ -179,7 +179,7 @@ function nextPage(): void {
   margin: 0;
   font-size: 1.2rem;
   line-height: 2;
-  text-indent: 2.2em;
+  /* text-indent: 2.2em; */
   white-space: pre-wrap;
 }
 

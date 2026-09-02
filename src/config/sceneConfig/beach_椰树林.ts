@@ -114,7 +114,7 @@ const beach_椰树林: SubScene = {
     {
       id: 'beach_椰树林_0 ',
       priority: 5,
-      text: '地上只剩下一截截矮树桩，椰树全被你砍倒了。\n\n等上几天，说不定还能冒出新的树苗来。',
+      text: '地上只剩下一截截矮树桩，椰树全被你砍倒了。\n\n不过等上几天，说不定还能冒出新的树苗来。',
       isOneTime: false,
       displayCondition: {
         condition: {

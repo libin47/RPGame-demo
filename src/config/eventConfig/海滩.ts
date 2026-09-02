@@ -4,7 +4,7 @@
 import type { GameEvent } from '@/types/event'
 import { OptionCostType } from '@/types/option'
 import { EffectType } from '@/types/effect'
-import { nextFrame, endEvent, triggerBattle, addItem } from './shared'
+import { nextFrame, endEvent, triggerBattle, addItem, addDaily } from './shared'
 
 // ============================================================
 // 海滩遇蟹（战斗事件）
@@ -17,6 +17,7 @@ export const event_beach_大螃蟹: GameEvent = {
     {
       id: 'crab_spotted',
       text: '你小心翼翼地靠近了那只站立不动地的大螃蟹，它青色的甲壳上透着一丝丝青色的纹路若隐若现。\n\n似乎注意到你的存在，它高举起巨大的螯钳。',
+      onEnterEffects: [addDaily('note_螃蟹')],
       options: [
         {
           id: 'fight_crab',
@@ -37,22 +38,16 @@ export const event_beach_大螃蟹: GameEvent = {
               value: 10,
             },
           ],
-          results: endEvent('你决定不去打扰它们。'),
+          results: endEvent(
+            '你决定不去打扰它们。\n\n但你记下了他们的位置，以后你可以直接过来狩猎了。\n\n【收集】中解锁了【狩猎大螃蟹】的互动。',
+          ),
         },
       ],
     },
     {
       id: 'crab_victory',
       text: '大螃蟹不再动弹。',
-      onEnterEffects: [
-        {
-          effect: {
-            type: EffectType.DAILY_NOTE,
-            noteId: '漂泊者的日记',
-          },
-          description: '写入日记：战胜了大螃蟹',
-        },
-      ],
+      onEnterEffects: [addDaily('note_螃蟹_战胜')],
       options: [
         {
           id: 'butcher_crab',
@@ -71,7 +66,9 @@ export const event_beach_大螃蟹: GameEvent = {
         {
           id: 'return_beach',
           name: '返回海滩',
-          results: endEvent('你安全回到了海滩上'),
+          results: endEvent(
+            '你安全回到了海滩上。\n\n但你记下了他们的位置，以后你可以直接过来狩猎了。\n\n【收集】中解锁了【狩猎大螃蟹】的互动。',
+          ),
         },
       ],
     },

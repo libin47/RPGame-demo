@@ -379,6 +379,6 @@ export const seasonWeatherRegistry: SeasonWeatherRegistry = {
   initialSeason: Season.SUMMER,
   initialSeasonPhase: SeasonPhase.EARLY,
   initialWeatherId: 'sunny',
-  initialDay: 1,
-  initialTimeMinutes: 480,
+  initialDay: 0,
+  initialTimeMinutes: 60 * 17,
 }

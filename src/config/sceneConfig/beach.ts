@@ -92,43 +92,43 @@ const beach: Scene = {
         },
       ],
       isOneTime: false,
-      displayCondition: { hideFlag: ['beach_螃蟹'] },
-      eventFlag: 'beach_螃蟹',
+      displayCondition: { hideFlag: ['flag_beach_螃蟹'] },
+      eventFlag: 'flag_beach_螃蟹',
     },
     {
       id: 'beach_潮汐洞穴',
       priority: 4,
-      text: '退潮了。你沿着海岸漫步，你看到前方有一个潮汐洞穴。\n\n可以前往【潮汐洞穴】了！',
+      text: '退潮了。在涨潮时海水覆盖的区域，你看到前方有一个小小的洞穴。\n\n可以前往【潮汐洞穴】了！',
       isOneTime: true,
-      seenFlag: 'beach_潮汐洞穴',
+      seenFlag: 'flag_beach_潮汐洞穴',
       displayCondition: 退潮时间,
     },
     {
       id: 'beach_海岸哨岩',
       priority: 3,
-      text: '你沿着海岸漫步，你看到前方有一个海岸哨岩，或许可以过去看看。\n\n可以前往【海岸哨岩】了！',
+      text: '你沿着海岸探索。\n\n你一边寻找一遍眺望海平线上，希望可以发现路过船只的身影。\n而一片阴影引起了你的注意，可惜并非来自大海，而是在海滩的不远处，几块突起的巨石组成了一块哨岩，或许你可以过去看看。\n\n可以前往【海岸哨岩】了！',
       isOneTime: true,
-      seenFlag: 'beach_海岸哨岩',
+      seenFlag: 'flag_beach_海岸哨岩',
     },
     {
       id: 'beach_椰树林',
       priority: 3,
-      text: '你沿着海岸漫步，你看到前方有片椰树林。\n\n可以前往【椰树林】了！',
+      text: '往岛深处走了不远，沙滩逐渐被椰树覆盖。\n\n在前方不远处，椰树已经密密麻麻成了一片林子。\n你不禁松了口气——有椰子树，吃喝应该暂时不成问题了。\n\n可以前往【椰树林】了！',
       isOneTime: true,
-      seenFlag: 'beach_椰树林',
+      seenFlag: 'flag_beach_椰树林',
     },
     {
       id: 'beach_礁石区',
       priority: 3,
-      text: '你沿着海岸漫步，你看到那边满是礁石，或许可以过去看看。\n\n可以前往【礁石区】了！',
+      text: '你沿着海滩探索。\n你注意到在坠机地的不远处的一片海滩上满是礁石，或许可以过去看看。\n\n可以前往【礁石区】了！',
       isOneTime: true,
-      seenFlag: 'beach_礁石区',
+      seenFlag: 'flag_beach_礁石区',
     },
     {
       id: 'beach_潮汐线',
       priority: 3,
       // 补全了文本中的事件入口
-      text: '潮水把各种东西冲上岸边。\n\n你蹲下来翻检这些来自{beach_sea}。',
+      text: '海水起起伏伏，潮水把各种东西冲上岸边。\n\n这些是来自{beach_sea}。',
       isOneTime: false,
       eventEntries: [
         {
@@ -147,7 +147,7 @@ const beach: Scene = {
     {
       id: 'beach_6',
       priority: 3,
-      text: '你想起了很久前在马尔代夫度过的那个夏天',
+      text: '你想起了很久前在马尔代夫度过的那个夏天。\n\n那时你二十一岁，在你一生的黄金时代。\n你有好多奢望。你想爱，想吃，还想在一瞬间变成天上半明半暗的云。\n后来你才知道，生活就是个缓慢受锤的过程，人一天天老下去，奢望也一天天消失，最后变得像挨了锤的牛一样。',
       isOneTime: false,
     },
     {
@@ -170,7 +170,7 @@ const beach: Scene = {
       name: '狩猎',
       description: '狩猎大螃蟹，可以获得蟹肉。',
       descriptionTitle: '狩猎大螃蟹',
-      displayCondition: { flag: ['beach_螃蟹'] },
+      displayCondition: { flag: ['flag_beach_螃蟹'] },
       costTime: 30,
       costEnergy: 10,
       paramId: 'beach_螃蟹',
@@ -182,19 +182,6 @@ const beach: Scene = {
             quantity: 2,
           },
         ],
-      },
-    },
-    {
-      // 非营地采集点·进行中（需要时间）制作示例：点击打开进行中制作面板（晒干/风干等）
-      id: 'beach_晒制台',
-      name: '晒制',
-      description: '用摊开的席子晾晒刚捕获的蟹，风干后更耐存放。',
-      descriptionTitle: '晒制台',
-      resourceType: 'ongoing',
-      ongoingConfig: {
-        ongoingMaxSlots: 3,
-        ongoingDeviceId: 'beach_晒制台',
-        ongoingDeviceLevel: 1,
       },
     },
   ],
@@ -211,36 +198,36 @@ const beach: Scene = {
       id: 'beach_前往椰树林',
       description: '椰子与椰木',
       descriptionTitle: '椰树林',
-      flag: 'beach_椰树林',
+      flag: 'flag_beach_椰树林',
       subSceneId: 'beach_椰树林',
     }),
     enterSubSceneMove({
       id: 'beach_前往礁石区',
       description: '礁石与',
       descriptionTitle: '礁石区',
-      flag: 'beach_礁石区',
+      flag: 'flag_beach_礁石区',
       subSceneId: 'beach_礁石区',
     }),
     enterSubSceneMove({
       id: 'beach_前往海岸哨岩',
       description: '海岸哨岩',
       descriptionTitle: '海岸哨岩',
-      flag: 'beach_海岸哨岩',
+      flag: 'flag_beach_海岸哨岩',
       subSceneId: 'beach_海岸哨岩',
     }),
     enterSubSceneMove({
       id: 'beach_前往潮汐洞穴',
       description: '潮汐洞穴',
       descriptionTitle: '潮汐洞穴',
-      flag: 'beach_潮汐洞穴',
+      flag: 'flag_beach_潮汐洞穴',
       subSceneId: 'beach_潮汐洞穴',
       availableCondition: 退潮时间,
       unavailableTooltip: '你得等退潮了才能去。',
     }),
 
     enterSubSceneMove({
-      id: 'beach_返回机翼营地',
-      name: '返回',
+      id: 'beach_前往机翼营地',
+      name: '前往',
       description: '机翼营地',
       descriptionTitle: '机翼营地',
       flag: 'beach_飞机残骸_搜索幸存者',
@@ -248,32 +235,39 @@ const beach: Scene = {
     }),
     moveButton,
   ],
-  characters: [
-    {
-      id: 'beach_船长',
-      name: '对话',
-      description: '独眼的女船长坐在崖头，沉默地抽着烟。',
-      descriptionTitle: '船长',
-      tradeConfig: wanderingMerchant,
-      dialogConfig: [
-        {
-          dialogEventId: 'event_beach_船长',
-        },
-      ],
-      enemyConfig: {
-        enemy: [
-          {
-            enemyId: '大螃蟹',
-            quantity: 2,
-          },
-        ],
-        failEventId: 'event_beach_船长',
-      },
-    },
-  ],
+  // characters: [
+  //   {
+  //     id: 'beach_船长',
+  //     name: '对话',
+  //     description: '独眼的女船长坐在崖头，沉默地抽着烟。',
+  //     descriptionTitle: '船长',
+  //     tradeConfig: wanderingMerchant,
+  //     dialogConfig: [
+  //       {
+  //         dialogEventId: 'event_beach_船长',
+  //       },
+  //     ],
+  //     enemyConfig: {
+  //       enemy: [
+  //         {
+  //           enemyId: '大螃蟹',
+  //           quantity: 2,
+  //         },
+  //       ],
+  //       failEventId: 'event_beach_船长',
+  //     },
+  //   },
+  // ],
   explore: exploreButton,
   isDungeon: false,
-  subSceneIds: ['beach_飞机残骸', 'beach_机翼营地', 'beach_椰树林', 'beach_礁石区'],
+  subSceneIds: [
+    'beach_飞机残骸',
+    'beach_机翼营地',
+    'beach_椰树林',
+    'beach_礁石区',
+    'beach_海岸哨岩',
+    'beach_潮汐洞穴',
+  ],
   backgroundImage: 'beach1.png',
 }
 

@@ -84,7 +84,7 @@ export const event_飞机残骸_搜索夹缝: GameEvent = {
     {
       id: 'event_飞机残骸_搜索夹缝',
       text: '座椅夹缝里找到两本杂志和一个带笔的空白笔记本。\n\n 你把笔记本和笔放进外套口袋，你不知道在这荒岛上笔记本除了点火之外还有什么用，或许你可以用它来写点儿东西？',
-      onEnterEffects: [addItem('笔记本', 1, '获得笔记本'), addDaily('漂泊者的日记')],
+      onEnterEffects: [addItem('笔记本', 1, '获得笔记本'), addDaily('note_漂泊者的日记')],
       options: [
         {
           id: '继续',

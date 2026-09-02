@@ -51,7 +51,11 @@
             <span v-if="item.quantity > 1" class="icon-qty">×{{ item.quantity }}</span>
             <span class="icon-weight">{{ getItemStackWeight(item).toFixed(1) }}</span>
           </div>
-          <div class="item-name">{{ getItemName(item.itemId) }}</div>
+
+          <div class="item-name-broken" v-if="isBroken(item)">
+            {{ getItemName(item.itemId) }}（破）
+          </div>
+          <div class="item-name" v-else>{{ getItemName(item.itemId) }}</div>
           <!-- 耐久度条（仅带耐久的物品显示） -->
           <div
             v-if="hasDurability(item)"
@@ -444,7 +448,10 @@ function useActionLabel(itemId: string): string {
   if (config.category === ItemCategory.DOCUMENT) return '阅读'
   return '使用'
 }
-
+/** 是否已破损（耐久为 0 且带耐久属性） */
+function isBroken(item: PlayerInventoryItem): boolean {
+  return hasDurability(item) && item.durability <= 0
+}
 /**
  * 该物品实例是否可丢弃：
  * - 杂项（MISC）属于"不可交易丢弃的重要物品"，不可丢弃
@@ -781,6 +788,13 @@ function confirmDiscard(): void {
   line-height: 1.3;
   word-break: break-all;
 }
+.item-name-broken {
+  color: var(--danger);
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.3;
+  word-break: break-all;
+}
 
 /* 耐久度条（卡片底部） */
 .dur-bar {
@@ -790,6 +804,9 @@ function confirmDiscard(): void {
   border-radius: 2px;
   background: var(--sub-bg);
   overflow: hidden;
+}
+.dur-bar.dur-low {
+  background-color: var(--danger);
 }
 
 .dur-fill {
