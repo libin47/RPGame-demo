@@ -8,6 +8,26 @@ import { CraftCategory } from '../types/craft'
 // ============================================================
 // 工具
 // ============================================================
+// 火把
+const craft_火把: CraftRecipe = {
+  id: 'craft_firestick',
+  name: '火把',
+  recipeType: RecipeType.CRAFT,
+  iconId: 'icon_firestick',
+  unlockHint: '初始解锁',
+  craftCategory: CraftCategory.TOOL,
+  materials: [
+    { itemId: '木头', quantity: 2, isConsumed: true },
+    { itemId: '布料', quantity: 2, isConsumed: true },
+  ],
+  requirements: { requiredDeviceLevel: 0, attributeRequirements: [], timeMinutes: 15 },
+  costs: [{ costType: RecipeCostType.STAMINA, value: 5, affectedByCoefficient: true }],
+  products: [{ itemId: '火把', baseQuantity: 1 }],
+  isRepeatable: true,
+  minCraftQuantity: 1,
+  maxCraftQuantity: 1,
+  additionalTimePerItem: 0,
+}
 
 /** 石斧：木头×2 + 石头×2 → 石斧 */
 const craftStoneAxe: CraftRecipe = {
@@ -191,5 +211,6 @@ export const craftRecipeRegistry: CraftRecipeRegistry = {
     craft_bandage: craftBandage,
     craft_cloth_scrap: craftClothScrap,
     craft_iron_sheet: craftIronSheet,
+    craft_firestick: craft_火把,
   },
 }

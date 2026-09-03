@@ -13,7 +13,105 @@ import {
   setFlag,
   attr,
   addDaily,
+  hasItem,
 } from './shared'
+
+// 第一阶段后，自由采摘
+export const event_beach_椰树林_椰树: GameEvent = {
+  id: 'event_beach_椰树林_椰树',
+  name: '椰树',
+  frames: [
+    {
+      id: 'event_beach_椰树林_椰树_1',
+      text: '你走到一棵椰树下，抬起头来，椰树上挂满了椰子。颗粒饱满，颜色鲜艳。\n你不觉咽了咽口水。',
+      onEnterEffects: [addDaily('note_椰树'), setFlag('flag_椰树林_自由采摘')],
+      options: [
+        {
+          id: '爬上树采摘',
+          name: '爬上树采摘',
+          rollResult: {
+            attribute: '敏捷',
+            successResult: nextFrame('event_beach_椰树林_采摘成功'),
+            failResult: nextFrame('event_beach_椰树林_采摘失败'),
+            bigFailResult: nextFrame('event_beach_椰树林_采摘大失败'),
+          },
+        },
+        {
+          id: '砍伐椰树',
+          name: '砍伐椰树',
+          conditionResult: {
+            condition: {
+              condition: hasItem(['石斧']),
+            },
+            successResult: nextFrame('event_beach_椰树林_砍伐', '你砍伐了椰树。'),
+            failResult: nextFrame('event_beach_椰树林_砍伐失败'),
+          },
+        },
+      ],
+    },
+    {
+      id: 'event_beach_椰树林_采摘成功',
+      text: '你的身手如此娴熟，三下五除二你爬上了树端，饱满的椰子被你尽收怀中。',
+      onEnterEffects: [addItem('椰子', 3)],
+      options: [
+        {
+          id: '返回',
+          name: '返回',
+          results: endEvent('你现在可以在椰树林自由【采摘】和【砍伐】了。'),
+        },
+      ],
+    },
+    {
+      id: 'event_beach_椰树林_采摘失败',
+      text: '你努力想爬到树上，但或许是树太滑、抑或是你还是恢复状态，总之是爬到一半你便重重的摔在了地上。\n仿佛是椰树的怜悯，砰的一声，一个椰子掉在了你的身边。',
+      onEnterEffects: [addItem('椰子', 1), attr(AttributeType.HP, -10)],
+      options: [
+        {
+          id: '返回',
+          name: '返回',
+          results: endEvent('你现在可以在椰树林自由【采摘】和【砍伐】了。'),
+        },
+      ],
+    },
+    {
+      id: 'event_beach_椰树林_采摘大失败',
+      text: '你努力想爬到树上，但或许是树太滑、抑或是你还是恢复状态，总之是爬到一半你便重重的摔在了地上。\n仿佛是在嘲讽你的无能，砰的一声，一个椰子应声而落，精准地砸在了你的头上。\n\n你站起身来，一时不知是该揉脑袋还是揉屁股。',
+      onEnterEffects: [addItem('椰子', 1), attr(AttributeType.HP, -20)],
+      options: [
+        {
+          id: '返回',
+          name: '返回',
+          results: endEvent('你现在可以在椰树林自由【采摘】和【砍伐】了。'),
+        },
+      ],
+    },
+    {
+      id: 'event_beach_椰树林_砍伐成功',
+      text: '你举起你的斧头，瞄准了椰树。\n\n不知过了多久，椰树的倒塌声是你这么久努力的欢呼。',
+      onEnterEffects: [addItem('椰子', 5), attr(AttributeType.STAMINA, -20)],
+      options: [
+        {
+          id: '返回',
+          name: '返回',
+          costTime: 60,
+          results: endEvent('你现在可以在椰树林自由【采摘】和【砍伐】了。'),
+        },
+      ],
+    },
+    {
+      id: 'event_beach_椰树林_砍伐失败',
+      text: '你绕着椰树转了三圈，翻遍了背包，也没有找到合适的工具。\n你抬头看了看枝头的椰子，不甘地踹了树干一脚。\n仿佛嘲讽你的无能，一颗椰子落在了你的脚边。',
+      onEnterEffects: [addItem('椰子', 1)],
+      options: [
+        {
+          id: '返回',
+          name: '返回',
+          results: endEvent('你现在可以在椰树林自由【采摘】和【砍伐】了。'),
+        },
+      ],
+    },
+  ],
+}
 
 // ============================================================
 // 第一阶段：发现猴群
@@ -373,14 +471,7 @@ export const event_beach_椰树林_猴王的领地: GameEvent = {
           id: '使用火把',
           name: '点燃火把（需要火把）',
           displayCondition: {
-            condition: {
-              target: {
-                type: ConditionTargetType.ITEM,
-                id: '火把',
-              },
-              operator: ComparisonOperator.GREATER_EQUAL,
-              value: 1,
-            },
+            condition: hasItem(['火把']),
           },
           results: nextFrame(
             'event_beach_椰树林_猴王的领地_火把威慑',
@@ -444,7 +535,7 @@ export const event_beach_椰树林_猴王的领地: GameEvent = {
             {
               buffs: [
                 {
-                  statusId: '恐惧',
+                  statusId: 'status_恐惧',
                   durationMinutes: 0,
                 },
               ],
@@ -476,7 +567,7 @@ export const event_beach_椰树林_猴王的领地: GameEvent = {
     {
       id: 'event_beach_椰树林_猴王的领地_失败',
       text: '猴王的尾巴狠狠抽在你的胸口，你倒飞出去，重重摔在地上。肋骨传来剧烈的疼痛，视线开始模糊。\n\n猴王没有追击。它站在你面前不远处，发出了一声低沉悠长的吼叫，然后缓缓退回了枯树旁。它没有杀你——也许它觉得你构不成威胁了，也许它只是在守护它的领地，并不需要你的命。\n\n你挣扎着爬起来，捂着胸口，一步一步退出了空地。猴群在树冠上沉默地看着你。\n\n等你恢复了，还可以再来。但现在——你需要先活下来。',
-      onEnterEffects: [attr(AttributeType.HP, -15, '你受了重伤。')],
+      onEnterEffects: [attr(AttributeType.HP, 1, '你受了重伤。')],
       options: [
         {
           id: '撤退',
@@ -630,11 +721,11 @@ export const event_beach_椰树林_猴王攻击: GameEvent = {
     // 胜利帧
     {
       id: 'event_beach_椰树林_猴王的领地_胜利',
-      text: '猴王发出一声长啸，拖着受伤的身体向密林深处逃去。它的血液滴在沙地上，是暗褐色的，里面混合着某种发光的微小颗粒。\n\n不知何时聚集起来的猴群在树冠上静默了片刻。然后它们发出了与之前完全不同的叫声。那声音轻快，短促，像是某种古老的、发自本能的欢呼。\n\n一只小猴子从树上爬了下来。它的爪子小心翼翼地触碰地面，先是前爪，然后是后爪。它站在了地面上。\n\n这是你第一次看到这些猴子踏足地面。\n\n小猴子看了你几秒，然后从地上捡起一颗最完整的椰子，滚到了你的脚边。它转身跟着猴群消失在树林深处。\n\n树冠上传来沙沙的声响，渐渐远去。你低头看了看脚边的椰子，又看了看猴王逃窜的方向。',
+      text: '猴王发出一声长啸，拖着受伤的身体向密林深处逃去。它的血液滴在沙地上，是暗褐色的，里面混合着某种发光的微小颗粒。\n\n不知何时聚集起来的猴群在树冠上静默了片刻。然后它们发出了与之前完全不同的叫声。那声音轻快，短促，像是某种古老的、发自本能的欢呼。\n\n一只银色的小猴子从树上爬了下来。它的爪子小心翼翼地触碰地面，先是前爪，然后是后爪。它站在了地面上。\n\n这是你第一次看到这些猴子踏足地面。\n\n小猴子看了你几秒，然后从地上捡起一颗最完整的椰子，滚到了你的脚边。它转身跟着猴群消失在树林深处。\n\n树冠上传来沙沙的声响，渐渐远去。你低头看了看脚边的椰子，又看了看猴王逃窜的方向。',
       onEnterEffects: [
         setFlag('flag_椰树林_猴王的领地_胜利'),
         addItem('椰子', 3, '猴子们留下了几颗完好的椰子。'),
-        addItem('变异猴王甲片', 2, '地面上散落着几片从猴王身上脱落的甲片。', 0.7),
+        addItem('甲片', 2, '地面上散落着几片从猴王身上脱落的甲片。', 0.7),
       ],
       options: [
         {
@@ -701,6 +792,101 @@ export const event_beach_椰树林_击败猴王_未追踪: GameEvent = {
           id: '查看出口',
           name: '走向那片开阔地',
           results: triggerEvent('event_beach_椰树林_发现荒野'),
+        },
+      ],
+    },
+  ],
+}
+
+// 小猴子
+export const event_beach_椰树林_小猴子_1_出现: GameEvent = {
+  id: 'event_beach_椰树林_小猴子_1_出现',
+  name: '小猴子_1_出现',
+  frames: [
+    {
+      id: 'event_beach_椰树林_小猴子_1_出现_1',
+      text: '海风混合着海浪、椰树叶子摇晃的声音。在这寂静中，你听到身后传来了悉悉索索的声响。',
+      options: [
+        {
+          id: '转身',
+          name: '转身',
+          results: nextFrame('event_beach_椰树林_小猴子_1_出现_2', '你回头。'),
+        },
+      ],
+    },
+    {
+      id: 'event_beach_椰树林_小猴子_1_出现_2',
+      text: '原来是一只小猴子——\n它躲在不远处的一棵椰树下，正鬼鬼祟祟地偷偷看你。\n你想起它来，是那天你赶走猴王时候，给你抛了一个椰子的小猴子。它浑身银白，在一堆猴子中格外突出。 \n',
+      options: [
+        {
+          id: '呼喊它过来',
+          name: '呼喊它过来',
+          results: nextFrame('event_beach_椰树林_小猴子_1_出现_3'),
+        },
+        {
+          id: '驱赶',
+          name: '驱赶',
+          results: nextFrame('event_beach_椰树林_小猴子_1_出现_4'),
+        },
+        {
+          id: '丢椰子过去',
+          name: '丢椰子过去',
+          availableCondition: {
+            condition: hasItem(['椰子']),
+          },
+          results: nextFrame('event_beach_椰树林_小猴子_1_出现_5'),
+        },
+      ],
+    },
+    {
+      id: 'event_beach_椰树林_小猴子_1_出现_3',
+      text: '“啧啧~”\n\n你发出呼唤动物时所通用的叫声。\n然而小猴子只是看着你，你似乎在它的表情中看到了一丝疑惑。\n\n然后它飞似的爬到了树上，随后消失在浓密的树叶中不见了踪影。',
+      options: [
+        {
+          id: '离开',
+          name: '离开',
+          results: endEvent('你继续忙你的事情了。'),
+        },
+      ],
+    },
+    {
+      id: 'event_beach_椰树林_小猴子_1_出现_4',
+      text: '“嗬~”\n\n你发出驱赶动物时所通用的叫声。\n然而小猴子只是看着你，你似乎在它的表情中看到了一丝疑惑。\n\n然后它飞似的爬到了树上，随后消失在浓密的树叶中不见了踪影。',
+      options: [
+        {
+          id: '离开',
+          name: '离开',
+          results: endEvent('你继续忙你的事情了。'),
+        },
+      ],
+    },
+    {
+      id: 'event_beach_椰树林_小猴子_1_出现_5',
+      text: '“接着~”\n\n你拿出一个椰子给小猴子丢了过去。\n小猴子捡起滚动的椰子，发出两声叫声，便欢快地消失在了茂密的椰林之中。\n你不由露出了一丝笑容。',
+      onEnterEffects: [attr(AttributeType.SAN, 2)],
+      options: [
+        {
+          id: '离开',
+          name: '离开',
+          results: endEvent('你挠了挠头，在这荒岛之上，有个友善的动物对你来说也是难得的安慰。'),
+        },
+      ],
+    },
+  ],
+}
+
+export const event_beach_椰树林_小猴子_日常_归家前: GameEvent = {
+  id: 'event_beach_椰树林_小猴子_日常_归家前',
+  name: '小猴子_日常_归家前',
+  frames: [
+    {
+      id: 'event_beach_椰树林_小猴子_日常_归家前_1',
+      text: '海风混合着海浪、椰树叶子摇晃的声音。在这寂静中，你听到头顶一阵传来了悉悉索索的声响与此起彼伏的猴叫声。\n你抬起头，群猴正在树尖嬉闹。\n那只银色的小猴子摘下一个椰子丢给了你，然后便欢快地跟随猴群消失了树端。',
+      options: [
+        {
+          id: '捡起椰子',
+          name: '捡起椰子',
+          results: endEvent(''),
         },
       ],
     },

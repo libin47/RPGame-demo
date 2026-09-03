@@ -4,7 +4,8 @@
 import type { GameEvent } from '@/types/event'
 import { ConditionTargetType, ComparisonOperator, EffectType, AttributeType } from '@/types/effect'
 import { OptionCostType } from '@/types/option'
-import { attr, endEvent, nextFrame } from './shared'
+import { attr, endEvent, nextFrame, fx } from './shared'
+import { RecipeType } from '@/types'
 
 // ============================================================
 // 搭建营地
@@ -149,7 +150,19 @@ export const event_机翼营地_查看日记: GameEvent = {
         {
           id: '离开',
           name: '离开',
-          results: endEvent('你放下日记本。', [], true),
+          results: endEvent(
+            '你放下日记本。',
+            [
+              fx({
+                type: EffectType.RECIPE,
+                recipeId: 'craft_firestick',
+                recipeType: RecipeType.CRAFT,
+                // 解锁还是删除配方
+                unlock: true,
+              }),
+            ],
+            true,
+          ),
         },
       ],
     },

@@ -1,11 +1,31 @@
 // config/weaponTypes.ts
 import type { WeaponType, WeaponTypeRegistry } from '../types/weapon'
-
+// 棍
+const stick: WeaponType = {
+  id: 'stick',
+  name: '棍',
+  description: '棍子',
+  primaryDamageTypeId: 'slash',
+  isRanged: false,
+  defaultStats: {
+    defaultDamageDice: '1d6',
+    attackRange: 1,
+    attackSpeed: 1.2,
+    staminaCostPerAttack: 10,
+  },
+  skillUnlocks: {
+    0: ['basic_stick'],
+  },
+  proficiencyGrowth: {
+    expPerHit: 12,
+    expPerCriticalHit: 25,
+    expPerKill: 50,
+  },
+}
 const sword: WeaponType = {
   id: 'sword',
   name: '剑',
   description: '平衡的近战武器，攻守兼备',
-  iconId: 'icon_weapon_sword',
   primaryDamageTypeId: 'slash',
   isRanged: false,
   defaultStats: {
@@ -30,7 +50,6 @@ const bow: WeaponType = {
   id: 'bow',
   name: '弓',
   description: '远程武器，可在安全距离攻击敌人',
-  iconId: 'icon_weapon_bow',
   primaryDamageTypeId: 'pierce',
   isRanged: true,
   defaultStats: {
@@ -55,7 +74,6 @@ const spear: WeaponType = {
   id: 'spear',
   name: '长矛',
   description: '长柄武器，攻击距离较远',
-  iconId: 'icon_weapon_spear',
   primaryDamageTypeId: 'pierce',
   isRanged: false,
   defaultStats: {
@@ -80,7 +98,6 @@ const axe: WeaponType = {
   id: 'axe',
   name: '斧',
   description: '兼具砍伐与战斗功能的斧类武器，势大力沉',
-  iconId: 'icon_weapon_axe',
   primaryDamageTypeId: 'slash',
   isRanged: false,
   defaultStats: {
@@ -104,7 +121,6 @@ const knife: WeaponType = {
   id: 'knife',
   name: '短刀',
   description: '轻巧灵活的短刃武器，出手迅捷',
-  iconId: 'icon_weapon_knife',
   primaryDamageTypeId: 'slash',
   isRanged: false,
   defaultStats: {
@@ -128,7 +144,6 @@ const unarmed: WeaponType = {
   id: 'unarmed',
   name: '徒手',
   description: '不使用武器时的徒手攻击',
-  iconId: 'icon_weapon_unarmed',
   primaryDamageTypeId: 'blunt',
   isRanged: false,
   defaultStats: {
@@ -150,6 +165,7 @@ const unarmed: WeaponType = {
 
 export const weaponTypeRegistry: WeaponTypeRegistry = {
   weaponTypes: {
+    stick,
     sword,
     bow,
     spear,

@@ -4,6 +4,7 @@
 import type { SubScene } from '../../types/scene'
 import { ConditionTargetType, ComparisonOperator } from '../../types/effect'
 import { exploreButton, exitSubSceneMove } from './shared'
+import { hasItem } from '../eventConfig/shared'
 
 const beach_椰树林: SubScene = {
   id: 'beach_椰树林',
@@ -42,7 +43,26 @@ const beach_椰树林: SubScene = {
     {
       id: 'beach_椰树林_深入_2',
       priority: 8,
-      text: '猴群的声音渐渐远了，林子里安静下来。你记下了它们{beach_ysl_event_2}\n\n现在没有猴子盯着了，你可以安心采摘和砍伐。',
+      text: '猴群的声音渐渐远了，林子里安静下来。你记下了它们{beach_ysl_event_2}\n\n现在没有猴子盯着了，这偌大的椰林，不少{beach_ysl_event_ys}上都挂着饱满的椰子。',
+      isOneTime: false,
+      displayCondition: { hideFlag: ['flag_椰树林_猴王的领地', 'flag_椰树林_自由采摘'] },
+      eventEntries: [
+        {
+          key: 'beach_ysl_event_2',
+          displayText: '离去的方向',
+          eventId: 'event_beach_椰树林_追踪猴群',
+        },
+        {
+          key: 'beach_ysl_event_ys',
+          displayText: '椰树',
+          eventId: 'event_beach_椰树林_椰树',
+        },
+      ],
+    },
+    {
+      id: 'beach_椰树林_深入_2_1',
+      priority: 7,
+      text: '猴群的声音渐渐远了，林子里安静下来。你记下了它们{beach_ysl_event_2}\n\n椰林里椰树林立，你可以自由采摘砍伐。',
       isOneTime: false,
       displayCondition: { hideFlag: ['flag_椰树林_猴王的领地'] },
       eventEntries: [
@@ -56,8 +76,8 @@ const beach_椰树林: SubScene = {
 
     {
       id: 'beach_椰树林_深入_3',
-      priority: 7,
-      text: '椰林恢复了日常的平静，你可以随意采摘和砍伐了。\n\n你知道林子深处，{beach_ysl_event_3}还在那里。',
+      priority: 6,
+      text: '椰林恢复了日常的平静，其码在外围看起来是这样。\n\n但是你知道林子深处，{beach_ysl_event_3}还在那里。',
       isOneTime: false,
       displayCondition: { hideFlag: ['flag_椰树林_猴王的领地_胜利'] },
       eventEntries: [
@@ -70,7 +90,7 @@ const beach_椰树林: SubScene = {
     },
     {
       id: 'beach_椰树林_日常',
-      priority: 6,
+      priority: 5,
       text: '椰林恢复了日常的平静，猴王已经不在这里了。\n\n猴子们在枝头飞窜跳跃，偶尔有一只小猴子疑惑的看向你，但很快又回到它自己的世界。',
       isOneTime: true,
       seenFlag: 'flag_seen_椰树林_打败猴王',
@@ -89,31 +109,11 @@ const beach_椰树林: SubScene = {
     {
       id: 'beach_椰树林_2 ',
       priority: 1,
-      text: '满眼的椰子树。',
-    },
-    {
-      id: 'beach_椰树林_3 ',
-      priority: 1,
-      text: '太好了，有椰子！',
-    },
-    {
-      id: 'beach_椰树林_4 ',
-      priority: 1,
-      text: '椰✌️……',
-    },
-    {
-      id: 'beach_椰树林_5 ',
-      priority: 1,
-      text: '盯着椰子看，嘴里好像尝到了那股清甜。',
-    },
-    {
-      id: 'beach_椰树林_6 ',
-      priority: 1,
       text: '椰树长得很茂盛，砍的时候留点神，别一口气全放倒了。',
     },
     {
       id: 'beach_椰树林_0 ',
-      priority: 5,
+      priority: 2,
       text: '地上只剩下一截截矮树桩，椰树全被你砍倒了。\n\n不过等上几天，说不定还能冒出新的树苗来。',
       isOneTime: false,
       displayCondition: {
@@ -139,6 +139,36 @@ const beach_椰树林: SubScene = {
       },
       isOneTime: false,
       probability: 0.05,
+      enterTexts: {
+        enter: '你刚来到椰树林。',
+        leave: '你正准备离开椰树林。',
+        collect: '正当你兴致勃勃地采集资源时。',
+      },
+    },
+    {
+      id: 'event_beach_椰树林_小猴子_1_出现',
+      name: '小猴子',
+      displayCondition: {
+        flag: ['flag_椰树林_猴王的领地_胜利'],
+      },
+      isOneTime: true,
+      seenFlag: 'flag_椰树林_小猴子_1_出现',
+      probability: 0.1,
+      enterTexts: {
+        enter: '你刚来到椰树林。',
+        leave: '你正准备离开椰树林。',
+        collect: '正当你兴致勃勃地采集资源时。',
+      },
+    },
+    {
+      id: 'event_beach_椰树林_小猴子_日常_归家前',
+      name: '小猴子',
+      displayCondition: {
+        flag: ['flag_椰树林_小猴子_1_出现'],
+      },
+      isOneTime: false,
+      seenFlag: 'flag_椰树林_小猴子_1_出现',
+      probability: 0.1,
       enterTexts: {
         enter: '你刚来到椰树林。',
         leave: '你正准备离开椰树林。',
@@ -171,7 +201,7 @@ const beach_椰树林: SubScene = {
       description: '爬上树去摘椰子，要是有根长杆就省事多了。',
       descriptionTitle: '摘椰子',
       displayCondition: {
-        flag: ['flag_椰树林_追踪猴群'],
+        flag: ['flag_椰树林_追踪猴群', 'flag_椰树林_自由采摘'],
         condition: {
           target: {
             type: ConditionTargetType.ITEM,
@@ -214,14 +244,7 @@ const beach_椰树林: SubScene = {
       descriptionTitle: '打椰子',
       displayCondition: {
         flag: ['flag_椰树林_追踪猴群'],
-        condition: {
-          target: {
-            type: ConditionTargetType.ITEM,
-            id: '木竿',
-          },
-          operator: ComparisonOperator.GREATER_EQUAL,
-          value: 1,
-        },
+        condition: hasItem(['木竿']),
       },
       costTime: 10,
       costEnergy: 10,
@@ -254,18 +277,11 @@ const beach_椰树林: SubScene = {
       name: '砍伐',
       description: '砍椰子树，有概率获得椰子。',
       descriptionTitle: '砍椰子树',
-      displayCondition: { flag: ['flag_椰树林_追踪猴群'] },
+      displayCondition: { flag: ['flag_椰树林_追踪猴群', 'flag_椰树林_自由采摘'] },
       costTime: 10,
       costEnergy: 10,
       availableCondition: {
-        condition: {
-          target: {
-            type: ConditionTargetType.ITEM,
-            id: '石斧',
-          },
-          operator: ComparisonOperator.GREATER_EQUAL,
-          value: 1,
-        },
+        condition: hasItem(['石斧']),
       },
       unavailableTooltip: '你需要一把斧子才能砍伐椰子树。',
       resourceType: 'item',
@@ -300,7 +316,7 @@ const beach_椰树林: SubScene = {
       },
     },
   ],
-  isDungeon: true,
+  isDungeon: false,
 }
 
 export default beach_椰树林

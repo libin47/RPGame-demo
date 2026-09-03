@@ -18,7 +18,7 @@ export interface WeaponType {
   /** 武器类型描述 */
   description: string
   /** 武器类型图标资源ID */
-  iconId: string
+  // iconId: string
 
   /** 主要伤害类型ID */
   primaryDamageTypeId: string

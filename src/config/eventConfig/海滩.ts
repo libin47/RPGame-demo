@@ -122,6 +122,7 @@ export const event_beach_大海的馈赠: GameEvent = {
         addItem('木头', 50),
         addItem('石头', 50),
         addItem('金属碎片', 50),
+        addItem('布料', 50),
         addItem('金属碎片', 1, '获得金属碎片', 0.3),
       ],
       options: [

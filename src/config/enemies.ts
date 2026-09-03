@@ -36,7 +36,7 @@ const 大螃蟹: Enemy = {
       weight: 70,
       damageTypeId: 'slash',
       stats: {
-        baseDamage: '2d80+6',
+        baseDamage: '1d6',
         scalingAttribute: 'strength',
         accuracyModifier: 0,
         criticalModifier: 10,
@@ -111,25 +111,12 @@ const 大螃蟹: Enemy = {
       maxQuantity: 3,
     },
   ],
-  spawnCondition: {
-    logic: LogicOperator.AND,
-    subConditions: [
-      {
-        target: { type: ConditionTargetType.CORRUPTION },
-        operator: ComparisonOperator.GREATER_EQUAL,
-        value: 30,
-      },
-    ],
-  },
-  spawnWeight: 50,
-  minCorruption: 20,
-  maxCorruption: 80,
 }
 
 const 变异猴王: Enemy = {
   id: '变异猴王',
   name: '变异猴王',
-  description: '一只体型巨大的猴王，体色异常，有不规则的尖刺，爪钳异常发达',
+  description: '一只体型巨大的猴王',
   imageId: 'enemy_mutated_monkey_king',
   enemyType: EnemyType.MUTATED,
   hp: 50,
@@ -145,28 +132,28 @@ const 变异猴王: Enemy = {
   },
   skills: [
     {
-      id: 'crab_claw_slash',
-      name: '螯钳挥击',
-      description: '用巨大的螯钳猛烈挥击',
+      id: 'monkey_claw_slash',
+      name: '拳击',
+      description: '用巨大的拳头攻击',
       priority: 1,
       weight: 70,
-      damageTypeId: 'slash',
+      damageTypeId: 'blunt',
       stats: {
-        baseDamage: '3d8+8',
+        baseDamage: '2d8',
         scalingAttribute: 'strength',
         accuracyModifier: 0,
-        criticalModifier: 10,
+        criticalModifier: 0,
         narrativeTexts: {
-          hit: ['变异猴王挥动巨螯，重重砸在你身上，造成{damage}点伤害'],
-          miss: ['变异猴王的螯钳挥过，被你闪身躲开'],
-          critHit: ['变异猴王的巨螯撕裂空气砸中你，造成{damage}点暴击伤害！'],
+          hit: ['变异猴王挥动巨拳头，重重砸在你身上，造成{damage}点伤害'],
+          miss: ['变异猴王的拳头挥过，被你闪身躲开'],
+          critHit: ['变异猴王的拳头撕裂空气砸中你，造成{damage}点暴击伤害！'],
           critMiss: ['变异猴王致命的一击竟被你惊险避开！'],
         },
       },
     },
     {
-      id: 'crab_foam_spray',
-      name: '毒沫喷射',
+      id: 'monkey_foam_spray',
+      name: '冲撞',
       description: '从口中喷出带有腐蚀性的泡沫',
       priority: 2,
       weight: 30,
@@ -174,29 +161,17 @@ const 变异猴王: Enemy = {
         minTurn: 2,
       },
       maxUses: 3,
-      damageTypeId: 'poison',
+      damageTypeId: 'blunt',
       stats: {
-        baseDamage: '1d8+3',
+        baseDamage: '3d8+5',
         scalingAttribute: 'strength',
         accuracyModifier: 10,
         criticalModifier: 5,
-        onHitEffects: [
-          {
-            effect: {
-              type: EffectType.STATUS,
-              statusId: 'poisoned',
-              apply: true,
-              duration: 15,
-            },
-            probability: 0.4,
-            description: '有概率使玩家中毒',
-          },
-        ],
         narrativeTexts: {
-          hit: ['变异猴王向你喷射出一股绿色毒沫，造成{damage}点伤害'],
-          miss: ['毒沫从你身边飞过，没有喷中'],
-          critHit: ['毒沫正中你的脸，造成{damage}点暴击伤害！'],
-          critMiss: ['你偏头躲过了致命的毒沫喷射！'],
+          hit: ['变异猴王向你冲撞，造成{damage}点伤害'],
+          miss: ['变异猴王的冲撞从你身边没有撞中'],
+          critHit: ['变异猴王的冲撞正中你的脸，造成{damage}点暴击伤害！'],
+          critMiss: ['你偏头躲过了致命的冲撞！'],
         },
       },
       cooldown: 3,
@@ -213,33 +188,9 @@ const 变异猴王: Enemy = {
       triggerText: '变异猴王受到重创，变得更加狂暴',
     },
   },
-  corruptionScaling: {
-    hpPerCorruption: 0.5,
-    damagePerCorruption: 0.3,
-  },
   escapeDifficultyModifier: 1.0,
   canNotEscape: false,
-  loot: [
-    {
-      itemId: '蟹肉',
-      probability: 1,
-      minQuantity: 1,
-      maxQuantity: 3,
-    },
-  ],
-  spawnCondition: {
-    logic: LogicOperator.AND,
-    subConditions: [
-      {
-        target: { type: ConditionTargetType.CORRUPTION },
-        operator: ComparisonOperator.GREATER_EQUAL,
-        value: 30,
-      },
-    ],
-  },
-  spawnWeight: 50,
-  minCorruption: 20,
-  maxCorruption: 80,
+  loot: [],
 }
 
 export const enemyRegistry: EnemyRegistry = {

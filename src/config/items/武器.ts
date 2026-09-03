@@ -1,7 +1,39 @@
 // 武器物品配置
 import type { WeaponItem } from '@/types/item'
 import { ItemCategory, EquipmentSlot } from '@/types/item'
-
+/** 火把 */
+const 火把: WeaponItem = {
+  id: '火把',
+  name: '火把',
+  description:
+    '木棒缠了一些布条，做了一个简易的火把。除了照明之外，也可以用来战斗。当然，这里你感觉不到照明功能= =',
+  category: ItemCategory.WEAPON,
+  iconId: 'icon_firestick',
+  weight: 1.0,
+  maxStackSize: 1,
+  isSellable: true,
+  basePrice: 12,
+  isKeyItem: false,
+  toolCapabilities: {
+    toolTypeId: 'firestick',
+    toolLevel: 1,
+  },
+  durability: {
+    maxDurability: 30,
+    initialDurability: 30,
+    isRepairable: true,
+    destroyOnBreak: true,
+  },
+  weaponTypeId: 'stick',
+  equipmentSlot: EquipmentSlot.WEAPON,
+  weaponStats: {
+    baseDamage: '1d6+2',
+    attackDistance: 1,
+    damageTypeId: 'fire',
+    throwDamageMultiplier: 1.5,
+  },
+  tags: ['tool', 'stick'],
+}
 /** 石斧 */
 const 石斧: WeaponItem = {
   id: '石斧',
@@ -174,4 +206,4 @@ const 合金匕首: WeaponItem = {
   tags: ['tool', 'knife', 'multitool', 'survival'],
 }
 
-export { 石斧, 木矛, 石刀, 多功能战术刀, 合金匕首 }
+export { 火把, 石斧, 木矛, 石刀, 多功能战术刀, 合金匕首 }

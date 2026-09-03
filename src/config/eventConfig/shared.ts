@@ -2,8 +2,16 @@
 // 事件配置通用效果/结果工厂
 // 将频繁重复的样板结构压缩为单行调用，事件内容（文本、条件、专属配置）仍留在事件文件内联
 
-import { EffectType, AttributeType, AttributeOperation, ItemChangeType } from '@/types/effect'
-import type { Effect, EffectResult } from '@/types/effect'
+import {
+  EffectType,
+  AttributeType,
+  AttributeOperation,
+  ItemChangeType,
+  ComparisonOperator,
+  ConditionTargetType,
+  LogicOperator,
+} from '@/types/effect'
+import type { Condition, Effect, EffectResult } from '@/types/effect'
 import type { EventOptionResult } from '@/types/event'
 
 // ============================================================
@@ -11,7 +19,7 @@ import type { EventOptionResult } from '@/types/event'
 // ============================================================
 
 /** 包装效果：probability 默认 1（省略不写），description 可选 */
-function fx(effect: Effect, probability = 1, description?: string): EffectResult {
+export function fx(effect: Effect, probability = 1, description?: string): EffectResult {
   return {
     effect,
     ...(probability !== 1 ? { probability } : {}),
@@ -56,18 +64,39 @@ export const addItem = (
     probability,
     description,
   )
-  
+
 /** 添加日记 */
-export const addDaily = (
-  noteId: string,
-  description?: string,
-  probability = 1,
-): EffectResult =>
-  fx(
-    { type: EffectType.DAILY_NOTE, noteId: noteId },
-    probability,
-    description,
-  )
+export const addDaily = (noteId: string, description?: string, probability = 1): EffectResult =>
+  fx({ type: EffectType.DAILY_NOTE, noteId: noteId }, probability, description)
+
+// ============================================================
+// 条件工厂（返回 ConditionResult）
+// ============================================================
+// 是否持有物品
+export const hasItem = (itemId: string[]): Condition => {
+  if (itemId.length === 0) {
+    return {
+      target: {
+        type: ConditionTargetType.ITEM,
+        id: itemId[0],
+      },
+      operator: ComparisonOperator.GREATER_EQUAL,
+      value: 1,
+    }
+  } else {
+    return {
+      logic: LogicOperator.OR,
+      subConditions: itemId.map((id) => ({
+        target: {
+          type: ConditionTargetType.ITEM,
+          id,
+        },
+        operator: ComparisonOperator.GREATER_EQUAL,
+        value: 1,
+      })),
+    }
+  }
+}
 
 // ============================================================
 // 结果工厂（返回 EventOptionResult）
