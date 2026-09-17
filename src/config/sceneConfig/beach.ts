@@ -163,7 +163,7 @@ const beach: Scene = {
       isOneTime: false,
     },
   ],
-  temperatureModifier: 5,
+  temperatureModifier: 0,
   collects: [
     {
       id: 'beach_螃蟹',
